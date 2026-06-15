@@ -7,7 +7,7 @@ from typing import Optional, Tuple
 
 import click
 
-from .models import load_config, generate_id, ImportLog, now_iso, LockViolation
+from .models import load_config, generate_id, ImportLog, now_iso, LockViolation, ConfigSnapshot
 from .storage import StateStore
 from .workflow import (
     scan_directory, build_plan, build_plan_summary, apply_plan,
@@ -55,7 +55,17 @@ def cmd_scan(config_path: str, verbose: bool):
         sys.exit(1)
 
     store = _get_store(config)
-    store.save_scan(files)
+    config_snapshot = ConfigSnapshot(
+        source_dir=config.source_dir,
+        dest_dir=config.dest_dir,
+        rules=[r.to_dict() for r in config.rules],
+        state_file=config.state_file,
+        recursive=config.recursive,
+        file_extensions=config.file_extensions,
+        config_path=config_path,
+        config_mtime=os.path.getmtime(config_path) if os.path.exists(config_path) else None,
+    )
+    store.save_scan(files, config_snapshot)
 
     matched = sum(1 for f in files if f.matched_rule)
     unmatched = len(files) - matched
@@ -86,12 +96,31 @@ def cmd_plan(config_path: str, plan_id: Optional[str], verbose: bool):
 
     store = _get_store(config)
     scanned = store.get_scan()
+    scan_config = store.get_scan_config()
 
-    if not scanned:
-        click.echo("[提示] 没有找到扫描结果，自动执行 scan...")
+    need_rescan = False
+    if scanned and scan_config is not None:
+        config_diff = diff_config(config, scan_config)
+        if config_diff.has_diff:
+            click.echo(f"[提示] 检测到配置变化，自动重新扫描...")
+            need_rescan = True
+
+    if not scanned or need_rescan:
+        if not scanned:
+            click.echo("[提示] 没有找到扫描结果，自动执行 scan...")
         try:
             scanned = scan_directory(config)
-            store.save_scan(scanned)
+            config_snapshot = ConfigSnapshot(
+                source_dir=config.source_dir,
+                dest_dir=config.dest_dir,
+                rules=[r.to_dict() for r in config.rules],
+                state_file=config.state_file,
+                recursive=config.recursive,
+                file_extensions=config.file_extensions,
+                config_path=config_path,
+                config_mtime=os.path.getmtime(config_path) if os.path.exists(config_path) else None,
+            )
+            store.save_scan(scanned, config_snapshot)
         except Exception as e:
             click.echo(f"[错误] 自动扫描失败: {e}", err=True)
             sys.exit(1)

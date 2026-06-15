@@ -1,48 +1,48 @@
 ﻿=== 扫描记录 ===
-扫描时间,2026-06-16T02:46:40.574899
+扫描时间,2026-06-16T03:20:30.818659
 文件ID,源路径,文件名,大小,修改时间,匹配规则
-24e8451f6daf,./examples/sample_invoices\2024年1月增值税专用发票_12345.pdf,2024年1月增值税专用发票_12345.pdf,66,1781549199.9124348,增值税专用发票
-069b1abd9b92,./examples/sample_invoices\2024年1月增值税专用发票_67890.pdf,2024年1月增值税专用发票_67890.pdf,66,1781549199.9124348,增值税专用发票
-886b54b4ffa1,./examples/sample_invoices\2024年2月增值税普通发票_ABCDE.pdf,2024年2月增值税普通发票_ABCDE.pdf,66,1781549199.913481,增值税普通发票
-5e5ed35dbc5b,./examples/sample_invoices\出差报销单_202401.xlsx,出差报销单_202401.xlsx,51,1781549199.9166274,报销单Excel
-61d57afee7a0,./examples/sample_invoices\发票扫描件_出租车发票.png,发票扫描件_出租车发票.png,59,1781549199.9182994,发票图片PNG
-b6eb53de2612,./examples/sample_invoices\发票照片_餐厅发票.jpg,发票照片_餐厅发票.jpg,53,1781549199.9171832,发票图片JPG
-2a63c0dfaff2,./examples/sample_invoices\电子发票_20240115_001.pdf,电子发票_20240115_001.pdf,53,1781549199.914521,电子发票PDF
-22dee8b172d3,./examples/sample_invoices\电子发票_20240116_002.pdf,电子发票_20240116_002.pdf,53,1781549199.9155798,电子发票PDF
-43fa25ea5a7f,./examples/sample_invoices\采购合同_供应商A.docx,采购合同_供应商A.docx,52,1781549199.9171832,合同文档
+58db1df12094,./examples/sample_invoices\2024年1月增值税专用发票_12345.pdf,2024年1月增值税专用发票_12345.pdf,66,1781551230.4129333,增值税专用发票
+f0aede018b38,./examples/sample_invoices\2024年1月增值税专用发票_67890.pdf,2024年1月增值税专用发票_67890.pdf,66,1781551230.4140558,增值税专用发票
+040b94b1e1b0,./examples/sample_invoices\2024年2月增值税普通发票_ABCDE.pdf,2024年2月增值税普通发票_ABCDE.pdf,66,1781551230.4140558,增值税普通发票
+36d580b6f10d,./examples/sample_invoices\出差报销单_202401.xlsx,出差报销单_202401.xlsx,51,1781551230.4163442,报销单Excel
+64c7414228fa,./examples/sample_invoices\发票扫描件_出租车发票.png,发票扫描件_出租车发票.png,59,1781551230.4173627,发票图片PNG
+e150230a4cae,./examples/sample_invoices\发票照片_餐厅发票.jpg,发票照片_餐厅发票.jpg,53,1781551230.4163442,发票图片JPG
+a4ee828f697f,./examples/sample_invoices\电子发票_20240115_001.pdf,电子发票_20240115_001.pdf,53,1781551230.4150598,电子发票PDF
+a452a0e0f4fc,./examples/sample_invoices\电子发票_20240116_002.pdf,电子发票_20240116_002.pdf,53,1781551230.4155552,电子发票PDF
+c425a3a2a879,./examples/sample_invoices\采购合同_供应商A.docx,采购合同_供应商A.docx,52,1781551230.4163442,合同文档
 
 === 归档预案 ===
 预案ID,创建时间,文件,源路径,目标路径,匹配规则,冲突类型,冲突详情
-fac9ca9985fd,2026-06-16T02:46:41.108106,2024年1月增值税专用发票_12345.pdf,./examples/sample_invoices\2024年1月增值税专用发票_12345.pdf,./examples/archived\vat_special\2024年1月增值税专用发票_12345.pdf,增值税专用发票,target_exists,目标文件已存在: ./examples/archived\vat_special\2024年1月增值税专用发票_12345.pdf
-fac9ca9985fd,2026-06-16T02:46:41.108106,2024年1月增值税专用发票_67890.pdf,./examples/sample_invoices\2024年1月增值税专用发票_67890.pdf,./examples/archived\vat_special\2024年1月增值税专用发票_67890.pdf,增值税专用发票,,
-fac9ca9985fd,2026-06-16T02:46:41.108106,2024年2月增值税普通发票_ABCDE.pdf,./examples/sample_invoices\2024年2月增值税普通发票_ABCDE.pdf,./examples/archived\vat_normal\2024年2月增值税普通发票_ABCDE.pdf,增值税普通发票,,
-fac9ca9985fd,2026-06-16T02:46:41.108106,出差报销单_202401.xlsx,./examples/sample_invoices\出差报销单_202401.xlsx,./examples/archived\reimbursement\出差报销单_202401.xlsx,报销单Excel,,
-fac9ca9985fd,2026-06-16T02:46:41.108106,发票扫描件_出租车发票.png,./examples/sample_invoices\发票扫描件_出租车发票.png,./examples/archived\images/png\发票扫描件_出租车发票.png,发票图片PNG,,
-fac9ca9985fd,2026-06-16T02:46:41.108106,发票照片_餐厅发票.jpg,./examples/sample_invoices\发票照片_餐厅发票.jpg,./examples/archived\images/jpg\发票照片_餐厅发票.jpg,发票图片JPG,,
-fac9ca9985fd,2026-06-16T02:46:41.108106,电子发票_20240115_001.pdf,./examples/sample_invoices\电子发票_20240115_001.pdf,./examples/archived\electronic\电子发票_20240115_001.pdf,电子发票PDF,,
-fac9ca9985fd,2026-06-16T02:46:41.108106,电子发票_20240116_002.pdf,./examples/sample_invoices\电子发票_20240116_002.pdf,./examples/archived\electronic\电子发票_20240116_002.pdf,电子发票PDF,,
-fac9ca9985fd,2026-06-16T02:46:41.108106,采购合同_供应商A.docx,./examples/sample_invoices\采购合同_供应商A.docx,./examples/archived\contracts\采购合同_供应商A.docx,合同文档,,
+7b7d504ecf2b,2026-06-16T03:20:31.228808,2024年1月增值税专用发票_12345.pdf,./examples/sample_invoices\2024年1月增值税专用发票_12345.pdf,./examples/archived\vat_special\2024年1月增值税专用发票_12345.pdf,增值税专用发票,target_exists,目标文件已存在: ./examples/archived\vat_special\2024年1月增值税专用发票_12345.pdf
+7b7d504ecf2b,2026-06-16T03:20:31.228808,2024年1月增值税专用发票_67890.pdf,./examples/sample_invoices\2024年1月增值税专用发票_67890.pdf,./examples/archived\vat_special\2024年1月增值税专用发票_67890.pdf,增值税专用发票,,
+7b7d504ecf2b,2026-06-16T03:20:31.228808,2024年2月增值税普通发票_ABCDE.pdf,./examples/sample_invoices\2024年2月增值税普通发票_ABCDE.pdf,./examples/archived\vat_normal\2024年2月增值税普通发票_ABCDE.pdf,增值税普通发票,,
+7b7d504ecf2b,2026-06-16T03:20:31.228808,出差报销单_202401.xlsx,./examples/sample_invoices\出差报销单_202401.xlsx,./examples/archived\reimbursement\出差报销单_202401.xlsx,报销单Excel,,
+7b7d504ecf2b,2026-06-16T03:20:31.228808,发票扫描件_出租车发票.png,./examples/sample_invoices\发票扫描件_出租车发票.png,./examples/archived\images/png\发票扫描件_出租车发票.png,发票图片PNG,,
+7b7d504ecf2b,2026-06-16T03:20:31.228808,发票照片_餐厅发票.jpg,./examples/sample_invoices\发票照片_餐厅发票.jpg,./examples/archived\images/jpg\发票照片_餐厅发票.jpg,发票图片JPG,,
+7b7d504ecf2b,2026-06-16T03:20:31.228808,电子发票_20240115_001.pdf,./examples/sample_invoices\电子发票_20240115_001.pdf,./examples/archived\electronic\电子发票_20240115_001.pdf,电子发票PDF,,
+7b7d504ecf2b,2026-06-16T03:20:31.228808,电子发票_20240116_002.pdf,./examples/sample_invoices\电子发票_20240116_002.pdf,./examples/archived\electronic\电子发票_20240116_002.pdf,电子发票PDF,,
+7b7d504ecf2b,2026-06-16T03:20:31.228808,采购合同_供应商A.docx,./examples/sample_invoices\采购合同_供应商A.docx,./examples/archived\contracts\采购合同_供应商A.docx,合同文档,,
 
 === 执行记录 ===
 执行ID,预案ID,是否预演,撤销状态,创建时间,完成时间,文件,源->目标,状态,执行时间,错误信息
-3c7152bb3438,fac9ca9985fd,是,未撤销,2026-06-16T02:46:42.283173,2026-06-16T02:46:42.305784,2024年1月增值税专用发票_12345.pdf,./examples/sample_invoices\2024年1月增值税专用发票_12345.pdf -> ./examples/archived\vat_special\2024年1月增值税专用发票_12345.pdf,skipped_conflict,2026-06-16T02:46:42.285268,目标文件已存在: ./examples/archived\vat_special\2024年1月增值税专用发票_12345.pdf
-3c7152bb3438,fac9ca9985fd,是,未撤销,2026-06-16T02:46:42.283173,2026-06-16T02:46:42.305784,2024年1月增值税专用发票_67890.pdf,./examples/sample_invoices\2024年1月增值税专用发票_67890.pdf -> ./examples/archived\vat_special\2024年1月增值税专用发票_67890.pdf,moved,2026-06-16T02:46:42.287394,
-3c7152bb3438,fac9ca9985fd,是,未撤销,2026-06-16T02:46:42.283173,2026-06-16T02:46:42.305784,2024年2月增值税普通发票_ABCDE.pdf,./examples/sample_invoices\2024年2月增值税普通发票_ABCDE.pdf -> ./examples/archived\vat_normal\2024年2月增值税普通发票_ABCDE.pdf,moved,2026-06-16T02:46:42.288555,
-3c7152bb3438,fac9ca9985fd,是,未撤销,2026-06-16T02:46:42.283173,2026-06-16T02:46:42.305784,出差报销单_202401.xlsx,./examples/sample_invoices\出差报销单_202401.xlsx -> ./examples/archived\reimbursement\出差报销单_202401.xlsx,moved,2026-06-16T02:46:42.290633,
-3c7152bb3438,fac9ca9985fd,是,未撤销,2026-06-16T02:46:42.283173,2026-06-16T02:46:42.305784,发票扫描件_出租车发票.png,./examples/sample_invoices\发票扫描件_出租车发票.png -> ./examples/archived\images/png\发票扫描件_出租车发票.png,moved,2026-06-16T02:46:42.295782,
-3c7152bb3438,fac9ca9985fd,是,未撤销,2026-06-16T02:46:42.283173,2026-06-16T02:46:42.305784,发票照片_餐厅发票.jpg,./examples/sample_invoices\发票照片_餐厅发票.jpg -> ./examples/archived\images/jpg\发票照片_餐厅发票.jpg,moved,2026-06-16T02:46:42.296825,
-3c7152bb3438,fac9ca9985fd,是,未撤销,2026-06-16T02:46:42.283173,2026-06-16T02:46:42.305784,电子发票_20240115_001.pdf,./examples/sample_invoices\电子发票_20240115_001.pdf -> ./examples/archived\electronic\电子发票_20240115_001.pdf,moved,2026-06-16T02:46:42.298921,
-3c7152bb3438,fac9ca9985fd,是,未撤销,2026-06-16T02:46:42.283173,2026-06-16T02:46:42.305784,电子发票_20240116_002.pdf,./examples/sample_invoices\电子发票_20240116_002.pdf -> ./examples/archived\electronic\电子发票_20240116_002.pdf,moved,2026-06-16T02:46:42.301035,
-3c7152bb3438,fac9ca9985fd,是,未撤销,2026-06-16T02:46:42.283173,2026-06-16T02:46:42.305784,采购合同_供应商A.docx,./examples/sample_invoices\采购合同_供应商A.docx -> ./examples/archived\contracts\采购合同_供应商A.docx,moved,2026-06-16T02:46:42.303131,
-5b04805da3db,fac9ca9985fd,否,未撤销,2026-06-16T02:46:42.807310,2026-06-16T02:46:42.836153,2024年1月增值税专用发票_12345.pdf,./examples/sample_invoices\2024年1月增值税专用发票_12345.pdf -> ./examples/archived\vat_special\2024年1月增值税专用发票_12345.pdf,skipped_conflict,2026-06-16T02:46:42.809584,目标文件已存在: ./examples/archived\vat_special\2024年1月增值税专用发票_12345.pdf
-5b04805da3db,fac9ca9985fd,否,未撤销,2026-06-16T02:46:42.807310,2026-06-16T02:46:42.836153,2024年1月增值税专用发票_67890.pdf,./examples/sample_invoices\2024年1月增值税专用发票_67890.pdf -> ./examples/archived\vat_special\2024年1月增值税专用发票_67890.pdf,moved,2026-06-16T02:46:42.813085,
-5b04805da3db,fac9ca9985fd,否,未撤销,2026-06-16T02:46:42.807310,2026-06-16T02:46:42.836153,2024年2月增值税普通发票_ABCDE.pdf,./examples/sample_invoices\2024年2月增值税普通发票_ABCDE.pdf -> ./examples/archived\vat_normal\2024年2月增值税普通发票_ABCDE.pdf,moved,2026-06-16T02:46:42.815142,
-5b04805da3db,fac9ca9985fd,否,未撤销,2026-06-16T02:46:42.807310,2026-06-16T02:46:42.836153,出差报销单_202401.xlsx,./examples/sample_invoices\出差报销单_202401.xlsx -> ./examples/archived\reimbursement\出差报销单_202401.xlsx,moved,2026-06-16T02:46:42.818223,
-5b04805da3db,fac9ca9985fd,否,未撤销,2026-06-16T02:46:42.807310,2026-06-16T02:46:42.836153,发票扫描件_出租车发票.png,./examples/sample_invoices\发票扫描件_出租车发票.png -> ./examples/archived\images/png\发票扫描件_出租车发票.png,moved,2026-06-16T02:46:42.821328,
-5b04805da3db,fac9ca9985fd,否,未撤销,2026-06-16T02:46:42.807310,2026-06-16T02:46:42.836153,发票照片_餐厅发票.jpg,./examples/sample_invoices\发票照片_餐厅发票.jpg -> ./examples/archived\images/jpg\发票照片_餐厅发票.jpg,moved,2026-06-16T02:46:42.824666,
-5b04805da3db,fac9ca9985fd,否,未撤销,2026-06-16T02:46:42.807310,2026-06-16T02:46:42.836153,电子发票_20240115_001.pdf,./examples/sample_invoices\电子发票_20240115_001.pdf -> ./examples/archived\electronic\电子发票_20240115_001.pdf,moved,2026-06-16T02:46:42.827909,
-5b04805da3db,fac9ca9985fd,否,未撤销,2026-06-16T02:46:42.807310,2026-06-16T02:46:42.836153,电子发票_20240116_002.pdf,./examples/sample_invoices\电子发票_20240116_002.pdf -> ./examples/archived\electronic\电子发票_20240116_002.pdf,moved,2026-06-16T02:46:42.830995,
-5b04805da3db,fac9ca9985fd,否,未撤销,2026-06-16T02:46:42.807310,2026-06-16T02:46:42.836153,采购合同_供应商A.docx,./examples/sample_invoices\采购合同_供应商A.docx -> ./examples/archived\contracts\采购合同_供应商A.docx,moved,2026-06-16T02:46:42.833122,
+781565d34d2f,7b7d504ecf2b,是,未撤销,2026-06-16T03:20:32.030720,2026-06-16T03:20:32.052775,2024年1月增值税专用发票_12345.pdf,./examples/sample_invoices\2024年1月增值税专用发票_12345.pdf -> ./examples/archived\vat_special\2024年1月增值税专用发票_12345.pdf,skipped_conflict,2026-06-16T03:20:32.032820,目标文件已存在: ./examples/archived\vat_special\2024年1月增值税专用发票_12345.pdf
+781565d34d2f,7b7d504ecf2b,是,未撤销,2026-06-16T03:20:32.030720,2026-06-16T03:20:32.052775,2024年1月增值税专用发票_67890.pdf,./examples/sample_invoices\2024年1月增值税专用发票_67890.pdf -> ./examples/archived\vat_special\2024年1月增值税专用发票_67890.pdf,moved,2026-06-16T03:20:32.034917,
+781565d34d2f,7b7d504ecf2b,是,未撤销,2026-06-16T03:20:32.030720,2026-06-16T03:20:32.052775,2024年2月增值税普通发票_ABCDE.pdf,./examples/sample_invoices\2024年2月增值税普通发票_ABCDE.pdf -> ./examples/archived\vat_normal\2024年2月增值税普通发票_ABCDE.pdf,moved,2026-06-16T03:20:32.036515,
+781565d34d2f,7b7d504ecf2b,是,未撤销,2026-06-16T03:20:32.030720,2026-06-16T03:20:32.052775,出差报销单_202401.xlsx,./examples/sample_invoices\出差报销单_202401.xlsx -> ./examples/archived\reimbursement\出差报销单_202401.xlsx,moved,2026-06-16T03:20:32.039439,
+781565d34d2f,7b7d504ecf2b,是,未撤销,2026-06-16T03:20:32.030720,2026-06-16T03:20:32.052775,发票扫描件_出租车发票.png,./examples/sample_invoices\发票扫描件_出租车发票.png -> ./examples/archived\images/png\发票扫描件_出租车发票.png,moved,2026-06-16T03:20:32.040079,
+781565d34d2f,7b7d504ecf2b,是,未撤销,2026-06-16T03:20:32.030720,2026-06-16T03:20:32.052775,发票照片_餐厅发票.jpg,./examples/sample_invoices\发票照片_餐厅发票.jpg -> ./examples/archived\images/jpg\发票照片_餐厅发票.jpg,moved,2026-06-16T03:20:32.043940,
+781565d34d2f,7b7d504ecf2b,是,未撤销,2026-06-16T03:20:32.030720,2026-06-16T03:20:32.052775,电子发票_20240115_001.pdf,./examples/sample_invoices\电子发票_20240115_001.pdf -> ./examples/archived\electronic\电子发票_20240115_001.pdf,moved,2026-06-16T03:20:32.044966,
+781565d34d2f,7b7d504ecf2b,是,未撤销,2026-06-16T03:20:32.030720,2026-06-16T03:20:32.052775,电子发票_20240116_002.pdf,./examples/sample_invoices\电子发票_20240116_002.pdf -> ./examples/archived\electronic\电子发票_20240116_002.pdf,moved,2026-06-16T03:20:32.047077,
+781565d34d2f,7b7d504ecf2b,是,未撤销,2026-06-16T03:20:32.030720,2026-06-16T03:20:32.052775,采购合同_供应商A.docx,./examples/sample_invoices\采购合同_供应商A.docx -> ./examples/archived\contracts\采购合同_供应商A.docx,moved,2026-06-16T03:20:32.049158,
+def151b75ff0,7b7d504ecf2b,否,未撤销,2026-06-16T03:20:32.482792,2026-06-16T03:20:32.521367,2024年1月增值税专用发票_12345.pdf,./examples/sample_invoices\2024年1月增值税专用发票_12345.pdf -> ./examples/archived\vat_special\2024年1月增值税专用发票_12345.pdf,skipped_conflict,2026-06-16T03:20:32.485890,目标文件已存在: ./examples/archived\vat_special\2024年1月增值税专用发票_12345.pdf
+def151b75ff0,7b7d504ecf2b,否,未撤销,2026-06-16T03:20:32.482792,2026-06-16T03:20:32.521367,2024年1月增值税专用发票_67890.pdf,./examples/sample_invoices\2024年1月增值税专用发票_67890.pdf -> ./examples/archived\vat_special\2024年1月增值税专用发票_67890.pdf,moved,2026-06-16T03:20:32.488520,
+def151b75ff0,7b7d504ecf2b,否,未撤销,2026-06-16T03:20:32.482792,2026-06-16T03:20:32.521367,2024年2月增值税普通发票_ABCDE.pdf,./examples/sample_invoices\2024年2月增值税普通发票_ABCDE.pdf -> ./examples/archived\vat_normal\2024年2月增值税普通发票_ABCDE.pdf,moved,2026-06-16T03:20:32.493882,
+def151b75ff0,7b7d504ecf2b,否,未撤销,2026-06-16T03:20:32.482792,2026-06-16T03:20:32.521367,出差报销单_202401.xlsx,./examples/sample_invoices\出差报销单_202401.xlsx -> ./examples/archived\reimbursement\出差报销单_202401.xlsx,moved,2026-06-16T03:20:32.496965,
+def151b75ff0,7b7d504ecf2b,否,未撤销,2026-06-16T03:20:32.482792,2026-06-16T03:20:32.521367,发票扫描件_出租车发票.png,./examples/sample_invoices\发票扫描件_出租车发票.png -> ./examples/archived\images/png\发票扫描件_出租车发票.png,moved,2026-06-16T03:20:32.500031,
+def151b75ff0,7b7d504ecf2b,否,未撤销,2026-06-16T03:20:32.482792,2026-06-16T03:20:32.521367,发票照片_餐厅发票.jpg,./examples/sample_invoices\发票照片_餐厅发票.jpg -> ./examples/archived\images/jpg\发票照片_餐厅发票.jpg,moved,2026-06-16T03:20:32.505347,
+def151b75ff0,7b7d504ecf2b,否,未撤销,2026-06-16T03:20:32.482792,2026-06-16T03:20:32.521367,电子发票_20240115_001.pdf,./examples/sample_invoices\电子发票_20240115_001.pdf -> ./examples/archived\electronic\电子发票_20240115_001.pdf,moved,2026-06-16T03:20:32.509796,
+def151b75ff0,7b7d504ecf2b,否,未撤销,2026-06-16T03:20:32.482792,2026-06-16T03:20:32.521367,电子发票_20240116_002.pdf,./examples/sample_invoices\电子发票_20240116_002.pdf -> ./examples/archived\electronic\电子发票_20240116_002.pdf,moved,2026-06-16T03:20:32.512882,
+def151b75ff0,7b7d504ecf2b,否,未撤销,2026-06-16T03:20:32.482792,2026-06-16T03:20:32.521367,采购合同_供应商A.docx,./examples/sample_invoices\采购合同_供应商A.docx -> ./examples/archived\contracts\采购合同_供应商A.docx,moved,2026-06-16T03:20:32.517341,
 
 === 撤销记录 ===
 执行ID,撤销时间,恢复数量,状态

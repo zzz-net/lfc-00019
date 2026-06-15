@@ -1,15 +1,15 @@
 ﻿=== 预案差异对比摘要 ===
-旧预案ID,be1f01434b0a
-新预案ID,a293f34f37d4
-旧快照ID,d3f163903481
-新快照ID,f2c38fc35dae
-对比时间,2026-06-16T02:46:09.664470
+旧预案ID,b76e34799a51
+新预案ID,01444138bb48
+旧快照ID,de7577b12a06
+新快照ID,06424ab0138d
+对比时间,2026-06-16T03:24:05.001750
 旧移动计划数,9
-新移动计划数,8
+新移动计划数,11
 旧未命中数,0
 新未命中数,0
 有变化,是
-变化的移动项数,5
+变化的移动项数,7
 
 === 规则变化 ===
 变化类型,规则名
@@ -26,10 +26,11 @@
 
 === 新增移动项 ===
 文件名,源路径,目标路径,匹配规则,冲突类型
+notes.md,./examples/sample_invoices\notes.md,./examples/archived\misc\notes.md,Markdown文档,
+未分类的文档.txt,./examples/sample_invoices\未分类的文档.txt,./examples/archived\misc\未分类的文档.txt,文本文档,
 
 === 删除移动项 ===
 文件名,源路径,原目标路径,原匹配规则,原冲突类型
-发票照片_餐厅发票.jpg,./examples/sample_invoices\发票照片_餐厅发票.jpg,./examples/archived\images/jpg\发票照片_餐厅发票.jpg,发票图片JPG,
 
 === 目标路径变化 ===
 文件名,源路径,原目标路径,新目标路径,原规则,新规则
@@ -37,6 +38,7 @@
 2024年1月增值税专用发票_67890.pdf,./examples/sample_invoices\2024年1月增值税专用发票_67890.pdf,./examples/archived\vat_special\2024年1月增值税专用发票_67890.pdf,./examples/archived\vat/special\2024年1月增值税专用发票_67890.pdf,增值税专用发票,增值税专用发票
 2024年2月增值税普通发票_ABCDE.pdf,./examples/sample_invoices\2024年2月增值税普通发票_ABCDE.pdf,./examples/archived\vat_normal\2024年2月增值税普通发票_ABCDE.pdf,./examples/archived\vat/normal\2024年2月增值税普通发票_ABCDE.pdf,增值税普通发票,增值税普通发票
 发票扫描件_出租车发票.png,./examples/sample_invoices\发票扫描件_出租车发票.png,./examples/archived\images/png\发票扫描件_出租车发票.png,./examples/archived\images\发票扫描件_出租车发票.png,发票图片PNG,发票图片PNG
+发票照片_餐厅发票.jpg,./examples/sample_invoices\发票照片_餐厅发票.jpg,./examples/archived\images/jpg\发票照片_餐厅发票.jpg,./examples/archived\images\发票照片_餐厅发票.jpg,发票图片JPG,发票图片
 
 === 匹配规则变化 ===
 文件名,源路径,原规则,新规则,目标路径

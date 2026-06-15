@@ -8,7 +8,7 @@ from datetime import datetime
 
 from .models import (
     ScannedFile, PlannedMove, ExecutedMove, UndoRecord,
-    BatchSnapshot, ImportLog, PlanLock, LockViolation,
+    BatchSnapshot, ImportLog, PlanLock, LockViolation, ConfigSnapshot,
     generate_id, now_iso,
 )
 
@@ -53,10 +53,12 @@ class StateStore:
 
     # ---- 扫描结果 ----
 
-    def save_scan(self, files: List[ScannedFile]) -> None:
+    def save_scan(self, files: List[ScannedFile], config_snapshot: Optional[ConfigSnapshot] = None) -> None:
         """保存扫描结果"""
         self._data["scanned_files"] = [f.to_dict() for f in files]
         self._data["last_scan"] = now_iso()
+        if config_snapshot is not None:
+            self._data["scan_config"] = config_snapshot.to_dict()
         self.save()
 
     def get_scan(self) -> List[ScannedFile]:
@@ -72,6 +74,13 @@ class StateStore:
             )
             for f in self._data.get("scanned_files", [])
         ]
+
+    def get_scan_config(self) -> Optional[ConfigSnapshot]:
+        """获取上次扫描时的配置快照"""
+        data = self._data.get("scan_config")
+        if data:
+            return ConfigSnapshot.from_dict(data)
+        return None
 
     def get_last_scan_time(self) -> Optional[str]:
         return self._data.get("last_scan")
