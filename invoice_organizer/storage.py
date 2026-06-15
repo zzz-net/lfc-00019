@@ -8,7 +8,7 @@ from datetime import datetime
 
 from .models import (
     ScannedFile, PlannedMove, ExecutedMove, UndoRecord,
-    BatchSnapshot,
+    BatchSnapshot, ImportLog,
     generate_id, now_iso,
 )
 
@@ -34,6 +34,7 @@ class StateStore:
             "runs": {},
             "undo_records": [],
             "snapshots": {},
+            "import_logs": [],
             "last_scan": None,
             "last_plan": None,
             "last_snapshot": None,
@@ -206,6 +207,27 @@ class StateStore:
         for sid, sdata in self._data.get("snapshots", {}).items():
             if sdata.get("plan_id") == plan_id:
                 return BatchSnapshot.from_dict(sdata)
+        return None
+
+    # ---- 导入日志 ----
+
+    def add_import_log(self, log: ImportLog) -> None:
+        """添加一条导入日志（成功/失败都记）"""
+        if "import_logs" not in self._data:
+            self._data["import_logs"] = []
+        self._data["import_logs"].append(log.to_dict())
+        self.save()
+
+    def get_import_logs(self) -> List[ImportLog]:
+        """获取所有导入日志"""
+        logs = self._data.get("import_logs", [])
+        return [ImportLog.from_dict(l) for l in logs]
+
+    def get_last_import_log(self) -> Optional[ImportLog]:
+        """获取最近一条导入日志"""
+        logs = self._data.get("import_logs", [])
+        if logs:
+            return ImportLog.from_dict(logs[-1])
         return None
 
     # ---- 完整数据导出 ----

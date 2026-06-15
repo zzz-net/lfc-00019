@@ -1,101 +1,101 @@
 {
   "scanned_files": [
     {
-      "id": "ae1940b1094b",
+      "id": "2deeab034820",
       "source_path": "./examples/sample_invoices\\2024年1月增值税专用发票_12345.pdf",
       "filename": "2024年1月增值税专用发票_12345.pdf",
       "size": 66,
-      "mtime": 1781545871.1832037,
+      "mtime": 1781547152.9005425,
       "matched_rule": "增值税专用发票"
     },
     {
-      "id": "b05feadedefb",
+      "id": "9e41d85617d6",
       "source_path": "./examples/sample_invoices\\2024年1月增值税专用发票_67890.pdf",
       "filename": "2024年1月增值税专用发票_67890.pdf",
       "size": 66,
-      "mtime": 1781545871.1842906,
+      "mtime": 1781547152.9005425,
       "matched_rule": "增值税专用发票"
     },
     {
-      "id": "3f4dc860416c",
+      "id": "4966092195a3",
       "source_path": "./examples/sample_invoices\\2024年2月增值税普通发票_ABCDE.pdf",
       "filename": "2024年2月增值税普通发票_ABCDE.pdf",
       "size": 66,
-      "mtime": 1781545871.1842906,
+      "mtime": 1781547152.9005425,
       "matched_rule": "增值税普通发票"
     },
     {
-      "id": "10647e50d82d",
+      "id": "f1f162a1d482",
       "source_path": "./examples/sample_invoices\\notes.md",
       "filename": "notes.md",
       "size": 32,
-      "mtime": 1781545871.187371,
+      "mtime": 1781547152.9046264,
       "matched_rule": "Markdown文档"
     },
     {
-      "id": "c1e077feb4a3",
+      "id": "104c7c5216fa",
       "source_path": "./examples/sample_invoices\\出差报销单_202401.xlsx",
       "filename": "出差报销单_202401.xlsx",
       "size": 51,
-      "mtime": 1781545871.185343,
+      "mtime": 1781547152.902591,
       "matched_rule": "报销单Excel"
     },
     {
-      "id": "a9d8a09bbbcd",
+      "id": "50d82872e2b2",
       "source_path": "./examples/sample_invoices\\发票扫描件_出租车发票.png",
       "filename": "发票扫描件_出租车发票.png",
       "size": 59,
-      "mtime": 1781545871.186355,
+      "mtime": 1781547152.9036088,
       "matched_rule": "发票图片PNG"
     },
     {
-      "id": "de21f88e1df2",
+      "id": "742d471dad2c",
       "source_path": "./examples/sample_invoices\\发票照片_餐厅发票.jpg",
       "filename": "发票照片_餐厅发票.jpg",
       "size": 53,
-      "mtime": 1781545871.186355,
+      "mtime": 1781547152.9036088,
       "matched_rule": "发票图片"
     },
     {
-      "id": "889125eee83c",
+      "id": "6fb356b0ab91",
       "source_path": "./examples/sample_invoices\\未分类的文档.txt",
       "filename": "未分类的文档.txt",
       "size": 46,
-      "mtime": 1781545871.187371,
+      "mtime": 1781547152.9036088,
       "matched_rule": "文本文档"
     },
     {
-      "id": "701e86f0e4ec",
+      "id": "cf6db5a032b0",
       "source_path": "./examples/sample_invoices\\电子发票_20240115_001.pdf",
       "filename": "电子发票_20240115_001.pdf",
       "size": 53,
-      "mtime": 1781545871.1842906,
+      "mtime": 1781547152.901575,
       "matched_rule": "电子发票PDF"
     },
     {
-      "id": "b2bd2616865b",
+      "id": "1ac696bbff47",
       "source_path": "./examples/sample_invoices\\电子发票_20240116_002.pdf",
       "filename": "电子发票_20240116_002.pdf",
       "size": 53,
-      "mtime": 1781545871.185343,
+      "mtime": 1781547152.901575,
       "matched_rule": "电子发票PDF"
     },
     {
-      "id": "627a00cacaef",
+      "id": "dcfdb4bf036a",
       "source_path": "./examples/sample_invoices\\采购合同_供应商A.docx",
       "filename": "采购合同_供应商A.docx",
       "size": 52,
-      "mtime": 1781545871.186355,
+      "mtime": 1781547152.902591,
       "matched_rule": "合同文档"
     }
   ],
   "plans": {
-    "89d9d679603e": {
-      "id": "89d9d679603e",
-      "created_at": "2026-06-16T01:51:12.049858",
+    "e9aa422370df": {
+      "id": "e9aa422370df",
+      "created_at": "2026-06-16T02:12:33.859731",
       "moves": [
         {
-          "id": "ca2437cd985f",
+          "id": "1bb6d71b7cfa",
           "source_path": "./examples/sample_invoices\\2024年1月增值税专用发票_12345.pdf",
           "target_path": "./examples/archived\\vat_special\\2024年1月增值税专用发票_12345.pdf",
           "filename": "2024年1月增值税专用发票_12345.pdf",
@@ -104,7 +104,7 @@
           "conflict_detail": "目标文件已存在: ./examples/archived\\vat_special\\2024年1月增值税专用发票_12345.pdf"
         },
         {
-          "id": "b7c7136d980b",
+          "id": "453ed48e9ef7",
           "source_path": "./examples/sample_invoices\\2024年1月增值税专用发票_67890.pdf",
           "target_path": "./examples/archived\\vat_special\\2024年1月增值税专用发票_67890.pdf",
           "filename": "2024年1月增值税专用发票_67890.pdf",
@@ -113,7 +113,7 @@
           "conflict_detail": null
         },
         {
-          "id": "2b42f808f1af",
+          "id": "a9f2dbed92fc",
           "source_path": "./examples/sample_invoices\\2024年2月增值税普通发票_ABCDE.pdf",
           "target_path": "./examples/archived\\vat_normal\\2024年2月增值税普通发票_ABCDE.pdf",
           "filename": "2024年2月增值税普通发票_ABCDE.pdf",
@@ -122,7 +122,7 @@
           "conflict_detail": null
         },
         {
-          "id": "33a84daabcb5",
+          "id": "effdb1823f01",
           "source_path": "./examples/sample_invoices\\出差报销单_202401.xlsx",
           "target_path": "./examples/archived\\reimbursement\\出差报销单_202401.xlsx",
           "filename": "出差报销单_202401.xlsx",
@@ -131,7 +131,7 @@
           "conflict_detail": null
         },
         {
-          "id": "ced31f5eb8f4",
+          "id": "f5c3eda3dce3",
           "source_path": "./examples/sample_invoices\\发票扫描件_出租车发票.png",
           "target_path": "./examples/archived\\images/png\\发票扫描件_出租车发票.png",
           "filename": "发票扫描件_出租车发票.png",
@@ -140,7 +140,7 @@
           "conflict_detail": null
         },
         {
-          "id": "6f3e6b0e94a7",
+          "id": "e741095a5a26",
           "source_path": "./examples/sample_invoices\\发票照片_餐厅发票.jpg",
           "target_path": "./examples/archived\\images/jpg\\发票照片_餐厅发票.jpg",
           "filename": "发票照片_餐厅发票.jpg",
@@ -149,7 +149,7 @@
           "conflict_detail": null
         },
         {
-          "id": "228883227161",
+          "id": "ffa0211d5104",
           "source_path": "./examples/sample_invoices\\电子发票_20240115_001.pdf",
           "target_path": "./examples/archived\\electronic\\电子发票_20240115_001.pdf",
           "filename": "电子发票_20240115_001.pdf",
@@ -158,7 +158,7 @@
           "conflict_detail": null
         },
         {
-          "id": "f4b9a1901989",
+          "id": "04cf3fa96c08",
           "source_path": "./examples/sample_invoices\\电子发票_20240116_002.pdf",
           "target_path": "./examples/archived\\electronic\\电子发票_20240116_002.pdf",
           "filename": "电子发票_20240116_002.pdf",
@@ -167,7 +167,7 @@
           "conflict_detail": null
         },
         {
-          "id": "0ad7d27b2e3a",
+          "id": "14d26d7ae51c",
           "source_path": "./examples/sample_invoices\\采购合同_供应商A.docx",
           "target_path": "./examples/archived\\contracts\\采购合同_供应商A.docx",
           "filename": "采购合同_供应商A.docx",
@@ -178,12 +178,12 @@
       ],
       "has_conflicts": true
     },
-    "1e59437cbd6b": {
-      "id": "1e59437cbd6b",
-      "created_at": "2026-06-16T01:51:19.028409",
+    "115afc50492f": {
+      "id": "115afc50492f",
+      "created_at": "2026-06-16T02:12:41.216478",
       "moves": [
         {
-          "id": "ecad2cc77f59",
+          "id": "8d3b7991653e",
           "source_path": "./examples/sample_invoices\\2024年1月增值税专用发票_12345.pdf",
           "target_path": "./examples/archived\\vat/special\\2024年1月增值税专用发票_12345.pdf",
           "filename": "2024年1月增值税专用发票_12345.pdf",
@@ -192,7 +192,7 @@
           "conflict_detail": null
         },
         {
-          "id": "5689194b8124",
+          "id": "e6d7b4302257",
           "source_path": "./examples/sample_invoices\\2024年1月增值税专用发票_67890.pdf",
           "target_path": "./examples/archived\\vat/special\\2024年1月增值税专用发票_67890.pdf",
           "filename": "2024年1月增值税专用发票_67890.pdf",
@@ -201,7 +201,7 @@
           "conflict_detail": null
         },
         {
-          "id": "13280883a108",
+          "id": "59b9ed7d168d",
           "source_path": "./examples/sample_invoices\\2024年2月增值税普通发票_ABCDE.pdf",
           "target_path": "./examples/archived\\vat/normal\\2024年2月增值税普通发票_ABCDE.pdf",
           "filename": "2024年2月增值税普通发票_ABCDE.pdf",
@@ -210,7 +210,7 @@
           "conflict_detail": null
         },
         {
-          "id": "ca0c3b9de2af",
+          "id": "5b9280f077c0",
           "source_path": "./examples/sample_invoices\\notes.md",
           "target_path": "./examples/archived\\misc\\notes.md",
           "filename": "notes.md",
@@ -219,7 +219,7 @@
           "conflict_detail": null
         },
         {
-          "id": "ba1083075830",
+          "id": "246485c73120",
           "source_path": "./examples/sample_invoices\\出差报销单_202401.xlsx",
           "target_path": "./examples/archived\\reimbursement\\出差报销单_202401.xlsx",
           "filename": "出差报销单_202401.xlsx",
@@ -228,7 +228,7 @@
           "conflict_detail": null
         },
         {
-          "id": "f854563fff32",
+          "id": "5f36d997893e",
           "source_path": "./examples/sample_invoices\\发票扫描件_出租车发票.png",
           "target_path": "./examples/archived\\images\\发票扫描件_出租车发票.png",
           "filename": "发票扫描件_出租车发票.png",
@@ -237,7 +237,7 @@
           "conflict_detail": null
         },
         {
-          "id": "cc2514b62baa",
+          "id": "e360714bc0ce",
           "source_path": "./examples/sample_invoices\\发票照片_餐厅发票.jpg",
           "target_path": "./examples/archived\\images\\发票照片_餐厅发票.jpg",
           "filename": "发票照片_餐厅发票.jpg",
@@ -246,7 +246,7 @@
           "conflict_detail": null
         },
         {
-          "id": "0c82e4783fdd",
+          "id": "f6ddf41782fe",
           "source_path": "./examples/sample_invoices\\未分类的文档.txt",
           "target_path": "./examples/archived\\misc\\未分类的文档.txt",
           "filename": "未分类的文档.txt",
@@ -255,7 +255,7 @@
           "conflict_detail": null
         },
         {
-          "id": "f6c92e7d009e",
+          "id": "a6a485882366",
           "source_path": "./examples/sample_invoices\\电子发票_20240115_001.pdf",
           "target_path": "./examples/archived\\electronic\\电子发票_20240115_001.pdf",
           "filename": "电子发票_20240115_001.pdf",
@@ -264,7 +264,7 @@
           "conflict_detail": null
         },
         {
-          "id": "33d3208e1c68",
+          "id": "4db0ee017f5f",
           "source_path": "./examples/sample_invoices\\电子发票_20240116_002.pdf",
           "target_path": "./examples/archived\\electronic\\电子发票_20240116_002.pdf",
           "filename": "电子发票_20240116_002.pdf",
@@ -273,7 +273,7 @@
           "conflict_detail": null
         },
         {
-          "id": "be79d3cf45bf",
+          "id": "75d75fdf54a4",
           "source_path": "./examples/sample_invoices\\采购合同_供应商A.docx",
           "target_path": "./examples/archived\\contracts\\采购合同_供应商A.docx",
           "filename": "采购合同_供应商A.docx",
@@ -286,721 +286,721 @@
     }
   },
   "runs": {
-    "49c836a16ea4": {
-      "id": "49c836a16ea4",
-      "plan_id": "89d9d679603e",
-      "created_at": "2026-06-16T01:51:13.015970",
+    "21471b5dcf71": {
+      "id": "21471b5dcf71",
+      "plan_id": "e9aa422370df",
+      "created_at": "2026-06-16T02:12:34.833508",
       "dry_run": true,
-      "completed_at": "2026-06-16T01:51:13.038678",
+      "completed_at": "2026-06-16T02:12:34.859327",
       "moves": [
         {
-          "id": "6dcb102d7f4f",
-          "run_id": "49c836a16ea4",
+          "id": "800b8c8da791",
+          "run_id": "21471b5dcf71",
           "source_path": "./examples/sample_invoices\\2024年1月增值税专用发票_12345.pdf",
           "target_path": "./examples/archived\\vat_special\\2024年1月增值税专用发票_12345.pdf",
           "filename": "2024年1月增值税专用发票_12345.pdf",
           "matched_rule": "增值税专用发票",
           "status": "skipped_conflict",
-          "timestamp": "2026-06-16T01:51:13.018029",
+          "timestamp": "2026-06-16T02:12:34.835489",
           "error_message": "目标文件已存在: ./examples/archived\\vat_special\\2024年1月增值税专用发票_12345.pdf"
         },
         {
-          "id": "9bc289121aba",
-          "run_id": "49c836a16ea4",
+          "id": "df186c5137ea",
+          "run_id": "21471b5dcf71",
           "source_path": "./examples/sample_invoices\\2024年1月增值税专用发票_67890.pdf",
           "target_path": "./examples/archived\\vat_special\\2024年1月增值税专用发票_67890.pdf",
           "filename": "2024年1月增值税专用发票_67890.pdf",
           "matched_rule": "增值税专用发票",
           "status": "moved",
-          "timestamp": "2026-06-16T01:51:13.019057",
+          "timestamp": "2026-06-16T02:12:34.838546",
           "error_message": null
         },
         {
-          "id": "4155fef553b3",
-          "run_id": "49c836a16ea4",
+          "id": "be1d943fccbb",
+          "run_id": "21471b5dcf71",
           "source_path": "./examples/sample_invoices\\2024年2月增值税普通发票_ABCDE.pdf",
           "target_path": "./examples/archived\\vat_normal\\2024年2月增值税普通发票_ABCDE.pdf",
           "filename": "2024年2月增值税普通发票_ABCDE.pdf",
           "matched_rule": "增值税普通发票",
           "status": "moved",
-          "timestamp": "2026-06-16T01:51:13.021401",
+          "timestamp": "2026-06-16T02:12:34.841701",
           "error_message": null
         },
         {
-          "id": "754cdc42c51e",
-          "run_id": "49c836a16ea4",
+          "id": "72603a4f17c0",
+          "run_id": "21471b5dcf71",
           "source_path": "./examples/sample_invoices\\出差报销单_202401.xlsx",
           "target_path": "./examples/archived\\reimbursement\\出差报销单_202401.xlsx",
           "filename": "出差报销单_202401.xlsx",
           "matched_rule": "报销单Excel",
           "status": "moved",
-          "timestamp": "2026-06-16T01:51:13.023545",
+          "timestamp": "2026-06-16T02:12:34.846291",
           "error_message": null
         },
         {
-          "id": "e9f42b60bee5",
-          "run_id": "49c836a16ea4",
+          "id": "90bd11142928",
+          "run_id": "21471b5dcf71",
           "source_path": "./examples/sample_invoices\\发票扫描件_出租车发票.png",
           "target_path": "./examples/archived\\images/png\\发票扫描件_出租车发票.png",
           "filename": "发票扫描件_出租车发票.png",
           "matched_rule": "发票图片PNG",
           "status": "moved",
-          "timestamp": "2026-06-16T01:51:13.026226",
+          "timestamp": "2026-06-16T02:12:34.849490",
           "error_message": null
         },
         {
-          "id": "572a82957e78",
-          "run_id": "49c836a16ea4",
+          "id": "ca7d846e7c88",
+          "run_id": "21471b5dcf71",
           "source_path": "./examples/sample_invoices\\发票照片_餐厅发票.jpg",
           "target_path": "./examples/archived\\images/jpg\\发票照片_餐厅发票.jpg",
           "filename": "发票照片_餐厅发票.jpg",
           "matched_rule": "发票图片JPG",
           "status": "moved",
-          "timestamp": "2026-06-16T01:51:13.028396",
+          "timestamp": "2026-06-16T02:12:34.850587",
           "error_message": null
         },
         {
-          "id": "81ef18601d49",
-          "run_id": "49c836a16ea4",
+          "id": "f6b8c779633d",
+          "run_id": "21471b5dcf71",
           "source_path": "./examples/sample_invoices\\电子发票_20240115_001.pdf",
           "target_path": "./examples/archived\\electronic\\电子发票_20240115_001.pdf",
           "filename": "电子发票_20240115_001.pdf",
           "matched_rule": "电子发票PDF",
           "status": "moved",
-          "timestamp": "2026-06-16T01:51:13.029452",
+          "timestamp": "2026-06-16T02:12:34.852689",
           "error_message": null
         },
         {
-          "id": "5d83e237df8a",
-          "run_id": "49c836a16ea4",
+          "id": "a1f77b4b3b6d",
+          "run_id": "21471b5dcf71",
           "source_path": "./examples/sample_invoices\\电子发票_20240116_002.pdf",
           "target_path": "./examples/archived\\electronic\\电子发票_20240116_002.pdf",
           "filename": "电子发票_20240116_002.pdf",
           "matched_rule": "电子发票PDF",
           "status": "moved",
-          "timestamp": "2026-06-16T01:51:13.031555",
+          "timestamp": "2026-06-16T02:12:34.854776",
           "error_message": null
         },
         {
-          "id": "1748fa324e49",
-          "run_id": "49c836a16ea4",
+          "id": "33a3209ce692",
+          "run_id": "21471b5dcf71",
           "source_path": "./examples/sample_invoices\\采购合同_供应商A.docx",
           "target_path": "./examples/archived\\contracts\\采购合同_供应商A.docx",
           "filename": "采购合同_供应商A.docx",
           "matched_rule": "合同文档",
           "status": "moved",
-          "timestamp": "2026-06-16T01:51:13.033640",
+          "timestamp": "2026-06-16T02:12:34.856873",
           "error_message": null
         }
       ],
       "is_undone": false
     },
-    "96608e592130": {
-      "id": "96608e592130",
-      "plan_id": "89d9d679603e",
-      "created_at": "2026-06-16T01:51:13.539907",
+    "b680c8234dbc": {
+      "id": "b680c8234dbc",
+      "plan_id": "e9aa422370df",
+      "created_at": "2026-06-16T02:12:35.365579",
       "dry_run": false,
-      "completed_at": "2026-06-16T01:51:13.576524",
+      "completed_at": "2026-06-16T02:12:35.460185",
       "moves": [
         {
-          "id": "459c316c4dcf",
-          "run_id": "96608e592130",
+          "id": "db4ea8e3a5e0",
+          "run_id": "b680c8234dbc",
           "source_path": "./examples/sample_invoices\\2024年1月增值税专用发票_12345.pdf",
           "target_path": "./examples/archived\\vat_special\\2024年1月增值税专用发票_12345.pdf",
           "filename": "2024年1月增值税专用发票_12345.pdf",
           "matched_rule": "增值税专用发票",
           "status": "skipped_conflict",
-          "timestamp": "2026-06-16T01:51:13.542955",
+          "timestamp": "2026-06-16T02:12:35.368744",
           "error_message": "目标文件已存在: ./examples/archived\\vat_special\\2024年1月增值税专用发票_12345.pdf"
         },
         {
-          "id": "22cd9208a350",
-          "run_id": "96608e592130",
+          "id": "1bf7243fa173",
+          "run_id": "b680c8234dbc",
           "source_path": "./examples/sample_invoices\\2024年1月增值税专用发票_67890.pdf",
           "target_path": "./examples/archived\\vat_special\\2024年1月增值税专用发票_67890.pdf",
           "filename": "2024年1月增值税专用发票_67890.pdf",
           "matched_rule": "增值税专用发票",
           "status": "moved",
-          "timestamp": "2026-06-16T01:51:13.546354",
+          "timestamp": "2026-06-16T02:12:35.374243",
           "error_message": null
         },
         {
-          "id": "bbd1a76ca069",
-          "run_id": "96608e592130",
+          "id": "660258e44b2c",
+          "run_id": "b680c8234dbc",
           "source_path": "./examples/sample_invoices\\2024年2月增值税普通发票_ABCDE.pdf",
           "target_path": "./examples/archived\\vat_normal\\2024年2月增值税普通发票_ABCDE.pdf",
           "filename": "2024年2月增值税普通发票_ABCDE.pdf",
           "matched_rule": "增值税普通发票",
           "status": "moved",
-          "timestamp": "2026-06-16T01:51:13.549690",
+          "timestamp": "2026-06-16T02:12:35.378961",
           "error_message": null
         },
         {
-          "id": "5a5d38ad1d07",
-          "run_id": "96608e592130",
+          "id": "617d116921fe",
+          "run_id": "b680c8234dbc",
           "source_path": "./examples/sample_invoices\\出差报销单_202401.xlsx",
           "target_path": "./examples/archived\\reimbursement\\出差报销单_202401.xlsx",
           "filename": "出差报销单_202401.xlsx",
           "matched_rule": "报销单Excel",
           "status": "moved",
-          "timestamp": "2026-06-16T01:51:13.555958",
+          "timestamp": "2026-06-16T02:12:35.383119",
           "error_message": null
         },
         {
-          "id": "7966a9f2cc51",
-          "run_id": "96608e592130",
+          "id": "25a521fc513e",
+          "run_id": "b680c8234dbc",
           "source_path": "./examples/sample_invoices\\发票扫描件_出租车发票.png",
           "target_path": "./examples/archived\\images/png\\发票扫描件_出租车发票.png",
           "filename": "发票扫描件_出租车发票.png",
           "matched_rule": "发票图片PNG",
           "status": "moved",
-          "timestamp": "2026-06-16T01:51:13.560071",
+          "timestamp": "2026-06-16T02:12:35.389638",
           "error_message": null
         },
         {
-          "id": "f053b72f3f01",
-          "run_id": "96608e592130",
+          "id": "39e38df727d0",
+          "run_id": "b680c8234dbc",
           "source_path": "./examples/sample_invoices\\发票照片_餐厅发票.jpg",
           "target_path": "./examples/archived\\images/jpg\\发票照片_餐厅发票.jpg",
           "filename": "发票照片_餐厅发票.jpg",
           "matched_rule": "发票图片JPG",
           "status": "moved",
-          "timestamp": "2026-06-16T01:51:13.563156",
+          "timestamp": "2026-06-16T02:12:35.394577",
           "error_message": null
         },
         {
-          "id": "fd46cb461a48",
-          "run_id": "96608e592130",
+          "id": "ccb7eb9b0c0b",
+          "run_id": "b680c8234dbc",
           "source_path": "./examples/sample_invoices\\电子发票_20240115_001.pdf",
           "target_path": "./examples/archived\\electronic\\电子发票_20240115_001.pdf",
           "filename": "电子发票_20240115_001.pdf",
           "matched_rule": "电子发票PDF",
           "status": "moved",
-          "timestamp": "2026-06-16T01:51:13.566252",
+          "timestamp": "2026-06-16T02:12:35.442099",
           "error_message": null
         },
         {
-          "id": "c24b58a64853",
-          "run_id": "96608e592130",
+          "id": "c3259a6ad74c",
+          "run_id": "b680c8234dbc",
           "source_path": "./examples/sample_invoices\\电子发票_20240116_002.pdf",
           "target_path": "./examples/archived\\electronic\\电子发票_20240116_002.pdf",
           "filename": "电子发票_20240116_002.pdf",
           "matched_rule": "电子发票PDF",
           "status": "moved",
-          "timestamp": "2026-06-16T01:51:13.570022",
+          "timestamp": "2026-06-16T02:12:35.446725",
           "error_message": null
         },
         {
-          "id": "3a1b49a95174",
-          "run_id": "96608e592130",
+          "id": "75457fbd1810",
+          "run_id": "b680c8234dbc",
           "source_path": "./examples/sample_invoices\\采购合同_供应商A.docx",
           "target_path": "./examples/archived\\contracts\\采购合同_供应商A.docx",
           "filename": "采购合同_供应商A.docx",
           "matched_rule": "合同文档",
           "status": "moved",
-          "timestamp": "2026-06-16T01:51:13.574460",
+          "timestamp": "2026-06-16T02:12:35.452810",
           "error_message": null
         }
       ],
       "is_undone": true
     },
-    "3ee70157403c": {
-      "id": "3ee70157403c",
-      "plan_id": "89d9d679603e",
-      "created_at": "2026-06-16T01:51:17.742282",
+    "af095583d631": {
+      "id": "af095583d631",
+      "plan_id": "e9aa422370df",
+      "created_at": "2026-06-16T02:12:39.856896",
       "dry_run": false,
-      "completed_at": "2026-06-16T01:51:17.771141",
+      "completed_at": "2026-06-16T02:12:39.883265",
       "moves": [
         {
-          "id": "dd0a8c78dc3e",
-          "run_id": "3ee70157403c",
+          "id": "e2d7a25572c9",
+          "run_id": "af095583d631",
           "source_path": "./examples/sample_invoices\\2024年1月增值税专用发票_12345.pdf",
           "target_path": "./examples/archived\\vat_special\\2024年1月增值税专用发票_12345.pdf",
           "filename": "2024年1月增值税专用发票_12345.pdf",
           "matched_rule": "增值税专用发票",
           "status": "skipped_manual",
-          "timestamp": "2026-06-16T01:51:17.745721",
+          "timestamp": "2026-06-16T02:12:39.858966",
           "error_message": "规则不在筛选范围内: 增值税专用发票"
         },
         {
-          "id": "a7500714f17a",
-          "run_id": "3ee70157403c",
+          "id": "4c036034453c",
+          "run_id": "af095583d631",
           "source_path": "./examples/sample_invoices\\2024年1月增值税专用发票_67890.pdf",
           "target_path": "./examples/archived\\vat_special\\2024年1月增值税专用发票_67890.pdf",
           "filename": "2024年1月增值税专用发票_67890.pdf",
           "matched_rule": "增值税专用发票",
           "status": "skipped_manual",
-          "timestamp": "2026-06-16T01:51:17.748898",
+          "timestamp": "2026-06-16T02:12:39.861898",
           "error_message": "规则不在筛选范围内: 增值税专用发票"
         },
         {
-          "id": "bdfe23c1d4bb",
-          "run_id": "3ee70157403c",
+          "id": "89b26390af05",
+          "run_id": "af095583d631",
           "source_path": "./examples/sample_invoices\\2024年2月增值税普通发票_ABCDE.pdf",
           "target_path": "./examples/archived\\vat_normal\\2024年2月增值税普通发票_ABCDE.pdf",
           "filename": "2024年2月增值税普通发票_ABCDE.pdf",
           "matched_rule": "增值税普通发票",
           "status": "skipped_manual",
-          "timestamp": "2026-06-16T01:51:17.750927",
+          "timestamp": "2026-06-16T02:12:39.861898",
           "error_message": "规则不在筛选范围内: 增值税普通发票"
         },
         {
-          "id": "3268f88edfea",
-          "run_id": "3ee70157403c",
+          "id": "7c539814334b",
+          "run_id": "af095583d631",
           "source_path": "./examples/sample_invoices\\发票扫描件_出租车发票.png",
           "target_path": "./examples/archived\\images/png\\发票扫描件_出租车发票.png",
           "filename": "发票扫描件_出租车发票.png",
           "matched_rule": "发票图片PNG",
           "status": "skipped_manual",
-          "timestamp": "2026-06-16T01:51:17.752937",
+          "timestamp": "2026-06-16T02:12:39.866559",
           "error_message": "规则不在筛选范围内: 发票图片PNG"
         },
         {
-          "id": "19fe2fd8e7c6",
-          "run_id": "3ee70157403c",
+          "id": "32368b8355a6",
+          "run_id": "af095583d631",
           "source_path": "./examples/sample_invoices\\发票照片_餐厅发票.jpg",
           "target_path": "./examples/archived\\images/jpg\\发票照片_餐厅发票.jpg",
           "filename": "发票照片_餐厅发票.jpg",
           "matched_rule": "发票图片JPG",
           "status": "skipped_manual",
-          "timestamp": "2026-06-16T01:51:17.755015",
+          "timestamp": "2026-06-16T02:12:39.869631",
           "error_message": "规则不在筛选范围内: 发票图片JPG"
         },
         {
-          "id": "4dfc3c45215a",
-          "run_id": "3ee70157403c",
+          "id": "838052325e41",
+          "run_id": "af095583d631",
           "source_path": "./examples/sample_invoices\\采购合同_供应商A.docx",
           "target_path": "./examples/archived\\contracts\\采购合同_供应商A.docx",
           "filename": "采购合同_供应商A.docx",
           "matched_rule": "合同文档",
           "status": "skipped_manual",
-          "timestamp": "2026-06-16T01:51:17.758356",
+          "timestamp": "2026-06-16T02:12:39.871658",
           "error_message": "规则不在筛选范围内: 合同文档"
         },
         {
-          "id": "ab36c114a3de",
-          "run_id": "3ee70157403c",
+          "id": "b248581319de",
+          "run_id": "af095583d631",
           "source_path": "./examples/sample_invoices\\出差报销单_202401.xlsx",
           "target_path": "./examples/archived\\reimbursement\\出差报销单_202401.xlsx",
           "filename": "出差报销单_202401.xlsx",
           "matched_rule": "报销单Excel",
           "status": "moved",
-          "timestamp": "2026-06-16T01:51:17.762234",
+          "timestamp": "2026-06-16T02:12:39.874735",
           "error_message": null
         },
         {
-          "id": "71b93908cbf3",
-          "run_id": "3ee70157403c",
+          "id": "b0176fc33283",
+          "run_id": "af095583d631",
           "source_path": "./examples/sample_invoices\\电子发票_20240115_001.pdf",
           "target_path": "./examples/archived\\electronic\\电子发票_20240115_001.pdf",
           "filename": "电子发票_20240115_001.pdf",
           "matched_rule": "电子发票PDF",
           "status": "moved",
-          "timestamp": "2026-06-16T01:51:17.765335",
+          "timestamp": "2026-06-16T02:12:39.878202",
           "error_message": null
         },
         {
-          "id": "7d15d7de11ea",
-          "run_id": "3ee70157403c",
+          "id": "39d5a43d94b1",
+          "run_id": "af095583d631",
           "source_path": "./examples/sample_invoices\\电子发票_20240116_002.pdf",
           "target_path": "./examples/archived\\electronic\\电子发票_20240116_002.pdf",
           "filename": "电子发票_20240116_002.pdf",
           "matched_rule": "电子发票PDF",
           "status": "moved",
-          "timestamp": "2026-06-16T01:51:17.768484",
+          "timestamp": "2026-06-16T02:12:39.881233",
           "error_message": null
         }
       ],
       "is_undone": true
     },
-    "f13e842a26e0": {
-      "id": "f13e842a26e0",
-      "plan_id": "1e59437cbd6b",
-      "created_at": "2026-06-16T01:51:19.923950",
+    "7b5a668c9bec": {
+      "id": "7b5a668c9bec",
+      "plan_id": "115afc50492f",
+      "created_at": "2026-06-16T02:12:42.159684",
       "dry_run": false,
-      "completed_at": "2026-06-16T01:51:19.966720",
+      "completed_at": "2026-06-16T02:12:42.210650",
       "moves": [
         {
-          "id": "c61aaa8854c4",
-          "run_id": "f13e842a26e0",
+          "id": "e96057ddb77f",
+          "run_id": "7b5a668c9bec",
           "source_path": "./examples/sample_invoices\\2024年1月增值税专用发票_12345.pdf",
           "target_path": "./examples/archived\\vat/special\\2024年1月增值税专用发票_12345.pdf",
           "filename": "2024年1月增值税专用发票_12345.pdf",
           "matched_rule": "增值税专用发票",
           "status": "skipped_manual",
-          "timestamp": "2026-06-16T01:51:19.927352",
+          "timestamp": "2026-06-16T02:12:42.164708",
           "error_message": "文件类型不在筛选范围内: .pdf"
         },
         {
-          "id": "2bbf859b6b54",
-          "run_id": "f13e842a26e0",
+          "id": "f8d4eea356d0",
+          "run_id": "7b5a668c9bec",
           "source_path": "./examples/sample_invoices\\2024年1月增值税专用发票_67890.pdf",
           "target_path": "./examples/archived\\vat/special\\2024年1月增值税专用发票_67890.pdf",
           "filename": "2024年1月增值税专用发票_67890.pdf",
           "matched_rule": "增值税专用发票",
           "status": "skipped_manual",
-          "timestamp": "2026-06-16T01:51:19.931194",
+          "timestamp": "2026-06-16T02:12:42.168736",
           "error_message": "文件类型不在筛选范围内: .pdf"
         },
         {
-          "id": "404afb4e4195",
-          "run_id": "f13e842a26e0",
+          "id": "fa8a7e50f899",
+          "run_id": "7b5a668c9bec",
           "source_path": "./examples/sample_invoices\\2024年2月增值税普通发票_ABCDE.pdf",
           "target_path": "./examples/archived\\vat/normal\\2024年2月增值税普通发票_ABCDE.pdf",
           "filename": "2024年2月增值税普通发票_ABCDE.pdf",
           "matched_rule": "增值税普通发票",
           "status": "skipped_manual",
-          "timestamp": "2026-06-16T01:51:19.934330",
+          "timestamp": "2026-06-16T02:12:42.173083",
           "error_message": "文件类型不在筛选范围内: .pdf"
         },
         {
-          "id": "714048ac2082",
-          "run_id": "f13e842a26e0",
+          "id": "25f1ddb5a67e",
+          "run_id": "7b5a668c9bec",
           "source_path": "./examples/sample_invoices\\notes.md",
           "target_path": "./examples/archived\\misc\\notes.md",
           "filename": "notes.md",
           "matched_rule": "Markdown文档",
           "status": "skipped_manual",
-          "timestamp": "2026-06-16T01:51:19.937496",
+          "timestamp": "2026-06-16T02:12:42.177079",
           "error_message": "文件类型不在筛选范围内: .md"
         },
         {
-          "id": "5c743544c889",
-          "run_id": "f13e842a26e0",
+          "id": "2399e7ff3908",
+          "run_id": "7b5a668c9bec",
           "source_path": "./examples/sample_invoices\\出差报销单_202401.xlsx",
           "target_path": "./examples/archived\\reimbursement\\出差报销单_202401.xlsx",
           "filename": "出差报销单_202401.xlsx",
           "matched_rule": "报销单Excel",
           "status": "skipped_manual",
-          "timestamp": "2026-06-16T01:51:19.941193",
+          "timestamp": "2026-06-16T02:12:42.180858",
           "error_message": "文件类型不在筛选范围内: .xlsx"
         },
         {
-          "id": "ba4f0517922d",
-          "run_id": "f13e842a26e0",
+          "id": "be77313ce446",
+          "run_id": "7b5a668c9bec",
           "source_path": "./examples/sample_invoices\\未分类的文档.txt",
           "target_path": "./examples/archived\\misc\\未分类的文档.txt",
           "filename": "未分类的文档.txt",
           "matched_rule": "文本文档",
           "status": "skipped_manual",
-          "timestamp": "2026-06-16T01:51:19.944839",
+          "timestamp": "2026-06-16T02:12:42.184084",
           "error_message": "文件类型不在筛选范围内: .txt"
         },
         {
-          "id": "7e0748b0c02f",
-          "run_id": "f13e842a26e0",
+          "id": "435770d449b4",
+          "run_id": "7b5a668c9bec",
           "source_path": "./examples/sample_invoices\\电子发票_20240115_001.pdf",
           "target_path": "./examples/archived\\electronic\\电子发票_20240115_001.pdf",
           "filename": "电子发票_20240115_001.pdf",
           "matched_rule": "电子发票PDF",
           "status": "skipped_manual",
-          "timestamp": "2026-06-16T01:51:19.949025",
+          "timestamp": "2026-06-16T02:12:42.187648",
           "error_message": "文件类型不在筛选范围内: .pdf"
         },
         {
-          "id": "b32994eb2c86",
-          "run_id": "f13e842a26e0",
+          "id": "4fed59c25f7b",
+          "run_id": "7b5a668c9bec",
           "source_path": "./examples/sample_invoices\\电子发票_20240116_002.pdf",
           "target_path": "./examples/archived\\electronic\\电子发票_20240116_002.pdf",
           "filename": "电子发票_20240116_002.pdf",
           "matched_rule": "电子发票PDF",
           "status": "skipped_manual",
-          "timestamp": "2026-06-16T01:51:19.951241",
+          "timestamp": "2026-06-16T02:12:42.192223",
           "error_message": "文件类型不在筛选范围内: .pdf"
         },
         {
-          "id": "b1b5981c1def",
-          "run_id": "f13e842a26e0",
+          "id": "c5488b0b9afd",
+          "run_id": "7b5a668c9bec",
           "source_path": "./examples/sample_invoices\\采购合同_供应商A.docx",
           "target_path": "./examples/archived\\contracts\\采购合同_供应商A.docx",
           "filename": "采购合同_供应商A.docx",
           "matched_rule": "合同文档",
           "status": "skipped_manual",
-          "timestamp": "2026-06-16T01:51:19.954323",
+          "timestamp": "2026-06-16T02:12:42.195454",
           "error_message": "文件类型不在筛选范围内: .docx"
         },
         {
-          "id": "224c8df6b172",
-          "run_id": "f13e842a26e0",
+          "id": "0ddef7c51d2a",
+          "run_id": "7b5a668c9bec",
           "source_path": "./examples/sample_invoices\\发票扫描件_出租车发票.png",
           "target_path": "./examples/archived\\images\\发票扫描件_出租车发票.png",
           "filename": "发票扫描件_出租车发票.png",
           "matched_rule": "发票图片PNG",
           "status": "moved",
-          "timestamp": "2026-06-16T01:51:19.958505",
+          "timestamp": "2026-06-16T02:12:42.199161",
           "error_message": null
         },
         {
-          "id": "c4c45213c656",
-          "run_id": "f13e842a26e0",
+          "id": "dd59b00d31d9",
+          "run_id": "7b5a668c9bec",
           "source_path": "./examples/sample_invoices\\发票照片_餐厅发票.jpg",
           "target_path": "./examples/archived\\images\\发票照片_餐厅发票.jpg",
           "filename": "发票照片_餐厅发票.jpg",
           "matched_rule": "发票图片",
           "status": "moved",
-          "timestamp": "2026-06-16T01:51:19.962083",
+          "timestamp": "2026-06-16T02:12:42.207460",
           "error_message": null
         }
       ],
       "is_undone": true
     },
-    "e75f77a27566": {
-      "id": "e75f77a27566",
-      "plan_id": "1e59437cbd6b",
-      "created_at": "2026-06-16T01:51:20.766658",
+    "6a97907d35a6": {
+      "id": "6a97907d35a6",
+      "plan_id": "115afc50492f",
+      "created_at": "2026-06-16T02:12:43.135407",
       "dry_run": false,
-      "completed_at": "2026-06-16T01:51:20.811893",
+      "completed_at": "2026-06-16T02:12:43.182177",
       "moves": [
         {
-          "id": "a0998ad8d97b",
-          "run_id": "e75f77a27566",
+          "id": "46f5616960e2",
+          "run_id": "6a97907d35a6",
           "source_path": "./examples/sample_invoices\\notes.md",
           "target_path": "./examples/archived\\misc\\notes.md",
           "filename": "notes.md",
           "matched_rule": "Markdown文档",
           "status": "skipped_manual",
-          "timestamp": "2026-06-16T01:51:20.770657",
+          "timestamp": "2026-06-16T02:12:43.139632",
           "error_message": "目标目录不在筛选范围内: ./examples/archived\\misc"
         },
         {
-          "id": "0ac5a4cdd0a5",
-          "run_id": "e75f77a27566",
+          "id": "4201cc553dfa",
+          "run_id": "6a97907d35a6",
           "source_path": "./examples/sample_invoices\\出差报销单_202401.xlsx",
           "target_path": "./examples/archived\\reimbursement\\出差报销单_202401.xlsx",
           "filename": "出差报销单_202401.xlsx",
           "matched_rule": "报销单Excel",
           "status": "skipped_manual",
-          "timestamp": "2026-06-16T01:51:20.774362",
+          "timestamp": "2026-06-16T02:12:43.141991",
           "error_message": "目标目录不在筛选范围内: ./examples/archived\\reimbursement"
         },
         {
-          "id": "e0aeb2b7708c",
-          "run_id": "e75f77a27566",
+          "id": "a60de7caf298",
+          "run_id": "6a97907d35a6",
           "source_path": "./examples/sample_invoices\\发票扫描件_出租车发票.png",
           "target_path": "./examples/archived\\images\\发票扫描件_出租车发票.png",
           "filename": "发票扫描件_出租车发票.png",
           "matched_rule": "发票图片PNG",
           "status": "skipped_manual",
-          "timestamp": "2026-06-16T01:51:20.777146",
+          "timestamp": "2026-06-16T02:12:43.147240",
           "error_message": "目标目录不在筛选范围内: ./examples/archived\\images"
         },
         {
-          "id": "12a71b499e8a",
-          "run_id": "e75f77a27566",
+          "id": "22628b6c1ae8",
+          "run_id": "6a97907d35a6",
           "source_path": "./examples/sample_invoices\\发票照片_餐厅发票.jpg",
           "target_path": "./examples/archived\\images\\发票照片_餐厅发票.jpg",
           "filename": "发票照片_餐厅发票.jpg",
           "matched_rule": "发票图片",
           "status": "skipped_manual",
-          "timestamp": "2026-06-16T01:51:20.780156",
+          "timestamp": "2026-06-16T02:12:43.150407",
           "error_message": "目标目录不在筛选范围内: ./examples/archived\\images"
         },
         {
-          "id": "899bd4009a07",
-          "run_id": "e75f77a27566",
+          "id": "4d2cb4560330",
+          "run_id": "6a97907d35a6",
           "source_path": "./examples/sample_invoices\\未分类的文档.txt",
           "target_path": "./examples/archived\\misc\\未分类的文档.txt",
           "filename": "未分类的文档.txt",
           "matched_rule": "文本文档",
           "status": "skipped_manual",
-          "timestamp": "2026-06-16T01:51:20.784203",
+          "timestamp": "2026-06-16T02:12:43.153440",
           "error_message": "目标目录不在筛选范围内: ./examples/archived\\misc"
         },
         {
-          "id": "c17ae0245240",
-          "run_id": "e75f77a27566",
+          "id": "63fe14c6cd0b",
+          "run_id": "6a97907d35a6",
           "source_path": "./examples/sample_invoices\\电子发票_20240115_001.pdf",
           "target_path": "./examples/archived\\electronic\\电子发票_20240115_001.pdf",
           "filename": "电子发票_20240115_001.pdf",
           "matched_rule": "电子发票PDF",
           "status": "skipped_manual",
-          "timestamp": "2026-06-16T01:51:20.787794",
+          "timestamp": "2026-06-16T02:12:43.157084",
           "error_message": "目标目录不在筛选范围内: ./examples/archived\\electronic"
         },
         {
-          "id": "f60bf79d6b64",
-          "run_id": "e75f77a27566",
+          "id": "c6f8d69ea62d",
+          "run_id": "6a97907d35a6",
           "source_path": "./examples/sample_invoices\\电子发票_20240116_002.pdf",
           "target_path": "./examples/archived\\electronic\\电子发票_20240116_002.pdf",
           "filename": "电子发票_20240116_002.pdf",
           "matched_rule": "电子发票PDF",
           "status": "skipped_manual",
-          "timestamp": "2026-06-16T01:51:20.790493",
+          "timestamp": "2026-06-16T02:12:43.161140",
           "error_message": "目标目录不在筛选范围内: ./examples/archived\\electronic"
         },
         {
-          "id": "d216f3aa4c1a",
-          "run_id": "e75f77a27566",
+          "id": "1c7cc94f53c4",
+          "run_id": "6a97907d35a6",
           "source_path": "./examples/sample_invoices\\采购合同_供应商A.docx",
           "target_path": "./examples/archived\\contracts\\采购合同_供应商A.docx",
           "filename": "采购合同_供应商A.docx",
           "matched_rule": "合同文档",
           "status": "skipped_manual",
-          "timestamp": "2026-06-16T01:51:20.794543",
+          "timestamp": "2026-06-16T02:12:43.164167",
           "error_message": "目标目录不在筛选范围内: ./examples/archived\\contracts"
         },
         {
-          "id": "efe6fb773b0e",
-          "run_id": "e75f77a27566",
+          "id": "97d500114c3f",
+          "run_id": "6a97907d35a6",
           "source_path": "./examples/sample_invoices\\2024年1月增值税专用发票_12345.pdf",
           "target_path": "./examples/archived\\vat/special\\2024年1月增值税专用发票_12345.pdf",
           "filename": "2024年1月增值税专用发票_12345.pdf",
           "matched_rule": "增值税专用发票",
           "status": "moved",
-          "timestamp": "2026-06-16T01:51:20.799595",
+          "timestamp": "2026-06-16T02:12:43.169231",
           "error_message": null
         },
         {
-          "id": "e1aab5d0e829",
-          "run_id": "e75f77a27566",
+          "id": "2e75b66f5a92",
+          "run_id": "6a97907d35a6",
           "source_path": "./examples/sample_invoices\\2024年1月增值税专用发票_67890.pdf",
           "target_path": "./examples/archived\\vat/special\\2024年1月增值税专用发票_67890.pdf",
           "filename": "2024年1月增值税专用发票_67890.pdf",
           "matched_rule": "增值税专用发票",
           "status": "moved",
-          "timestamp": "2026-06-16T01:51:20.804085",
+          "timestamp": "2026-06-16T02:12:43.173850",
           "error_message": null
         },
         {
-          "id": "a9adc055b245",
-          "run_id": "e75f77a27566",
+          "id": "1462be3cc8b4",
+          "run_id": "6a97907d35a6",
           "source_path": "./examples/sample_invoices\\2024年2月增值税普通发票_ABCDE.pdf",
           "target_path": "./examples/archived\\vat/normal\\2024年2月增值税普通发票_ABCDE.pdf",
           "filename": "2024年2月增值税普通发票_ABCDE.pdf",
           "matched_rule": "增值税普通发票",
           "status": "moved",
-          "timestamp": "2026-06-16T01:51:20.808883",
+          "timestamp": "2026-06-16T02:12:43.178991",
           "error_message": null
         }
       ],
       "is_undone": true
     },
-    "6ef547c81171": {
-      "id": "6ef547c81171",
-      "plan_id": "1e59437cbd6b",
-      "created_at": "2026-06-16T01:51:21.595544",
+    "d7b982d99941": {
+      "id": "d7b982d99941",
+      "plan_id": "115afc50492f",
+      "created_at": "2026-06-16T02:12:43.947738",
       "dry_run": false,
-      "completed_at": "2026-06-16T01:51:21.649915",
+      "completed_at": "2026-06-16T02:12:44.008053",
       "moves": [
         {
-          "id": "a729f4defc76",
-          "run_id": "6ef547c81171",
+          "id": "ce48f448f844",
+          "run_id": "d7b982d99941",
           "source_path": "./examples/sample_invoices\\2024年1月增值税专用发票_12345.pdf",
           "target_path": "./examples/archived\\vat/special\\2024年1月增值税专用发票_12345.pdf",
           "filename": "2024年1月增值税专用发票_12345.pdf",
           "matched_rule": "增值税专用发票",
           "status": "skipped_manual",
-          "timestamp": "2026-06-16T01:51:21.599252",
+          "timestamp": "2026-06-16T02:12:43.950857",
           "error_message": "规则不在筛选范围内: 增值税专用发票"
         },
         {
-          "id": "7b1b32ff12bf",
-          "run_id": "6ef547c81171",
+          "id": "fa006c7adb68",
+          "run_id": "d7b982d99941",
           "source_path": "./examples/sample_invoices\\2024年1月增值税专用发票_67890.pdf",
           "target_path": "./examples/archived\\vat/special\\2024年1月增值税专用发票_67890.pdf",
           "filename": "2024年1月增值税专用发票_67890.pdf",
           "matched_rule": "增值税专用发票",
           "status": "skipped_manual",
-          "timestamp": "2026-06-16T01:51:21.605558",
+          "timestamp": "2026-06-16T02:12:43.956010",
           "error_message": "规则不在筛选范围内: 增值税专用发票"
         },
         {
-          "id": "57b5e59f12a6",
-          "run_id": "6ef547c81171",
+          "id": "0c9079a81f74",
+          "run_id": "d7b982d99941",
           "source_path": "./examples/sample_invoices\\2024年2月增值税普通发票_ABCDE.pdf",
           "target_path": "./examples/archived\\vat/normal\\2024年2月增值税普通发票_ABCDE.pdf",
           "filename": "2024年2月增值税普通发票_ABCDE.pdf",
           "matched_rule": "增值税普通发票",
           "status": "skipped_manual",
-          "timestamp": "2026-06-16T01:51:21.609755",
+          "timestamp": "2026-06-16T02:12:43.960087",
           "error_message": "规则不在筛选范围内: 增值税普通发票"
         },
         {
-          "id": "c01d425666ff",
-          "run_id": "6ef547c81171",
+          "id": "53c72209f0e9",
+          "run_id": "d7b982d99941",
           "source_path": "./examples/sample_invoices\\notes.md",
           "target_path": "./examples/archived\\misc\\notes.md",
           "filename": "notes.md",
           "matched_rule": "Markdown文档",
           "status": "skipped_manual",
-          "timestamp": "2026-06-16T01:51:21.613465",
+          "timestamp": "2026-06-16T02:12:43.964263",
           "error_message": "规则不在筛选范围内: Markdown文档"
         },
         {
-          "id": "df251eba965b",
-          "run_id": "6ef547c81171",
+          "id": "65e27f7acdcb",
+          "run_id": "d7b982d99941",
           "source_path": "./examples/sample_invoices\\出差报销单_202401.xlsx",
           "target_path": "./examples/archived\\reimbursement\\出差报销单_202401.xlsx",
           "filename": "出差报销单_202401.xlsx",
           "matched_rule": "报销单Excel",
           "status": "skipped_manual",
-          "timestamp": "2026-06-16T01:51:21.619136",
+          "timestamp": "2026-06-16T02:12:43.968476",
           "error_message": "规则不在筛选范围内: 报销单Excel"
         },
         {
-          "id": "b3b714b1f995",
-          "run_id": "6ef547c81171",
+          "id": "148d25ab163c",
+          "run_id": "d7b982d99941",
           "source_path": "./examples/sample_invoices\\发票扫描件_出租车发票.png",
           "target_path": "./examples/archived\\images\\发票扫描件_出租车发票.png",
           "filename": "发票扫描件_出租车发票.png",
           "matched_rule": "发票图片PNG",
           "status": "skipped_manual",
-          "timestamp": "2026-06-16T01:51:21.622734",
+          "timestamp": "2026-06-16T02:12:43.973193",
           "error_message": "规则不在筛选范围内: 发票图片PNG"
         },
         {
-          "id": "e654f6865ee0",
-          "run_id": "6ef547c81171",
+          "id": "e1b356121e4e",
+          "run_id": "d7b982d99941",
           "source_path": "./examples/sample_invoices\\发票照片_餐厅发票.jpg",
           "target_path": "./examples/archived\\images\\发票照片_餐厅发票.jpg",
           "filename": "发票照片_餐厅发票.jpg",
           "matched_rule": "发票图片",
           "status": "skipped_manual",
-          "timestamp": "2026-06-16T01:51:21.625766",
+          "timestamp": "2026-06-16T02:12:43.980288",
           "error_message": "规则不在筛选范围内: 发票图片"
         },
         {
-          "id": "9ba2cff0aa46",
-          "run_id": "6ef547c81171",
+          "id": "878448edc64b",
+          "run_id": "d7b982d99941",
           "source_path": "./examples/sample_invoices\\未分类的文档.txt",
           "target_path": "./examples/archived\\misc\\未分类的文档.txt",
           "filename": "未分类的文档.txt",
           "matched_rule": "文本文档",
           "status": "skipped_manual",
-          "timestamp": "2026-06-16T01:51:21.631175",
+          "timestamp": "2026-06-16T02:12:43.983987",
           "error_message": "规则不在筛选范围内: 文本文档"
         },
         {
-          "id": "f971360214d7",
-          "run_id": "6ef547c81171",
+          "id": "19339bd4f752",
+          "run_id": "d7b982d99941",
           "source_path": "./examples/sample_invoices\\采购合同_供应商A.docx",
           "target_path": "./examples/archived\\contracts\\采购合同_供应商A.docx",
           "filename": "采购合同_供应商A.docx",
           "matched_rule": "合同文档",
           "status": "skipped_manual",
-          "timestamp": "2026-06-16T01:51:21.635441",
+          "timestamp": "2026-06-16T02:12:43.990468",
           "error_message": "规则不在筛选范围内: 合同文档"
         },
         {
-          "id": "ee51ab695540",
-          "run_id": "6ef547c81171",
+          "id": "12a445de4287",
+          "run_id": "d7b982d99941",
           "source_path": "./examples/sample_invoices\\电子发票_20240115_001.pdf",
           "target_path": "./examples/archived\\electronic\\电子发票_20240115_001.pdf",
           "filename": "电子发票_20240115_001.pdf",
           "matched_rule": "电子发票PDF",
           "status": "moved",
-          "timestamp": "2026-06-16T01:51:21.640909",
+          "timestamp": "2026-06-16T02:12:43.996602",
           "error_message": null
         },
         {
-          "id": "a8e38e7a3eac",
-          "run_id": "6ef547c81171",
+          "id": "d32291cc9cd3",
+          "run_id": "d7b982d99941",
           "source_path": "./examples/sample_invoices\\电子发票_20240116_002.pdf",
           "target_path": "./examples/archived\\electronic\\电子发票_20240116_002.pdf",
           "filename": "电子发票_20240116_002.pdf",
           "matched_rule": "电子发票PDF",
           "status": "moved",
-          "timestamp": "2026-06-16T01:51:21.646384",
+          "timestamp": "2026-06-16T02:12:44.000787",
           "error_message": null
         }
       ],
@@ -1009,35 +1009,35 @@
   },
   "undo_records": [
     {
-      "run_id": "96608e592130",
-      "undo_timestamp": "2026-06-16T01:51:15.188751",
+      "run_id": "b680c8234dbc",
+      "undo_timestamp": "2026-06-16T02:12:37.517581",
       "moves_restored": 8,
       "status": "completed"
     },
     {
-      "run_id": "3ee70157403c",
-      "undo_timestamp": "2026-06-16T01:51:18.255592",
+      "run_id": "af095583d631",
+      "undo_timestamp": "2026-06-16T02:12:40.353168",
       "moves_restored": 3,
       "status": "completed"
     },
     {
-      "run_id": "f13e842a26e0",
-      "undo_timestamp": "2026-06-16T01:51:20.389018",
+      "run_id": "7b5a668c9bec",
+      "undo_timestamp": "2026-06-16T02:12:42.685284",
       "moves_restored": 2,
       "status": "completed"
     },
     {
-      "run_id": "e75f77a27566",
-      "undo_timestamp": "2026-06-16T01:51:21.219026",
+      "run_id": "6a97907d35a6",
+      "undo_timestamp": "2026-06-16T02:12:43.595005",
       "moves_restored": 3,
       "status": "completed"
     }
   ],
   "snapshots": {
-    "2b2ee2efa56a": {
-      "snapshot_id": "2b2ee2efa56a",
-      "created_at": "2026-06-16T01:51:12.051449",
-      "plan_id": "89d9d679603e",
+    "f5e9f2358954": {
+      "snapshot_id": "f5e9f2358954",
+      "created_at": "2026-06-16T02:12:33.861826",
+      "plan_id": "e9aa422370df",
       "config_snapshot": {
         "source_dir": "./examples/sample_invoices",
         "dest_dir": "./examples/archived",
@@ -1099,81 +1099,81 @@
       },
       "scanned_files": [
         {
-          "id": "026617df1349",
+          "id": "e6bebf778004",
           "source_path": "./examples/sample_invoices\\2024年1月增值税专用发票_12345.pdf",
           "filename": "2024年1月增值税专用发票_12345.pdf",
           "size": 66,
-          "mtime": 1781545871.1832037,
+          "mtime": 1781547152.9005425,
           "matched_rule": "增值税专用发票"
         },
         {
-          "id": "9b5b5612340f",
+          "id": "5f3432258344",
           "source_path": "./examples/sample_invoices\\2024年1月增值税专用发票_67890.pdf",
           "filename": "2024年1月增值税专用发票_67890.pdf",
           "size": 66,
-          "mtime": 1781545871.1842906,
+          "mtime": 1781547152.9005425,
           "matched_rule": "增值税专用发票"
         },
         {
-          "id": "5c6fcea2084d",
+          "id": "d346089307ef",
           "source_path": "./examples/sample_invoices\\2024年2月增值税普通发票_ABCDE.pdf",
           "filename": "2024年2月增值税普通发票_ABCDE.pdf",
           "size": 66,
-          "mtime": 1781545871.1842906,
+          "mtime": 1781547152.9005425,
           "matched_rule": "增值税普通发票"
         },
         {
-          "id": "4e72923a2224",
+          "id": "3f4d0d045f6a",
           "source_path": "./examples/sample_invoices\\出差报销单_202401.xlsx",
           "filename": "出差报销单_202401.xlsx",
           "size": 51,
-          "mtime": 1781545871.185343,
+          "mtime": 1781547152.902591,
           "matched_rule": "报销单Excel"
         },
         {
-          "id": "bbf54886c140",
+          "id": "469bb9b25a14",
           "source_path": "./examples/sample_invoices\\发票扫描件_出租车发票.png",
           "filename": "发票扫描件_出租车发票.png",
           "size": 59,
-          "mtime": 1781545871.186355,
+          "mtime": 1781547152.9036088,
           "matched_rule": "发票图片PNG"
         },
         {
-          "id": "402079c32db1",
+          "id": "d84fd4ffcfb5",
           "source_path": "./examples/sample_invoices\\发票照片_餐厅发票.jpg",
           "filename": "发票照片_餐厅发票.jpg",
           "size": 53,
-          "mtime": 1781545871.186355,
+          "mtime": 1781547152.9036088,
           "matched_rule": "发票图片JPG"
         },
         {
-          "id": "5608204b7820",
+          "id": "070b8196ce00",
           "source_path": "./examples/sample_invoices\\电子发票_20240115_001.pdf",
           "filename": "电子发票_20240115_001.pdf",
           "size": 53,
-          "mtime": 1781545871.1842906,
+          "mtime": 1781547152.901575,
           "matched_rule": "电子发票PDF"
         },
         {
-          "id": "4b2de1420b05",
+          "id": "16c2d1f33019",
           "source_path": "./examples/sample_invoices\\电子发票_20240116_002.pdf",
           "filename": "电子发票_20240116_002.pdf",
           "size": 53,
-          "mtime": 1781545871.185343,
+          "mtime": 1781547152.901575,
           "matched_rule": "电子发票PDF"
         },
         {
-          "id": "f1e203d4a6ce",
+          "id": "9744227d548f",
           "source_path": "./examples/sample_invoices\\采购合同_供应商A.docx",
           "filename": "采购合同_供应商A.docx",
           "size": 52,
-          "mtime": 1781545871.186355,
+          "mtime": 1781547152.902591,
           "matched_rule": "合同文档"
         }
       ],
       "moves": [
         {
-          "id": "ca2437cd985f",
+          "id": "1bb6d71b7cfa",
           "source_path": "./examples/sample_invoices\\2024年1月增值税专用发票_12345.pdf",
           "target_path": "./examples/archived\\vat_special\\2024年1月增值税专用发票_12345.pdf",
           "filename": "2024年1月增值税专用发票_12345.pdf",
@@ -1182,7 +1182,7 @@
           "conflict_detail": "目标文件已存在: ./examples/archived\\vat_special\\2024年1月增值税专用发票_12345.pdf"
         },
         {
-          "id": "b7c7136d980b",
+          "id": "453ed48e9ef7",
           "source_path": "./examples/sample_invoices\\2024年1月增值税专用发票_67890.pdf",
           "target_path": "./examples/archived\\vat_special\\2024年1月增值税专用发票_67890.pdf",
           "filename": "2024年1月增值税专用发票_67890.pdf",
@@ -1191,7 +1191,7 @@
           "conflict_detail": null
         },
         {
-          "id": "2b42f808f1af",
+          "id": "a9f2dbed92fc",
           "source_path": "./examples/sample_invoices\\2024年2月增值税普通发票_ABCDE.pdf",
           "target_path": "./examples/archived\\vat_normal\\2024年2月增值税普通发票_ABCDE.pdf",
           "filename": "2024年2月增值税普通发票_ABCDE.pdf",
@@ -1200,7 +1200,7 @@
           "conflict_detail": null
         },
         {
-          "id": "33a84daabcb5",
+          "id": "effdb1823f01",
           "source_path": "./examples/sample_invoices\\出差报销单_202401.xlsx",
           "target_path": "./examples/archived\\reimbursement\\出差报销单_202401.xlsx",
           "filename": "出差报销单_202401.xlsx",
@@ -1209,7 +1209,7 @@
           "conflict_detail": null
         },
         {
-          "id": "ced31f5eb8f4",
+          "id": "f5c3eda3dce3",
           "source_path": "./examples/sample_invoices\\发票扫描件_出租车发票.png",
           "target_path": "./examples/archived\\images/png\\发票扫描件_出租车发票.png",
           "filename": "发票扫描件_出租车发票.png",
@@ -1218,7 +1218,7 @@
           "conflict_detail": null
         },
         {
-          "id": "6f3e6b0e94a7",
+          "id": "e741095a5a26",
           "source_path": "./examples/sample_invoices\\发票照片_餐厅发票.jpg",
           "target_path": "./examples/archived\\images/jpg\\发票照片_餐厅发票.jpg",
           "filename": "发票照片_餐厅发票.jpg",
@@ -1227,7 +1227,7 @@
           "conflict_detail": null
         },
         {
-          "id": "228883227161",
+          "id": "ffa0211d5104",
           "source_path": "./examples/sample_invoices\\电子发票_20240115_001.pdf",
           "target_path": "./examples/archived\\electronic\\电子发票_20240115_001.pdf",
           "filename": "电子发票_20240115_001.pdf",
@@ -1236,7 +1236,7 @@
           "conflict_detail": null
         },
         {
-          "id": "f4b9a1901989",
+          "id": "04cf3fa96c08",
           "source_path": "./examples/sample_invoices\\电子发票_20240116_002.pdf",
           "target_path": "./examples/archived\\electronic\\电子发票_20240116_002.pdf",
           "filename": "电子发票_20240116_002.pdf",
@@ -1245,7 +1245,7 @@
           "conflict_detail": null
         },
         {
-          "id": "0ad7d27b2e3a",
+          "id": "14d26d7ae51c",
           "source_path": "./examples/sample_invoices\\采购合同_供应商A.docx",
           "target_path": "./examples/archived\\contracts\\采购合同_供应商A.docx",
           "filename": "采购合同_供应商A.docx",
@@ -1339,10 +1339,10 @@
       "imported": false,
       "import_source": null
     },
-    "030fbe9478dd": {
-      "snapshot_id": "030fbe9478dd",
-      "created_at": "2026-06-16T01:51:19.033848",
-      "plan_id": "1e59437cbd6b",
+    "f48fe8d42f42": {
+      "snapshot_id": "f48fe8d42f42",
+      "created_at": "2026-06-16T02:12:41.220137",
+      "plan_id": "115afc50492f",
       "config_snapshot": {
         "source_dir": "./examples/sample_invoices",
         "dest_dir": "./examples/archived",
@@ -1418,97 +1418,97 @@
       },
       "scanned_files": [
         {
-          "id": "ae1940b1094b",
+          "id": "2deeab034820",
           "source_path": "./examples/sample_invoices\\2024年1月增值税专用发票_12345.pdf",
           "filename": "2024年1月增值税专用发票_12345.pdf",
           "size": 66,
-          "mtime": 1781545871.1832037,
+          "mtime": 1781547152.9005425,
           "matched_rule": "增值税专用发票"
         },
         {
-          "id": "b05feadedefb",
+          "id": "9e41d85617d6",
           "source_path": "./examples/sample_invoices\\2024年1月增值税专用发票_67890.pdf",
           "filename": "2024年1月增值税专用发票_67890.pdf",
           "size": 66,
-          "mtime": 1781545871.1842906,
+          "mtime": 1781547152.9005425,
           "matched_rule": "增值税专用发票"
         },
         {
-          "id": "3f4dc860416c",
+          "id": "4966092195a3",
           "source_path": "./examples/sample_invoices\\2024年2月增值税普通发票_ABCDE.pdf",
           "filename": "2024年2月增值税普通发票_ABCDE.pdf",
           "size": 66,
-          "mtime": 1781545871.1842906,
+          "mtime": 1781547152.9005425,
           "matched_rule": "增值税普通发票"
         },
         {
-          "id": "10647e50d82d",
+          "id": "f1f162a1d482",
           "source_path": "./examples/sample_invoices\\notes.md",
           "filename": "notes.md",
           "size": 32,
-          "mtime": 1781545871.187371,
+          "mtime": 1781547152.9046264,
           "matched_rule": "Markdown文档"
         },
         {
-          "id": "c1e077feb4a3",
+          "id": "104c7c5216fa",
           "source_path": "./examples/sample_invoices\\出差报销单_202401.xlsx",
           "filename": "出差报销单_202401.xlsx",
           "size": 51,
-          "mtime": 1781545871.185343,
+          "mtime": 1781547152.902591,
           "matched_rule": "报销单Excel"
         },
         {
-          "id": "a9d8a09bbbcd",
+          "id": "50d82872e2b2",
           "source_path": "./examples/sample_invoices\\发票扫描件_出租车发票.png",
           "filename": "发票扫描件_出租车发票.png",
           "size": 59,
-          "mtime": 1781545871.186355,
+          "mtime": 1781547152.9036088,
           "matched_rule": "发票图片PNG"
         },
         {
-          "id": "de21f88e1df2",
+          "id": "742d471dad2c",
           "source_path": "./examples/sample_invoices\\发票照片_餐厅发票.jpg",
           "filename": "发票照片_餐厅发票.jpg",
           "size": 53,
-          "mtime": 1781545871.186355,
+          "mtime": 1781547152.9036088,
           "matched_rule": "发票图片"
         },
         {
-          "id": "889125eee83c",
+          "id": "6fb356b0ab91",
           "source_path": "./examples/sample_invoices\\未分类的文档.txt",
           "filename": "未分类的文档.txt",
           "size": 46,
-          "mtime": 1781545871.187371,
+          "mtime": 1781547152.9036088,
           "matched_rule": "文本文档"
         },
         {
-          "id": "701e86f0e4ec",
+          "id": "cf6db5a032b0",
           "source_path": "./examples/sample_invoices\\电子发票_20240115_001.pdf",
           "filename": "电子发票_20240115_001.pdf",
           "size": 53,
-          "mtime": 1781545871.1842906,
+          "mtime": 1781547152.901575,
           "matched_rule": "电子发票PDF"
         },
         {
-          "id": "b2bd2616865b",
+          "id": "1ac696bbff47",
           "source_path": "./examples/sample_invoices\\电子发票_20240116_002.pdf",
           "filename": "电子发票_20240116_002.pdf",
           "size": 53,
-          "mtime": 1781545871.185343,
+          "mtime": 1781547152.901575,
           "matched_rule": "电子发票PDF"
         },
         {
-          "id": "627a00cacaef",
+          "id": "dcfdb4bf036a",
           "source_path": "./examples/sample_invoices\\采购合同_供应商A.docx",
           "filename": "采购合同_供应商A.docx",
           "size": 52,
-          "mtime": 1781545871.186355,
+          "mtime": 1781547152.902591,
           "matched_rule": "合同文档"
         }
       ],
       "moves": [
         {
-          "id": "ecad2cc77f59",
+          "id": "8d3b7991653e",
           "source_path": "./examples/sample_invoices\\2024年1月增值税专用发票_12345.pdf",
           "target_path": "./examples/archived\\vat/special\\2024年1月增值税专用发票_12345.pdf",
           "filename": "2024年1月增值税专用发票_12345.pdf",
@@ -1517,7 +1517,7 @@
           "conflict_detail": null
         },
         {
-          "id": "5689194b8124",
+          "id": "e6d7b4302257",
           "source_path": "./examples/sample_invoices\\2024年1月增值税专用发票_67890.pdf",
           "target_path": "./examples/archived\\vat/special\\2024年1月增值税专用发票_67890.pdf",
           "filename": "2024年1月增值税专用发票_67890.pdf",
@@ -1526,7 +1526,7 @@
           "conflict_detail": null
         },
         {
-          "id": "13280883a108",
+          "id": "59b9ed7d168d",
           "source_path": "./examples/sample_invoices\\2024年2月增值税普通发票_ABCDE.pdf",
           "target_path": "./examples/archived\\vat/normal\\2024年2月增值税普通发票_ABCDE.pdf",
           "filename": "2024年2月增值税普通发票_ABCDE.pdf",
@@ -1535,7 +1535,7 @@
           "conflict_detail": null
         },
         {
-          "id": "ca0c3b9de2af",
+          "id": "5b9280f077c0",
           "source_path": "./examples/sample_invoices\\notes.md",
           "target_path": "./examples/archived\\misc\\notes.md",
           "filename": "notes.md",
@@ -1544,7 +1544,7 @@
           "conflict_detail": null
         },
         {
-          "id": "ba1083075830",
+          "id": "246485c73120",
           "source_path": "./examples/sample_invoices\\出差报销单_202401.xlsx",
           "target_path": "./examples/archived\\reimbursement\\出差报销单_202401.xlsx",
           "filename": "出差报销单_202401.xlsx",
@@ -1553,7 +1553,7 @@
           "conflict_detail": null
         },
         {
-          "id": "f854563fff32",
+          "id": "5f36d997893e",
           "source_path": "./examples/sample_invoices\\发票扫描件_出租车发票.png",
           "target_path": "./examples/archived\\images\\发票扫描件_出租车发票.png",
           "filename": "发票扫描件_出租车发票.png",
@@ -1562,7 +1562,7 @@
           "conflict_detail": null
         },
         {
-          "id": "cc2514b62baa",
+          "id": "e360714bc0ce",
           "source_path": "./examples/sample_invoices\\发票照片_餐厅发票.jpg",
           "target_path": "./examples/archived\\images\\发票照片_餐厅发票.jpg",
           "filename": "发票照片_餐厅发票.jpg",
@@ -1571,7 +1571,7 @@
           "conflict_detail": null
         },
         {
-          "id": "0c82e4783fdd",
+          "id": "f6ddf41782fe",
           "source_path": "./examples/sample_invoices\\未分类的文档.txt",
           "target_path": "./examples/archived\\misc\\未分类的文档.txt",
           "filename": "未分类的文档.txt",
@@ -1580,7 +1580,7 @@
           "conflict_detail": null
         },
         {
-          "id": "f6c92e7d009e",
+          "id": "a6a485882366",
           "source_path": "./examples/sample_invoices\\电子发票_20240115_001.pdf",
           "target_path": "./examples/archived\\electronic\\电子发票_20240115_001.pdf",
           "filename": "电子发票_20240115_001.pdf",
@@ -1589,7 +1589,7 @@
           "conflict_detail": null
         },
         {
-          "id": "33d3208e1c68",
+          "id": "4db0ee017f5f",
           "source_path": "./examples/sample_invoices\\电子发票_20240116_002.pdf",
           "target_path": "./examples/archived\\electronic\\电子发票_20240116_002.pdf",
           "filename": "电子发票_20240116_002.pdf",
@@ -1598,7 +1598,7 @@
           "conflict_detail": null
         },
         {
-          "id": "be79d3cf45bf",
+          "id": "75d75fdf54a4",
           "source_path": "./examples/sample_invoices\\采购合同_供应商A.docx",
           "target_path": "./examples/archived\\contracts\\采购合同_供应商A.docx",
           "filename": "采购合同_供应商A.docx",
@@ -1679,8 +1679,9 @@
       "import_source": null
     }
   },
-  "last_scan": "2026-06-16T01:51:18.651075",
-  "last_plan": "1e59437cbd6b",
-  "last_snapshot": "030fbe9478dd",
-  "created_at": "2026-06-16T01:51:11.591304"
+  "import_logs": [],
+  "last_scan": "2026-06-16T02:12:40.786786",
+  "last_plan": "115afc50492f",
+  "last_snapshot": "f48fe8d42f42",
+  "created_at": "2026-06-16T02:12:33.416438"
 }

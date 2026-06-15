@@ -1,29 +1,29 @@
 {
   "scanned_files": [
     {
-      "id": "2f45bf3cb1a3",
+      "id": "454d0f34fd2f",
       "source_path": "./examples/sample_invoices\\电子发票_20240115_001.pdf",
       "filename": "电子发票_20240115_001.pdf",
-      "size": 46,
-      "mtime": 1781545831.0729976,
+      "size": 45,
+      "mtime": 1781547117.427067,
       "matched_rule": "电子发票PDF"
     },
     {
-      "id": "74546fb25e58",
+      "id": "930c6d18d5c1",
       "source_path": "./examples/sample_invoices\\电子发票_20240116_002.pdf",
       "filename": "电子发票_20240116_002.pdf",
       "size": 46,
-      "mtime": 1781545868.4797142,
+      "mtime": 1781547150.0714686,
       "matched_rule": "电子发票PDF"
     }
   ],
   "plans": {
-    "f14e1a9b0451": {
-      "id": "f14e1a9b0451",
-      "created_at": "2026-06-16T01:51:09.122510",
+    "ac2394f47453": {
+      "id": "ac2394f47453",
+      "created_at": "2026-06-16T02:12:30.696809",
       "moves": [
         {
-          "id": "eabdfd5884b7",
+          "id": "d912730b5b53",
           "source_path": "./examples/sample_invoices\\电子发票_20240115_001.pdf",
           "target_path": "./examples/archived\\electronic\\电子发票_20240115_001.pdf",
           "filename": "电子发票_20240115_001.pdf",
@@ -32,7 +32,7 @@
           "conflict_detail": null
         },
         {
-          "id": "66aa72afaae2",
+          "id": "e9164032c9b5",
           "source_path": "./examples/sample_invoices\\电子发票_20240116_002.pdf",
           "target_path": "./examples/archived\\electronic\\电子发票_20240116_002.pdf",
           "filename": "电子发票_20240116_002.pdf",
@@ -45,33 +45,33 @@
     }
   },
   "runs": {
-    "1425db5cbdea": {
-      "id": "1425db5cbdea",
-      "plan_id": "f14e1a9b0451",
-      "created_at": "2026-06-16T01:51:09.448420",
+    "11fe193a72b0": {
+      "id": "11fe193a72b0",
+      "plan_id": "ac2394f47453",
+      "created_at": "2026-06-16T02:12:31.048669",
       "dry_run": false,
-      "completed_at": "2026-06-16T01:51:09.452459",
+      "completed_at": "2026-06-16T02:12:31.053706",
       "moves": [
         {
-          "id": "0d189eae56c7",
-          "run_id": "1425db5cbdea",
+          "id": "f0436e839ceb",
+          "run_id": "11fe193a72b0",
           "source_path": "./examples/sample_invoices\\电子发票_20240115_001.pdf",
           "target_path": "./examples/archived\\electronic\\电子发票_20240115_001.pdf",
           "filename": "电子发票_20240115_001.pdf",
           "matched_rule": "电子发票PDF",
           "status": "skipped_conflict",
-          "timestamp": "2026-06-16T01:51:09.450428",
+          "timestamp": "2026-06-16T02:12:31.050733",
           "error_message": "执行时目标已存在: ./examples/archived\\electronic\\电子发票_20240115_001.pdf"
         },
         {
-          "id": "71e51910dffa",
-          "run_id": "1425db5cbdea",
+          "id": "17f153e12e68",
+          "run_id": "11fe193a72b0",
           "source_path": "./examples/sample_invoices\\电子发票_20240116_002.pdf",
           "target_path": "./examples/archived\\electronic\\电子发票_20240116_002.pdf",
           "filename": "电子发票_20240116_002.pdf",
           "matched_rule": "电子发票PDF",
           "status": "moved",
-          "timestamp": "2026-06-16T01:51:09.452459",
+          "timestamp": "2026-06-16T02:12:31.052694",
           "error_message": null
         }
       ],
@@ -80,10 +80,10 @@
   },
   "undo_records": [],
   "snapshots": {
-    "ff1904ed6000": {
-      "snapshot_id": "ff1904ed6000",
-      "created_at": "2026-06-16T01:51:09.123558",
-      "plan_id": "f14e1a9b0451",
+    "4cda7afbde19": {
+      "snapshot_id": "4cda7afbde19",
+      "created_at": "2026-06-16T02:12:30.698883",
+      "plan_id": "ac2394f47453",
       "config_snapshot": {
         "source_dir": "./examples/sample_invoices",
         "dest_dir": "./examples/archived",
@@ -145,25 +145,25 @@
       },
       "scanned_files": [
         {
-          "id": "2f45bf3cb1a3",
+          "id": "454d0f34fd2f",
           "source_path": "./examples/sample_invoices\\电子发票_20240115_001.pdf",
           "filename": "电子发票_20240115_001.pdf",
-          "size": 46,
-          "mtime": 1781545831.0729976,
+          "size": 45,
+          "mtime": 1781547117.427067,
           "matched_rule": "电子发票PDF"
         },
         {
-          "id": "74546fb25e58",
+          "id": "930c6d18d5c1",
           "source_path": "./examples/sample_invoices\\电子发票_20240116_002.pdf",
           "filename": "电子发票_20240116_002.pdf",
           "size": 46,
-          "mtime": 1781545868.4797142,
+          "mtime": 1781547150.0714686,
           "matched_rule": "电子发票PDF"
         }
       ],
       "moves": [
         {
-          "id": "eabdfd5884b7",
+          "id": "d912730b5b53",
           "source_path": "./examples/sample_invoices\\电子发票_20240115_001.pdf",
           "target_path": "./examples/archived\\electronic\\电子发票_20240115_001.pdf",
           "filename": "电子发票_20240115_001.pdf",
@@ -172,7 +172,7 @@
           "conflict_detail": null
         },
         {
-          "id": "66aa72afaae2",
+          "id": "e9164032c9b5",
           "source_path": "./examples/sample_invoices\\电子发票_20240116_002.pdf",
           "target_path": "./examples/archived\\electronic\\电子发票_20240116_002.pdf",
           "filename": "电子发票_20240116_002.pdf",
@@ -213,8 +213,9 @@
       "import_source": null
     }
   },
-  "last_scan": "2026-06-16T01:51:08.796773",
-  "last_plan": "f14e1a9b0451",
-  "last_snapshot": "ff1904ed6000",
-  "created_at": "2026-06-16T01:51:08.796773"
+  "import_logs": [],
+  "last_scan": "2026-06-16T02:12:30.383489",
+  "last_plan": "ac2394f47453",
+  "last_snapshot": "4cda7afbde19",
+  "created_at": "2026-06-16T02:12:30.382460"
 }

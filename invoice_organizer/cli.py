@@ -7,7 +7,7 @@ from typing import Optional
 
 import click
 
-from .models import load_config, generate_id
+from .models import load_config, generate_id, ImportLog, now_iso
 from .storage import StateStore
 from .workflow import (
     scan_directory, build_plan, build_plan_summary, apply_plan,
@@ -649,6 +649,22 @@ def cmd_import_snapshot(config_path: str, input_path: str, yes: bool, verbose: b
     click.echo(f"  未命中规则: {len(snapshot.unmatched_files)} 个")
 
     validation = validate_import_snapshot(snapshot)
+    diff_result = diff_config(config, snapshot.config_snapshot)
+
+    def _make_log(status: str, forced_flag: bool = False) -> ImportLog:
+        return ImportLog(
+            import_id=generate_id(),
+            timestamp=now_iso(),
+            status=status,
+            source_file=os.path.abspath(input_path),
+            snapshot_id=snapshot.snapshot_id,
+            plan_id=snapshot.plan_id,
+            move_count=len(snapshot.moves),
+            errors=list(validation.errors),
+            warnings=list(validation.warnings),
+            config_diff=diff_result.to_dict() if diff_result.has_diff else None,
+            forced=forced_flag,
+        )
 
     if validation.has_errors:
         click.echo(click.style("\n[错误] 快照验证失败，无法导入：", fg="red", bold=True))
@@ -656,6 +672,7 @@ def cmd_import_snapshot(config_path: str, input_path: str, yes: bool, verbose: b
             click.echo(click.style(f"  - {err}", fg="red"))
 
         if not force:
+            store.add_import_log(_make_log("failed"))
             click.echo(click.style("\n使用 --force 可强制导入，但执行时可能出错。", fg="yellow"))
             sys.exit(1)
         else:
@@ -666,7 +683,6 @@ def cmd_import_snapshot(config_path: str, input_path: str, yes: bool, verbose: b
         for warn in validation.warnings:
             click.echo(click.style(f"  - {warn}", fg="yellow"))
 
-    diff_result = diff_config(config, snapshot.config_snapshot)
     if diff_result.has_diff:
         click.echo(click.style("\n[提示] 当前配置与快照配置不一致：", fg="cyan"))
         if diff_result.source_dir_changed:
@@ -686,6 +702,7 @@ def cmd_import_snapshot(config_path: str, input_path: str, yes: bool, verbose: b
 
     if not yes:
         if not click.confirm("\n确认导入该批次快照？", default=False):
+            store.add_import_log(_make_log("cancelled"))
             click.echo("已取消。")
             sys.exit(0)
 
@@ -693,6 +710,11 @@ def cmd_import_snapshot(config_path: str, input_path: str, yes: bool, verbose: b
     snapshot.import_source = os.path.abspath(input_path)
 
     store.save_snapshot(snapshot)
+
+    if validation.has_errors and force:
+        store.add_import_log(_make_log("forced", forced_flag=True))
+    else:
+        store.add_import_log(_make_log("success"))
 
     click.echo(click.style(f"\n[导入成功] 快照已保存: {snapshot.snapshot_id}", fg="green"))
     click.echo(f"  可使用 apply -s {snapshot.snapshot_id} 执行，或 export-snapshot 导出复核。")

@@ -1,18 +1,18 @@
 ﻿=== 扫描记录 ===
-扫描时间,2026-06-16T01:51:08.796773
+扫描时间,2026-06-16T02:12:30.383489
 文件ID,源路径,文件名,大小,修改时间,匹配规则
-2f45bf3cb1a3,./examples/sample_invoices\电子发票_20240115_001.pdf,电子发票_20240115_001.pdf,46,1781545831.0729976,电子发票PDF
-74546fb25e58,./examples/sample_invoices\电子发票_20240116_002.pdf,电子发票_20240116_002.pdf,46,1781545868.4797142,电子发票PDF
+454d0f34fd2f,./examples/sample_invoices\电子发票_20240115_001.pdf,电子发票_20240115_001.pdf,45,1781547117.427067,电子发票PDF
+930c6d18d5c1,./examples/sample_invoices\电子发票_20240116_002.pdf,电子发票_20240116_002.pdf,46,1781547150.0714686,电子发票PDF
 
 === 归档预案 ===
 预案ID,创建时间,文件,源路径,目标路径,匹配规则,冲突类型,冲突详情
-f14e1a9b0451,2026-06-16T01:51:09.122510,电子发票_20240115_001.pdf,./examples/sample_invoices\电子发票_20240115_001.pdf,./examples/archived\electronic\电子发票_20240115_001.pdf,电子发票PDF,,
-f14e1a9b0451,2026-06-16T01:51:09.122510,电子发票_20240116_002.pdf,./examples/sample_invoices\电子发票_20240116_002.pdf,./examples/archived\electronic\电子发票_20240116_002.pdf,电子发票PDF,,
+ac2394f47453,2026-06-16T02:12:30.696809,电子发票_20240115_001.pdf,./examples/sample_invoices\电子发票_20240115_001.pdf,./examples/archived\electronic\电子发票_20240115_001.pdf,电子发票PDF,,
+ac2394f47453,2026-06-16T02:12:30.696809,电子发票_20240116_002.pdf,./examples/sample_invoices\电子发票_20240116_002.pdf,./examples/archived\electronic\电子发票_20240116_002.pdf,电子发票PDF,,
 
 === 执行记录 ===
 执行ID,预案ID,是否预演,撤销状态,创建时间,完成时间,文件,源->目标,状态,执行时间,错误信息
-1425db5cbdea,f14e1a9b0451,否,未撤销,2026-06-16T01:51:09.448420,2026-06-16T01:51:09.452459,电子发票_20240115_001.pdf,./examples/sample_invoices\电子发票_20240115_001.pdf -> ./examples/archived\electronic\电子发票_20240115_001.pdf,skipped_conflict,2026-06-16T01:51:09.450428,执行时目标已存在: ./examples/archived\electronic\电子发票_20240115_001.pdf
-1425db5cbdea,f14e1a9b0451,否,未撤销,2026-06-16T01:51:09.448420,2026-06-16T01:51:09.452459,电子发票_20240116_002.pdf,./examples/sample_invoices\电子发票_20240116_002.pdf -> ./examples/archived\electronic\电子发票_20240116_002.pdf,moved,2026-06-16T01:51:09.452459,
+11fe193a72b0,ac2394f47453,否,未撤销,2026-06-16T02:12:31.048669,2026-06-16T02:12:31.053706,电子发票_20240115_001.pdf,./examples/sample_invoices\电子发票_20240115_001.pdf -> ./examples/archived\electronic\电子发票_20240115_001.pdf,skipped_conflict,2026-06-16T02:12:31.050733,执行时目标已存在: ./examples/archived\electronic\电子发票_20240115_001.pdf
+11fe193a72b0,ac2394f47453,否,未撤销,2026-06-16T02:12:31.048669,2026-06-16T02:12:31.053706,电子发票_20240116_002.pdf,./examples/sample_invoices\电子发票_20240116_002.pdf -> ./examples/archived\electronic\电子发票_20240116_002.pdf,moved,2026-06-16T02:12:31.052694,
 
 === 撤销记录 ===
 执行ID,撤销时间,恢复数量,状态

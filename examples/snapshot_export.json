@@ -1,7 +1,7 @@
 {
-  "snapshot_id": "1a5fa42d7c19",
-  "created_at": "2026-06-16T01:50:29.994803",
-  "plan_id": "a88a128b1ea7",
+  "snapshot_id": "efcc4bec73c3",
+  "created_at": "2026-06-16T02:23:28.572429",
+  "plan_id": "09fc5fdc8ad1",
   "config_snapshot": {
     "source_dir": "./examples/sample_invoices",
     "dest_dir": "./examples/archived",
@@ -58,126 +58,22 @@
       "xlsx",
       "docx"
     ],
-    "config_path": "examples/config_normal.yaml",
+    "config_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\config_normal.yaml",
     "config_mtime": 1781539799.5941894
   },
-  "scanned_files": [
-    {
-      "id": "22324ea6eb63",
-      "source_path": "./examples/sample_invoices\\2024年1月增值税专用发票_12345.pdf",
-      "filename": "2024年1月增值税专用发票_12345.pdf",
-      "size": 59,
-      "mtime": 1781545829.3447263,
-      "matched_rule": "增值税专用发票"
-    },
-    {
-      "id": "1277a6de10b8",
-      "source_path": "./examples/sample_invoices\\发票照片_餐厅发票.jpg",
-      "filename": "发票照片_餐厅发票.jpg",
-      "size": 46,
-      "mtime": 1781545829.3492012,
-      "matched_rule": "发票图片JPG"
-    },
-    {
-      "id": "17400c671761",
-      "source_path": "./examples/sample_invoices\\电子发票_20240115_001.pdf",
-      "filename": "电子发票_20240115_001.pdf",
-      "size": 46,
-      "mtime": 1781545724.335392,
-      "matched_rule": "电子发票PDF"
-    },
-    {
-      "id": "da5062065e62",
-      "source_path": "./examples/sample_invoices\\电子发票_20240116_002.pdf",
-      "filename": "电子发票_20240116_002.pdf",
-      "size": 46,
-      "mtime": 1781545724.335392,
-      "matched_rule": "电子发票PDF"
-    }
-  ],
-  "moves": [
-    {
-      "id": "143abc1d5f0d",
-      "source_path": "./examples/sample_invoices\\2024年1月增值税专用发票_12345.pdf",
-      "target_path": "./examples/archived\\vat_special\\2024年1月增值税专用发票_12345.pdf",
-      "filename": "2024年1月增值税专用发票_12345.pdf",
-      "matched_rule": "增值税专用发票",
-      "conflict_type": null,
-      "conflict_detail": null
-    },
-    {
-      "id": "11e329e46cde",
-      "source_path": "./examples/sample_invoices\\发票照片_餐厅发票.jpg",
-      "target_path": "./examples/archived\\images/jpg\\发票照片_餐厅发票.jpg",
-      "filename": "发票照片_餐厅发票.jpg",
-      "matched_rule": "发票图片JPG",
-      "conflict_type": null,
-      "conflict_detail": null
-    },
-    {
-      "id": "3ddf1eadd656",
-      "source_path": "./examples/sample_invoices\\电子发票_20240115_001.pdf",
-      "target_path": "./examples/archived\\electronic\\电子发票_20240115_001.pdf",
-      "filename": "电子发票_20240115_001.pdf",
-      "matched_rule": "电子发票PDF",
-      "conflict_type": null,
-      "conflict_detail": null
-    },
-    {
-      "id": "e0217e569f47",
-      "source_path": "./examples/sample_invoices\\电子发票_20240116_002.pdf",
-      "target_path": "./examples/archived\\electronic\\电子发票_20240116_002.pdf",
-      "filename": "电子发票_20240116_002.pdf",
-      "matched_rule": "电子发票PDF",
-      "conflict_type": null,
-      "conflict_detail": null
-    }
-  ],
+  "scanned_files": [],
+  "moves": [],
   "unmatched_files": [],
-  "new_target_dirs": [
-    {
-      "path": "./examples/archived\\electronic",
-      "rule_names": [
-        "电子发票PDF"
-      ],
-      "file_count": 2
-    },
-    {
-      "path": "./examples/archived\\images/jpg",
-      "rule_names": [
-        "发票图片JPG"
-      ],
-      "file_count": 1
-    },
-    {
-      "path": "./examples/archived\\vat_special",
-      "rule_names": [
-        "增值税专用发票"
-      ],
-      "file_count": 1
-    }
-  ],
+  "new_target_dirs": [],
   "has_conflicts": false,
   "summary": {
-    "total_files": 4,
-    "matched_files": 4,
+    "total_files": 0,
+    "matched_files": 0,
     "unmatched_files": 0,
-    "new_target_dirs": [
-      "./examples/archived\\electronic",
-      "./examples/archived\\images/jpg",
-      "./examples/archived\\vat_special"
-    ],
+    "new_target_dirs": [],
     "rules_with_same_target": {},
-    "files_per_rule": {
-      "增值税专用发票": 1,
-      "发票图片JPG": 1,
-      "电子发票PDF": 2
-    },
-    "files_per_target_dir": {
-      "./examples/archived\\vat_special": 1,
-      "./examples/archived\\images/jpg": 1,
-      "./examples/archived\\electronic": 2
-    },
+    "files_per_rule": {},
+    "files_per_target_dir": {},
     "conflict_count": 0,
     "conflict_details": []
   },

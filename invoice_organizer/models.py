@@ -273,6 +273,44 @@ class ImportValidationResult:
         return asdict(self)
 
 
+@dataclass
+class ImportLog:
+    """导入日志记录 - 成功和失败的导入尝试都要记
+
+    用于跨重启回查：为什么某次导入成功/失败了。
+    """
+    import_id: str
+    timestamp: str
+    status: str  # "success" | "failed" | "forced" | "cancelled"
+    source_file: str
+    snapshot_id: Optional[str] = None
+    plan_id: Optional[str] = None
+    move_count: Optional[int] = None
+    errors: List[str] = field(default_factory=list)
+    warnings: List[str] = field(default_factory=list)
+    config_diff: Optional[Dict[str, Any]] = None
+    forced: bool = False
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "ImportLog":
+        return cls(
+            import_id=data["import_id"],
+            timestamp=data["timestamp"],
+            status=data["status"],
+            source_file=data["source_file"],
+            snapshot_id=data.get("snapshot_id"),
+            plan_id=data.get("plan_id"),
+            move_count=data.get("move_count"),
+            errors=data.get("errors", []),
+            warnings=data.get("warnings", []),
+            config_diff=data.get("config_diff"),
+            forced=data.get("forced", False),
+        )
+
+
 def generate_id() -> str:
     """生成唯一 ID"""
     return uuid.uuid4().hex[:12]
