@@ -8,6 +8,7 @@ from datetime import datetime
 
 from .models import (
     ScannedFile, PlannedMove, ExecutedMove, UndoRecord,
+    BatchSnapshot,
     generate_id, now_iso,
 )
 
@@ -32,8 +33,10 @@ class StateStore:
             "plans": {},
             "runs": {},
             "undo_records": [],
+            "snapshots": {},
             "last_scan": None,
             "last_plan": None,
+            "last_snapshot": None,
             "created_at": now_iso(),
         }
 
@@ -156,6 +159,54 @@ class StateStore:
             )
             for r in self._data.get("undo_records", [])
         ]
+
+    # ---- 批次快照 ----
+
+    def save_snapshot(self, snapshot: BatchSnapshot) -> None:
+        """保存批次快照"""
+        self._data["snapshots"][snapshot.snapshot_id] = snapshot.to_dict()
+        self._data["last_snapshot"] = snapshot.snapshot_id
+        self.save()
+
+    def get_snapshot(self, snapshot_id: str) -> Optional[BatchSnapshot]:
+        """获取指定快照"""
+        data = self._data.get("snapshots", {}).get(snapshot_id)
+        if data:
+            return BatchSnapshot.from_dict(data)
+        return None
+
+    def get_last_snapshot(self) -> Optional[BatchSnapshot]:
+        """获取最近的快照"""
+        snapshot_id = self._data.get("last_snapshot")
+        if snapshot_id:
+            return self.get_snapshot(snapshot_id)
+        return None
+
+    def get_last_snapshot_id(self) -> Optional[str]:
+        """获取最近的快照 ID"""
+        return self._data.get("last_snapshot")
+
+    def list_snapshots(self) -> List[Dict[str, Any]]:
+        """列出所有快照（摘要信息）"""
+        result = []
+        for sid, sdata in self._data.get("snapshots", {}).items():
+            result.append({
+                "snapshot_id": sid,
+                "created_at": sdata.get("created_at", ""),
+                "plan_id": sdata.get("plan_id", ""),
+                "move_count": len(sdata.get("moves", [])),
+                "has_conflicts": sdata.get("has_conflicts", False),
+                "imported": sdata.get("imported", False),
+                "import_source": sdata.get("import_source"),
+            })
+        return sorted(result, key=lambda x: x["created_at"], reverse=True)
+
+    def get_snapshot_by_plan_id(self, plan_id: str) -> Optional[BatchSnapshot]:
+        """根据预案 ID 查找对应的快照"""
+        for sid, sdata in self._data.get("snapshots", {}).items():
+            if sdata.get("plan_id") == plan_id:
+                return BatchSnapshot.from_dict(sdata)
+        return None
 
     # ---- 完整数据导出 ----
 

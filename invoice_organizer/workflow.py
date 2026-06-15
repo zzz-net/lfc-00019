@@ -11,6 +11,8 @@ from collections import defaultdict
 
 from .models import (
     Config, Rule, ScannedFile, PlannedMove, ExecutedMove, UndoRecord, PlanSummary,
+    ConfigSnapshot, BatchSnapshot, UnmatchedFileInfo, NewDirInfo,
+    ConfigDiffResult, ImportValidationResult,
     generate_id, now_iso,
 )
 from .storage import StateStore
@@ -620,3 +622,254 @@ def export_plan(
 
     else:
         raise ValueError(f"不支持的导出格式: {format}")
+
+
+# ============================================================
+# 批次快照相关功能
+# ============================================================
+
+def create_config_snapshot(config: Config, config_path: Optional[str] = None) -> ConfigSnapshot:
+    """
+    从当前配置创建配置快照
+    """
+    config_mtime = None
+    if config_path and os.path.exists(config_path):
+        config_mtime = os.path.getmtime(config_path)
+
+    return ConfigSnapshot(
+        source_dir=config.source_dir,
+        dest_dir=config.dest_dir,
+        rules=[r.to_dict() for r in config.rules],
+        state_file=config.state_file,
+        recursive=config.recursive,
+        file_extensions=config.file_extensions,
+        config_path=config_path,
+        config_mtime=config_mtime,
+    )
+
+
+def create_batch_snapshot(
+    config: Config,
+    scanned_files: List[ScannedFile],
+    moves: List[PlannedMove],
+    plan_id: str,
+    summary: PlanSummary,
+    config_path: Optional[str] = None,
+) -> BatchSnapshot:
+    """
+    从 plan 结果创建完整的批次快照
+    """
+    config_snapshot = create_config_snapshot(config, config_path)
+
+    unmatched_infos: List[UnmatchedFileInfo] = []
+    for sf in scanned_files:
+        if not sf.matched_rule:
+            reason = "no_rule_match"
+            if config.file_extensions:
+                ext = os.path.splitext(sf.filename)[1].lower().lstrip(".")
+                if ext not in [e.lower().lstrip(".") for e in config.file_extensions]:
+                    reason = "extension_filtered"
+            unmatched_infos.append(UnmatchedFileInfo(
+                filename=sf.filename,
+                source_path=sf.source_path,
+                size=sf.size,
+                mtime=sf.mtime,
+                reason=reason,
+            ))
+
+    new_dir_infos: List[NewDirInfo] = []
+    target_dir_rules: Dict[str, List[str]] = defaultdict(list)
+    target_dir_file_count: Dict[str, int] = defaultdict(int)
+
+    for move in moves:
+        tdir = os.path.dirname(move.target_path)
+        if move.matched_rule not in target_dir_rules[tdir]:
+            target_dir_rules[tdir].append(move.matched_rule)
+        target_dir_file_count[tdir] += 1
+
+    for nd in summary.new_target_dirs:
+        new_dir_infos.append(NewDirInfo(
+            path=nd,
+            rule_names=target_dir_rules.get(nd, []),
+            file_count=target_dir_file_count.get(nd, 0),
+        ))
+
+    has_conflicts = any(m.conflict_type is not None for m in moves)
+
+    snapshot_id = generate_id()
+
+    return BatchSnapshot(
+        snapshot_id=snapshot_id,
+        created_at=now_iso(),
+        plan_id=plan_id,
+        config_snapshot=config_snapshot,
+        scanned_files=[sf.to_dict() for sf in scanned_files],
+        moves=[m.to_dict() for m in moves],
+        unmatched_files=unmatched_infos,
+        new_target_dirs=new_dir_infos,
+        has_conflicts=has_conflicts,
+        summary=summary.to_dict(),
+    )
+
+
+def diff_config(current_config: Config, snapshot_config: ConfigSnapshot) -> ConfigDiffResult:
+    """
+    比较当前配置与快照配置的差异
+    """
+    added_rules: List[str] = []
+    removed_rules: List[str] = []
+    modified_rules: List[str] = []
+
+    current_rule_map: Dict[str, Rule] = {r.name: r for r in current_config.rules}
+    snapshot_rule_map: Dict[str, Dict[str, Any]] = {r["name"]: r for r in snapshot_config.rules}
+
+    all_rule_names = set(current_rule_map.keys()) | set(snapshot_rule_map.keys())
+
+    for name in all_rule_names:
+        if name in current_rule_map and name not in snapshot_rule_map:
+            added_rules.append(name)
+        elif name not in current_rule_map and name in snapshot_rule_map:
+            removed_rules.append(name)
+        else:
+            curr = current_rule_map[name]
+            snap = snapshot_rule_map[name]
+            if (curr.pattern != snap.get("pattern") or
+                curr.target != snap.get("target") or
+                curr.description != snap.get("description")):
+                modified_rules.append(name)
+
+    source_dir_changed = current_config.source_dir != snapshot_config.source_dir
+    dest_dir_changed = current_config.dest_dir != snapshot_config.dest_dir
+    extensions_changed = current_config.file_extensions != snapshot_config.file_extensions
+    recursive_changed = current_config.recursive != snapshot_config.recursive
+
+    has_diff = (
+        len(added_rules) > 0 or
+        len(removed_rules) > 0 or
+        len(modified_rules) > 0 or
+        source_dir_changed or
+        dest_dir_changed or
+        extensions_changed or
+        recursive_changed
+    )
+
+    return ConfigDiffResult(
+        has_diff=has_diff,
+        added_rules=added_rules,
+        removed_rules=removed_rules,
+        modified_rules=modified_rules,
+        source_dir_changed=source_dir_changed,
+        dest_dir_changed=dest_dir_changed,
+        extensions_changed=extensions_changed,
+        recursive_changed=recursive_changed,
+    )
+
+
+def validate_import_snapshot(snapshot: BatchSnapshot) -> ImportValidationResult:
+    """
+    验证导入的快照是否可用于当前环境
+
+    检查项：
+    - 源文件是否存在（是否被外部移动）
+    - 目标文件是否冲突
+    - 目标目录是否有写权限
+    """
+    errors: List[str] = []
+    warnings: List[str] = []
+    conflicting_files: List[str] = []
+    missing_source_files: List[str] = []
+    unwritable_dirs: List[str] = []
+
+    for move_data in snapshot.moves:
+        source_path = move_data["source_path"]
+        target_path = move_data["target_path"]
+
+        if not os.path.exists(source_path):
+            missing_source_files.append(source_path)
+            errors.append(f"源文件不存在 (可能已被外部移动): {source_path}")
+
+        if os.path.exists(target_path):
+            conflicting_files.append(target_path)
+            warnings.append(f"目标文件已存在 (执行时将跳过): {target_path}")
+
+    checked_dirs = set()
+    for nd in snapshot.new_target_dirs:
+        dir_path = nd.path
+        parent = os.path.dirname(dir_path)
+        if parent and parent not in checked_dirs:
+            checked_dirs.add(parent)
+            if os.path.exists(parent):
+                if not os.access(parent, os.W_OK):
+                    unwritable_dirs.append(parent)
+                    errors.append(f"父目录无写权限: {parent}")
+            else:
+                ancestor = parent
+                while ancestor and not os.path.exists(ancestor):
+                    ancestor = os.path.dirname(ancestor)
+                if ancestor and not os.access(ancestor, os.W_OK):
+                    unwritable_dirs.append(ancestor)
+                    errors.append(f"最近的现存祖先目录无写权限: {ancestor}")
+
+    dest_dir = snapshot.config_snapshot.dest_dir
+    if os.path.exists(dest_dir):
+        if not os.access(dest_dir, os.W_OK):
+            if dest_dir not in unwritable_dirs:
+                unwritable_dirs.append(dest_dir)
+                errors.append(f"目标根目录无写权限: {dest_dir}")
+
+    valid = len(errors) == 0
+
+    return ImportValidationResult(
+        valid=valid,
+        errors=errors,
+        warnings=warnings,
+        conflicting_files=conflicting_files,
+        missing_source_files=missing_source_files,
+        unwritable_dirs=unwritable_dirs,
+    )
+
+
+def load_snapshot_from_file(file_path: str) -> BatchSnapshot:
+    """
+    从 JSON 文件加载快照
+    """
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"快照文件不存在: {file_path}")
+
+    with open(file_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    if "snapshot_id" not in data:
+        raise ValueError("无效的快照文件：缺少 snapshot_id 字段")
+    if "config_snapshot" not in data:
+        raise ValueError("无效的快照文件：缺少 config_snapshot 字段")
+    if "moves" not in data:
+        raise ValueError("无效的快照文件：缺少 moves 字段")
+
+    return BatchSnapshot.from_dict(data)
+
+
+def export_snapshot_to_file(snapshot: BatchSnapshot, output_path: str) -> None:
+    """
+    导出快照到 JSON 文件
+    """
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(snapshot.to_dict(), f, ensure_ascii=False, indent=2)
+
+
+def snapshot_to_planned_moves(snapshot: BatchSnapshot) -> List[PlannedMove]:
+    """
+    从快照中提取 PlannedMove 列表（用于 apply）
+    """
+    return [
+        PlannedMove(
+            id=m["id"],
+            source_path=m["source_path"],
+            target_path=m["target_path"],
+            filename=m["filename"],
+            matched_rule=m["matched_rule"],
+            conflict_type=m.get("conflict_type"),
+            conflict_detail=m.get("conflict_detail"),
+        )
+        for m in snapshot.moves
+    ]

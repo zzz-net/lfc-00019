@@ -12,6 +12,9 @@ from .storage import StateStore
 from .workflow import (
     scan_directory, build_plan, build_plan_summary, apply_plan,
     undo_run, export_logs, export_plan, filter_moves,
+    create_batch_snapshot, diff_config, validate_import_snapshot,
+    load_snapshot_from_file, export_snapshot_to_file,
+    snapshot_to_planned_moves,
 )
 
 
@@ -109,7 +112,18 @@ def cmd_plan(config_path: str, plan_id: Optional[str], verbose: bool):
 
     store.save_plan(final_plan_id, moves, has_conflicts)
 
+    snapshot = create_batch_snapshot(
+        config=config,
+        scanned_files=scanned,
+        moves=moves,
+        plan_id=final_plan_id,
+        summary=summary,
+        config_path=config_path,
+    )
+    store.save_snapshot(snapshot)
+
     click.echo(click.style(f"[预案生成成功] ID: {final_plan_id}", fg="green"))
+    click.echo(click.style(f"[批次快照] ID: {snapshot.snapshot_id}", fg="cyan"))
     click.echo(f"  扫描文件总数: {summary.total_files}")
     click.echo(f"  匹配规则: {summary.matched_files}")
     click.echo(f"  未匹配规则: {summary.unmatched_files}")
@@ -176,9 +190,12 @@ def cmd_plan(config_path: str, plan_id: Optional[str], verbose: bool):
 @click.option("-c", "--config", "config_path", required=True, type=click.Path(),
               help="配置文件路径 (YAML)")
 @click.option("-p", "--plan-id", "plan_id", help="指定预案 ID (默认使用最近的)")
+@click.option("-s", "--snapshot-id", "snapshot_id", help="指定批次快照 ID (优先级高于 plan-id)")
 @click.option("--dry-run", is_flag=True, help="预演模式，不实际移动文件")
 @click.option("-y", "--yes", is_flag=True, help="跳过确认提示")
 @click.option("-v", "--verbose", is_flag=True, help="显示详细信息")
+@click.option("--force-snapshot", is_flag=True,
+              help="即使配置有变更，强制按旧快照执行")
 @click.option("--rule", "filter_rules", multiple=True,
               help="按规则名筛选，可多次指定 (如: --rule 增值税专用发票 --rule 电子发票PDF)")
 @click.option("--type", "filter_types", multiple=True,
@@ -188,9 +205,11 @@ def cmd_plan(config_path: str, plan_id: Optional[str], verbose: bool):
 def cmd_apply(
     config_path: str,
     plan_id: Optional[str],
+    snapshot_id: Optional[str],
     dry_run: bool,
     yes: bool,
     verbose: bool,
+    force_snapshot: bool,
     filter_rules: tuple,
     filter_types: tuple,
     filter_targets: tuple,
@@ -203,34 +222,61 @@ def cmd_apply(
 
     store = _get_store(config)
 
-    if plan_id:
-        plan = store.get_plan(plan_id)
+    snapshot = None
+    if snapshot_id:
+        snapshot = store.get_snapshot(snapshot_id)
+        if not snapshot:
+            click.echo(f"[错误] 未找到批次快照: {snapshot_id}", err=True)
+            sys.exit(1)
+    elif plan_id:
+        snapshot = store.get_snapshot_by_plan_id(plan_id)
+        if not snapshot:
+            click.echo(f"[错误] 预案 {plan_id} 没有对应的批次快照", err=True)
+            sys.exit(1)
     else:
-        plan = store.get_last_plan()
-        if plan:
-            plan_id = store.get_last_plan_id()
+        snapshot = store.get_last_snapshot()
+        if not snapshot:
+            click.echo("[错误] 未找到批次快照，请先执行 plan 命令。", err=True)
+            sys.exit(1)
 
-    if not plan:
-        click.echo("[错误] 未找到归档预案，请先执行 plan 命令。", err=True)
-        sys.exit(1)
+    snapshot_id = snapshot.snapshot_id
+    plan_id = snapshot.plan_id
 
-    if plan.get("has_conflicts"):
-        click.echo(click.style("[提示] 该预案包含冲突项，执行时将被跳过。", fg="yellow"))
+    diff_result = diff_config(config, snapshot.config_snapshot)
+    if diff_result.has_diff and not force_snapshot:
+        click.echo(click.style("[警告] 检测到配置与快照时不一致！", fg="yellow", bold=True))
+        click.echo(click.style(f"  快照创建时间: {snapshot.created_at}", fg="yellow"))
 
-    moves_data = plan.get("moves", [])
-    from .models import PlannedMove
-    moves = [
-        PlannedMove(
-            id=m["id"],
-            source_path=m["source_path"],
-            target_path=m["target_path"],
-            filename=m["filename"],
-            matched_rule=m["matched_rule"],
-            conflict_type=m.get("conflict_type"),
-            conflict_detail=m.get("conflict_detail"),
-        )
-        for m in moves_data
-    ]
+        if diff_result.source_dir_changed:
+            click.echo(click.style(f"  - 源目录变更: {snapshot.config_snapshot.source_dir} -> {config.source_dir}", fg="yellow"))
+        if diff_result.dest_dir_changed:
+            click.echo(click.style(f"  - 目标目录变更: {snapshot.config_snapshot.dest_dir} -> {config.dest_dir}", fg="yellow"))
+        if diff_result.extensions_changed:
+            click.echo(click.style(f"  - 文件扩展名过滤变更", fg="yellow"))
+        if diff_result.recursive_changed:
+            click.echo(click.style(f"  - 递归扫描变更: {snapshot.config_snapshot.recursive} -> {config.recursive}", fg="yellow"))
+
+        if diff_result.added_rules:
+            click.echo(click.style(f"  - 新增规则: {', '.join(diff_result.added_rules)}", fg="green"))
+        if diff_result.removed_rules:
+            click.echo(click.style(f"  - 删除规则: {', '.join(diff_result.removed_rules)}", fg="red"))
+        if diff_result.modified_rules:
+            click.echo(click.style(f"  - 修改规则: {', '.join(diff_result.modified_rules)}", fg="yellow"))
+
+        click.echo()
+        if not yes:
+            click.echo(click.style("[提示] 继续按旧快照执行，可能导致结果与新配置不一致。", fg="yellow"))
+            if not click.confirm("是否继续按旧快照执行？", default=False):
+                click.echo("已取消。请重新 plan 生成新快照后再执行。")
+                sys.exit(0)
+        else:
+            click.echo(click.style("[提示] 配置有变更，但使用 -y 跳过，将按旧快照执行。", fg="yellow"))
+            click.echo()
+
+    if snapshot.has_conflicts:
+        click.echo(click.style("[提示] 该快照包含冲突项，执行时将被跳过。", fg="yellow"))
+
+    moves = snapshot_to_planned_moves(snapshot)
 
     fr = list(filter_rules) if filter_rules else None
     ft = list(filter_types) if filter_types else None
@@ -250,6 +296,7 @@ def cmd_apply(
         click.echo(click.style(f"  人工跳过: {len(skipped_manual_preview)} 条", fg="yellow"))
         click.echo()
 
+    click.echo(f"[执行] 快照 ID: {snapshot_id}")
     click.echo(f"[执行] 预案 ID: {plan_id}")
     click.echo(f"[执行] 模式: {'预演 (DRY-RUN)' if dry_run else '实际执行'}")
     click.echo(f"[执行] 总移动项: {len(moves)}")
@@ -489,6 +536,166 @@ def cmd_list_runs(config_path: str):
         created = r.get("created_at", "")[:26]
         count = len(r.get("moves", []))
         click.echo(f"{r['id']:<14} {created:<27} {r.get('plan_id',''):<14} {mode:<6} {status:<8} {count:<6}")
+
+
+@cli.command("list-snapshots", help="列出所有批次快照")
+@click.option("-c", "--config", "config_path", required=True, type=click.Path(),
+              help="配置文件路径 (YAML)")
+def cmd_list_snapshots(config_path: str):
+    try:
+        config = load_config(config_path)
+    except Exception as e:
+        click.echo(f"[错误] 加载配置失败: {e}", err=True)
+        sys.exit(1)
+
+    store = _get_store(config)
+    snapshots = store.list_snapshots()
+
+    if not snapshots:
+        click.echo("暂无批次快照。")
+        return
+
+    click.echo(f"{'快照ID':<14} {'创建时间':<27} {'预案ID':<14} {'移动项':<8} {'冲突':<6} {'来源':<10}")
+    click.echo("-" * 90)
+    for s in snapshots:
+        created = s.get("created_at", "")[:26]
+        has_conflict = "是" if s.get("has_conflicts") else "否"
+        source = "导入" if s.get("imported") else "本地"
+        click.echo(
+            f"{s['snapshot_id']:<14} {created:<27} {s.get('plan_id',''):<14} "
+            f"{s.get('move_count',0):<8} {has_conflict:<6} {source:<10}"
+        )
+
+
+@cli.command("export-snapshot", help="导出批次快照为 JSON 文件，可用于复核或二次执行")
+@click.option("-c", "--config", "config_path", required=True, type=click.Path(),
+              help="配置文件路径 (YAML)")
+@click.option("-s", "--snapshot-id", "snapshot_id", help="指定快照 ID (默认使用最近的)")
+@click.option("-o", "--output", "output_path", required=True, type=click.Path(),
+              help="导出文件路径")
+@click.option("-v", "--verbose", is_flag=True, help="显示详细信息")
+def cmd_export_snapshot(config_path: str, snapshot_id: Optional[str], output_path: str, verbose: bool):
+    try:
+        config = load_config(config_path)
+    except Exception as e:
+        click.echo(f"[错误] 加载配置失败: {e}", err=True)
+        sys.exit(1)
+
+    store = _get_store(config)
+
+    if snapshot_id:
+        snapshot = store.get_snapshot(snapshot_id)
+    else:
+        snapshot = store.get_last_snapshot()
+
+    if not snapshot:
+        click.echo("[错误] 未找到批次快照，请先执行 plan 命令。", err=True)
+        sys.exit(1)
+
+    try:
+        export_snapshot_to_file(snapshot, output_path)
+    except Exception as e:
+        click.echo(f"[错误] 导出失败: {e}", err=True)
+        sys.exit(1)
+
+    click.echo(click.style(f"[导出成功] 快照导出文件: {output_path}", fg="green"))
+    click.echo(f"  快照ID: {snapshot.snapshot_id}")
+    click.echo(f"  预案ID: {snapshot.plan_id}")
+    click.echo(f"  创建时间: {snapshot.created_at}")
+    click.echo(f"  移动计划: {len(snapshot.moves)} 条")
+    click.echo(f"  未命中规则: {len(snapshot.unmatched_files)} 个")
+    click.echo(f"  新建目录: {len(snapshot.new_target_dirs)} 个")
+
+    if verbose and snapshot.unmatched_files:
+        click.echo("\n[未命中规则文件]")
+        for uf in snapshot.unmatched_files:
+            reason_desc = "无匹配规则" if uf.reason == "no_rule_match" else "扩展名过滤"
+            click.echo(f"  - {uf.filename} ({reason_desc})")
+
+    if verbose and snapshot.new_target_dirs:
+        click.echo("\n[新建目标目录]")
+        for nd in snapshot.new_target_dirs:
+            click.echo(f"  + {nd.path} ({nd.file_count} 个文件)")
+
+
+@cli.command("import-snapshot", help="从 JSON 文件导入批次快照，用于复核或二次执行")
+@click.option("-c", "--config", "config_path", required=True, type=click.Path(),
+              help="配置文件路径 (YAML)")
+@click.option("-i", "--input", "input_path", required=True, type=click.Path(),
+              help="快照 JSON 文件路径")
+@click.option("-y", "--yes", is_flag=True, help="跳过确认提示")
+@click.option("-v", "--verbose", is_flag=True, help="显示详细信息")
+@click.option("--force", is_flag=True, help="即使有警告也强制导入")
+def cmd_import_snapshot(config_path: str, input_path: str, yes: bool, verbose: bool, force: bool):
+    try:
+        config = load_config(config_path)
+    except Exception as e:
+        click.echo(f"[错误] 加载配置失败: {e}", err=True)
+        sys.exit(1)
+
+    store = _get_store(config)
+
+    try:
+        snapshot = load_snapshot_from_file(input_path)
+    except Exception as e:
+        click.echo(f"[错误] 加载快照文件失败: {e}", err=True)
+        sys.exit(1)
+
+    click.echo(click.style("[导入快照] 解析成功", fg="green"))
+    click.echo(f"  快照ID: {snapshot.snapshot_id}")
+    click.echo(f"  创建时间: {snapshot.created_at}")
+    click.echo(f"  预案ID: {snapshot.plan_id}")
+    click.echo(f"  移动计划: {len(snapshot.moves)} 条")
+    click.echo(f"  未命中规则: {len(snapshot.unmatched_files)} 个")
+
+    validation = validate_import_snapshot(snapshot)
+
+    if validation.has_errors:
+        click.echo(click.style("\n[错误] 快照验证失败，无法导入：", fg="red", bold=True))
+        for err in validation.errors:
+            click.echo(click.style(f"  - {err}", fg="red"))
+
+        if not force:
+            click.echo(click.style("\n使用 --force 可强制导入，但执行时可能出错。", fg="yellow"))
+            sys.exit(1)
+        else:
+            click.echo(click.style("\n[警告] 强制导入，执行时可能出错。", fg="yellow"))
+
+    if validation.warnings:
+        click.echo(click.style("\n[警告] 导入时检测到以下问题：", fg="yellow"))
+        for warn in validation.warnings:
+            click.echo(click.style(f"  - {warn}", fg="yellow"))
+
+    diff_result = diff_config(config, snapshot.config_snapshot)
+    if diff_result.has_diff:
+        click.echo(click.style("\n[提示] 当前配置与快照配置不一致：", fg="cyan"))
+        if diff_result.source_dir_changed:
+            click.echo(f"  - 源目录变更: {snapshot.config_snapshot.source_dir} -> {config.source_dir}")
+        if diff_result.dest_dir_changed:
+            click.echo(f"  - 目标目录变更: {snapshot.config_snapshot.dest_dir} -> {config.dest_dir}")
+        if diff_result.added_rules:
+            click.echo(f"  - 新增规则: {', '.join(diff_result.added_rules)}")
+        if diff_result.removed_rules:
+            click.echo(f"  - 删除规则: {', '.join(diff_result.removed_rules)}")
+        if diff_result.modified_rules:
+            click.echo(f"  - 修改规则: {', '.join(diff_result.modified_rules)}")
+
+    existing = store.get_snapshot(snapshot.snapshot_id)
+    if existing:
+        click.echo(click.style("\n[提示] 快照 ID 已存在，将更新已有快照。", fg="yellow"))
+
+    if not yes:
+        if not click.confirm("\n确认导入该批次快照？", default=False):
+            click.echo("已取消。")
+            sys.exit(0)
+
+    snapshot.imported = True
+    snapshot.import_source = os.path.abspath(input_path)
+
+    store.save_snapshot(snapshot)
+
+    click.echo(click.style(f"\n[导入成功] 快照已保存: {snapshot.snapshot_id}", fg="green"))
+    click.echo(f"  可使用 apply -s {snapshot.snapshot_id} 执行，或 export-snapshot 导出复核。")
 
 
 def main():
