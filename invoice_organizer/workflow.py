@@ -85,13 +85,22 @@ def build_plan(config: Config, scanned_files: List[ScannedFile]) -> Tuple[List[P
 
     rule_map: Dict[str, Rule] = {r.name: r for r in config.rules}
 
+    def _resolve_rule(sf: ScannedFile) -> Optional[Rule]:
+        rule = rule_map.get(sf.matched_rule)
+        if rule:
+            return rule
+        for r in config.rules:
+            if fnmatch.fnmatch(sf.filename.lower(), r.pattern.lower()):
+                return r
+        return None
+
     target_counter: Dict[str, List[str]] = defaultdict(list)
 
     for sf in scanned_files:
         if not sf.matched_rule:
             continue
 
-        rule = rule_map.get(sf.matched_rule)
+        rule = _resolve_rule(sf)
         if not rule:
             continue
 
@@ -104,7 +113,7 @@ def build_plan(config: Config, scanned_files: List[ScannedFile]) -> Tuple[List[P
         if not sf.matched_rule:
             continue
 
-        rule = rule_map.get(sf.matched_rule)
+        rule = _resolve_rule(sf)
         if not rule:
             continue
 
@@ -127,7 +136,7 @@ def build_plan(config: Config, scanned_files: List[ScannedFile]) -> Tuple[List[P
             source_path=sf.source_path,
             target_path=target_path,
             filename=sf.filename,
-            matched_rule=sf.matched_rule,
+            matched_rule=rule.name,
             conflict_type=conflict_type,
             conflict_detail=conflict_detail,
         ))
@@ -538,6 +547,53 @@ def export_logs(
                     ur.get("undo_timestamp", ""),
                     ur.get("moves_restored", ""),
                     ur.get("status", ""),
+                ])
+
+            writer.writerow([])
+            writer.writerow(["=== 版本锁定记录 ==="])
+            writer.writerow(["锁定ID", "快照ID", "预案ID", "锁定时间", "释放时间", "锁定原因", "释放原因", "状态"])
+            for lk in full_state.get("plan_locks", []):
+                writer.writerow([
+                    lk.get("lock_id", ""),
+                    lk.get("snapshot_id", ""),
+                    lk.get("plan_id", ""),
+                    lk.get("locked_at", ""),
+                    lk.get("released_at", ""),
+                    lk.get("lock_reason", ""),
+                    lk.get("release_reason", ""),
+                    "已释放" if lk.get("released_at") else "活动",
+                ])
+
+            writer.writerow([])
+            writer.writerow(["=== 锁定违规记录 ==="])
+            writer.writerow(["违规时间", "锁定ID", "违规类型", "详情", "已拦截"])
+            for lv in full_state.get("lock_violations", []):
+                writer.writerow([
+                    lv.get("timestamp", ""),
+                    lv.get("lock_id", ""),
+                    lv.get("violation_type", ""),
+                    lv.get("detail", ""),
+                    lv.get("blocked", ""),
+                ])
+
+            writer.writerow([])
+            writer.writerow(["=== 预案差异记录 ==="])
+            writer.writerow(["差异ID", "对比时间", "旧快照ID", "新快照ID", "旧预案ID", "新预案ID", "目标变化数", "新增数", "删除数", "新增规则", "删除规则", "修改规则"])
+            for pd in full_state.get("plan_diffs", []):
+                data = pd.get("data", pd)
+                writer.writerow([
+                    pd.get("diff_id", ""),
+                    data.get("compared_at", ""),
+                    data.get("old_snapshot_id", ""),
+                    data.get("new_snapshot_id", ""),
+                    data.get("old_plan_id", ""),
+                    data.get("new_plan_id", ""),
+                    data.get("target_changed_count", ""),
+                    data.get("added_count", ""),
+                    data.get("removed_count", ""),
+                    ", ".join(data.get("added_rules", [])),
+                    ", ".join(data.get("removed_rules", [])),
+                    ", ".join(data.get("modified_rules", [])),
                 ])
 
         return 1

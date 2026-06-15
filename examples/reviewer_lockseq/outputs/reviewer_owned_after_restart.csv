@@ -1,0 +1,59 @@
+﻿=== 扫描记录 ===
+扫描时间,2026-06-16T04:54:07.924509
+文件ID,源路径,文件名,大小,修改时间,匹配规则
+74e550a3d21e,./examples/reviewer_lockseq/source\2024年1月增值税专用发票_A001.pdf,2024年1月增值税专用发票_A001.pdf,65,1781549813.8219843,增值税专用发票
+7aab58d4c439,./examples/reviewer_lockseq/source\2024年2月增值税普通发票_B002.pdf,2024年2月增值税普通发票_B002.pdf,65,1781549813.824061,增值税普通发票
+6357080a1cea,./examples/reviewer_lockseq/source\notes.md,notes.md,32,1781549813.8326292,Markdown文档
+f29b014e5c70,./examples/reviewer_lockseq/source\出差报销单_202401.xlsx,出差报销单_202401.xlsx,51,1781549813.8289967,报销单Excel
+ff1b018f089b,./examples/reviewer_lockseq/source\发票扫描件_出租车发票.png,发票扫描件_出租车发票.png,59,1781549813.8282776,发票图片PNG
+b585df1bfcbc,./examples/reviewer_lockseq/source\发票照片_餐厅发票.jpg,发票照片_餐厅发票.jpg,53,1781549813.8261201,发票图片
+e8b7ebb396ca,./examples/reviewer_lockseq/source\未分类的文档.txt,未分类的文档.txt,46,1781549813.8316317,文本文档
+c07338cd8878,./examples/reviewer_lockseq/source\电子发票_20240115_001.pdf,电子发票_20240115_001.pdf,53,1781549813.82509,电子发票PDF
+272ffd7e276b,./examples/reviewer_lockseq/source\采购合同_供应商A.docx,采购合同_供应商A.docx,52,1781549813.8305895,合同文档
+
+=== 归档预案 ===
+预案ID,创建时间,文件,源路径,目标路径,匹配规则,冲突类型,冲突详情
+9598ce3e5d24,2026-06-16T04:53:37.910156,2024年1月增值税专用发票_A001.pdf,./examples/reviewer_lockseq/source\2024年1月增值税专用发票_A001.pdf,./examples/reviewer_lockseq/dest\vat_special\2024年1月增值税专用发票_A001.pdf,增值税专用发票,target_exists,目标文件已存在: ./examples/reviewer_lockseq/dest\vat_special\2024年1月增值税专用发票_A001.pdf
+9598ce3e5d24,2026-06-16T04:53:37.910156,2024年2月增值税普通发票_B002.pdf,./examples/reviewer_lockseq/source\2024年2月增值税普通发票_B002.pdf,./examples/reviewer_lockseq/dest\vat_normal\2024年2月增值税普通发票_B002.pdf,增值税普通发票,,
+9598ce3e5d24,2026-06-16T04:53:37.910156,出差报销单_202401.xlsx,./examples/reviewer_lockseq/source\出差报销单_202401.xlsx,./examples/reviewer_lockseq/dest\reimbursement\出差报销单_202401.xlsx,报销单Excel,,
+9598ce3e5d24,2026-06-16T04:53:37.910156,发票扫描件_出租车发票.png,./examples/reviewer_lockseq/source\发票扫描件_出租车发票.png,./examples/reviewer_lockseq/dest\images/png\发票扫描件_出租车发票.png,发票图片PNG,,
+9598ce3e5d24,2026-06-16T04:53:37.910156,发票照片_餐厅发票.jpg,./examples/reviewer_lockseq/source\发票照片_餐厅发票.jpg,./examples/reviewer_lockseq/dest\images/jpg\发票照片_餐厅发票.jpg,发票图片JPG,,
+9598ce3e5d24,2026-06-16T04:53:37.910156,电子发票_20240115_001.pdf,./examples/reviewer_lockseq/source\电子发票_20240115_001.pdf,./examples/reviewer_lockseq/dest\electronic\电子发票_20240115_001.pdf,电子发票PDF,,
+9598ce3e5d24,2026-06-16T04:53:37.910156,采购合同_供应商A.docx,./examples/reviewer_lockseq/source\采购合同_供应商A.docx,./examples/reviewer_lockseq/dest\contracts\采购合同_供应商A.docx,合同文档,,
+ad2d28fd7a0f,2026-06-16T04:54:07.925524,2024年1月增值税专用发票_A001.pdf,./examples/reviewer_lockseq/source\2024年1月增值税专用发票_A001.pdf,./examples/reviewer_lockseq/dest\vat/special\2024年1月增值税专用发票_A001.pdf,增值税专用发票,,
+ad2d28fd7a0f,2026-06-16T04:54:07.925524,2024年2月增值税普通发票_B002.pdf,./examples/reviewer_lockseq/source\2024年2月增值税普通发票_B002.pdf,./examples/reviewer_lockseq/dest\vat/normal\2024年2月增值税普通发票_B002.pdf,增值税普通发票,,
+ad2d28fd7a0f,2026-06-16T04:54:07.925524,notes.md,./examples/reviewer_lockseq/source\notes.md,./examples/reviewer_lockseq/dest\misc\notes.md,Markdown文档,,
+ad2d28fd7a0f,2026-06-16T04:54:07.925524,出差报销单_202401.xlsx,./examples/reviewer_lockseq/source\出差报销单_202401.xlsx,./examples/reviewer_lockseq/dest\reimbursement\出差报销单_202401.xlsx,报销单Excel,,
+ad2d28fd7a0f,2026-06-16T04:54:07.925524,发票扫描件_出租车发票.png,./examples/reviewer_lockseq/source\发票扫描件_出租车发票.png,./examples/reviewer_lockseq/dest\images\发票扫描件_出租车发票.png,发票图片PNG,,
+ad2d28fd7a0f,2026-06-16T04:54:07.925524,发票照片_餐厅发票.jpg,./examples/reviewer_lockseq/source\发票照片_餐厅发票.jpg,./examples/reviewer_lockseq/dest\images\发票照片_餐厅发票.jpg,发票图片,,
+ad2d28fd7a0f,2026-06-16T04:54:07.925524,未分类的文档.txt,./examples/reviewer_lockseq/source\未分类的文档.txt,./examples/reviewer_lockseq/dest\misc\未分类的文档.txt,文本文档,,
+ad2d28fd7a0f,2026-06-16T04:54:07.925524,电子发票_20240115_001.pdf,./examples/reviewer_lockseq/source\电子发票_20240115_001.pdf,./examples/reviewer_lockseq/dest\electronic\电子发票_20240115_001.pdf,电子发票PDF,,
+ad2d28fd7a0f,2026-06-16T04:54:07.925524,采购合同_供应商A.docx,./examples/reviewer_lockseq/source\采购合同_供应商A.docx,./examples/reviewer_lockseq/dest\contracts\采购合同_供应商A.docx,合同文档,,
+
+=== 执行记录 ===
+执行ID,预案ID,是否预演,撤销状态,创建时间,完成时间,文件,源->目标,状态,执行时间,错误信息
+9554ffa10753,ad2d28fd7a0f,否,已撤销,2026-06-16T04:55:12.641364,2026-06-16T04:55:12.671264,2024年1月增值税专用发票_A001.pdf,./examples/reviewer_lockseq/source\2024年1月增值税专用发票_A001.pdf -> ./examples/reviewer_lockseq/dest\vat/special\2024年1月增值税专用发票_A001.pdf,moved,2026-06-16T04:55:12.644453,
+9554ffa10753,ad2d28fd7a0f,否,已撤销,2026-06-16T04:55:12.641364,2026-06-16T04:55:12.671264,2024年2月增值税普通发票_B002.pdf,./examples/reviewer_lockseq/source\2024年2月增值税普通发票_B002.pdf -> ./examples/reviewer_lockseq/dest\vat/normal\2024年2月增值税普通发票_B002.pdf,moved,2026-06-16T04:55:12.647617,
+9554ffa10753,ad2d28fd7a0f,否,已撤销,2026-06-16T04:55:12.641364,2026-06-16T04:55:12.671264,notes.md,./examples/reviewer_lockseq/source\notes.md -> ./examples/reviewer_lockseq/dest\misc\notes.md,moved,2026-06-16T04:55:12.650670,
+9554ffa10753,ad2d28fd7a0f,否,已撤销,2026-06-16T04:55:12.641364,2026-06-16T04:55:12.671264,出差报销单_202401.xlsx,./examples/reviewer_lockseq/source\出差报销单_202401.xlsx -> ./examples/reviewer_lockseq/dest\reimbursement\出差报销单_202401.xlsx,moved,2026-06-16T04:55:12.653699,
+9554ffa10753,ad2d28fd7a0f,否,已撤销,2026-06-16T04:55:12.641364,2026-06-16T04:55:12.671264,发票扫描件_出租车发票.png,./examples/reviewer_lockseq/source\发票扫描件_出租车发票.png -> ./examples/reviewer_lockseq/dest\images\发票扫描件_出租车发票.png,moved,2026-06-16T04:55:12.656739,
+9554ffa10753,ad2d28fd7a0f,否,已撤销,2026-06-16T04:55:12.641364,2026-06-16T04:55:12.671264,发票照片_餐厅发票.jpg,./examples/reviewer_lockseq/source\发票照片_餐厅发票.jpg -> ./examples/reviewer_lockseq/dest\images\发票照片_餐厅发票.jpg,moved,2026-06-16T04:55:12.658763,
+9554ffa10753,ad2d28fd7a0f,否,已撤销,2026-06-16T04:55:12.641364,2026-06-16T04:55:12.671264,未分类的文档.txt,./examples/reviewer_lockseq/source\未分类的文档.txt -> ./examples/reviewer_lockseq/dest\misc\未分类的文档.txt,moved,2026-06-16T04:55:12.662329,
+9554ffa10753,ad2d28fd7a0f,否,已撤销,2026-06-16T04:55:12.641364,2026-06-16T04:55:12.671264,电子发票_20240115_001.pdf,./examples/reviewer_lockseq/source\电子发票_20240115_001.pdf -> ./examples/reviewer_lockseq/dest\electronic\电子发票_20240115_001.pdf,moved,2026-06-16T04:55:12.666195,
+9554ffa10753,ad2d28fd7a0f,否,已撤销,2026-06-16T04:55:12.641364,2026-06-16T04:55:12.671264,采购合同_供应商A.docx,./examples/reviewer_lockseq/source\采购合同_供应商A.docx -> ./examples/reviewer_lockseq/dest\contracts\采购合同_供应商A.docx,moved,2026-06-16T04:55:12.669240,
+
+=== 撤销记录 ===
+执行ID,撤销时间,恢复数量,状态
+9554ffa10753,2026-06-16T04:55:20.529593,9,completed
+
+=== 版本锁定记录 ===
+锁定ID,快照ID,预案ID,锁定时间,释放时间,锁定原因,释放原因,状态
+5551e3ad2ef1,3bfaf6caae52,ad2d28fd7a0f,2026-06-16T04:54:40.894875,,,,活动
+
+=== 锁定违规记录 ===
+违规时间,锁定ID,违规类型,详情,已拦截
+,5551e3ad2ef1,wrong_snapshot,,True
+
+=== 预案差异记录 ===
+差异ID,对比时间,旧快照ID,新快照ID,旧预案ID,新预案ID,目标变化数,新增数,删除数,新增规则,删除规则,修改规则
+666ae9ec9e96,,,,,,,,,,,

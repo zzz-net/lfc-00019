@@ -99,11 +99,15 @@ def cmd_plan(config_path: str, plan_id: Optional[str], verbose: bool):
     scan_config = store.get_scan_config()
 
     need_rescan = False
-    if scanned and scan_config is not None:
-        config_diff = diff_config(config, scan_config)
-        if config_diff.has_diff:
-            click.echo(f"[提示] 检测到配置变化，自动重新扫描...")
+    if scanned:
+        if scan_config is None:
+            click.echo(f"[提示] 旧版状态文件无配置快照，自动重新扫描...")
             need_rescan = True
+        else:
+            config_diff = diff_config(config, scan_config)
+            if config_diff.has_diff:
+                click.echo(f"[提示] 检测到配置变化，自动重新扫描...")
+                need_rescan = True
 
     if not scanned or need_rescan:
         if not scanned:

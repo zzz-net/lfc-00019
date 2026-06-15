@@ -1,29 +1,42 @@
 {
-  "old_plan_id": "7ddc664f0e9a",
-  "new_plan_id": "8df5ec6ff7ec",
-  "old_snapshot_id": "90b645f15e66",
-  "new_snapshot_id": "c0f7d8c43efd",
-  "diff_timestamp": "2026-06-16T03:25:00.062231",
+  "old_plan_id": "9598ce3e5d24",
+  "new_plan_id": "ad2d28fd7a0f",
+  "old_snapshot_id": "e5cc606a83a8",
+  "new_snapshot_id": "3bfaf6caae52",
+  "diff_timestamp": "2026-06-16T04:54:16.380433",
   "old_move_count": 7,
-  "new_move_count": 6,
+  "new_move_count": 9,
   "old_unmatched_count": 0,
   "new_unmatched_count": 0,
-  "added_moves": [],
-  "removed_moves": [
+  "added_moves": [
     {
-      "filename": "发票照片_餐厅发票.jpg",
-      "source_path": "./examples/reviewer_lockseq/source\\发票照片_餐厅发票.jpg",
-      "change_type": "removed",
-      "old_target_path": "./examples/reviewer_lockseq/dest\\images/jpg\\发票照片_餐厅发票.jpg",
-      "new_target_path": null,
-      "old_matched_rule": "发票图片JPG",
-      "new_matched_rule": null,
+      "filename": "notes.md",
+      "source_path": "./examples/reviewer_lockseq/source\\notes.md",
+      "change_type": "added",
+      "old_target_path": null,
+      "new_target_path": "./examples/reviewer_lockseq/dest\\misc\\notes.md",
+      "old_matched_rule": null,
+      "new_matched_rule": "Markdown文档",
+      "old_conflict_type": null,
+      "new_conflict_type": null,
+      "old_conflict_detail": null,
+      "new_conflict_detail": null
+    },
+    {
+      "filename": "未分类的文档.txt",
+      "source_path": "./examples/reviewer_lockseq/source\\未分类的文档.txt",
+      "change_type": "added",
+      "old_target_path": null,
+      "new_target_path": "./examples/reviewer_lockseq/dest\\misc\\未分类的文档.txt",
+      "old_matched_rule": null,
+      "new_matched_rule": "文本文档",
       "old_conflict_type": null,
       "new_conflict_type": null,
       "old_conflict_detail": null,
       "new_conflict_detail": null
     }
   ],
+  "removed_moves": [],
   "target_changed": [
     {
       "filename": "2024年1月增值税专用发票_A001.pdf",
@@ -59,6 +72,19 @@
       "new_target_path": "./examples/reviewer_lockseq/dest\\images\\发票扫描件_出租车发票.png",
       "old_matched_rule": "发票图片PNG",
       "new_matched_rule": "发票图片PNG",
+      "old_conflict_type": null,
+      "new_conflict_type": null,
+      "old_conflict_detail": null,
+      "new_conflict_detail": null
+    },
+    {
+      "filename": "发票照片_餐厅发票.jpg",
+      "source_path": "./examples/reviewer_lockseq/source\\发票照片_餐厅发票.jpg",
+      "change_type": "target_changed",
+      "old_target_path": "./examples/reviewer_lockseq/dest\\images/jpg\\发票照片_餐厅发票.jpg",
+      "new_target_path": "./examples/reviewer_lockseq/dest\\images\\发票照片_餐厅发票.jpg",
+      "old_matched_rule": "发票图片JPG",
+      "new_matched_rule": "发票图片",
       "old_conflict_type": null,
       "new_conflict_type": null,
       "old_conflict_detail": null,
@@ -125,7 +151,7 @@
     "增值税普通发票"
   ],
   "has_changes": true,
-  "total_changed_moves": 4,
+  "total_changed_moves": 6,
   "config_diff": {
     "has_diff": true,
     "added_rules": [
