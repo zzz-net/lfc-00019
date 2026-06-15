@@ -323,7 +323,7 @@ def apply_plan(
                 )
                 executed.append(em)
                 store.add_executed_move(run_id, em)
-                skipped += 1
+                skipped_conflict += 1
                 continue
 
             shutil.move(move.source_path, move.target_path)

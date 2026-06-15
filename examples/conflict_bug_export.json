@@ -1,0 +1,85 @@
+{
+  "scanned_files": [
+    {
+      "id": "99d592b2f3ab",
+      "source_path": "./examples/sample_invoices\\电子发票_20240115_001.pdf",
+      "filename": "电子发票_20240115_001.pdf",
+      "size": 53,
+      "mtime": 1781542840.687784,
+      "matched_rule": "电子发票PDF"
+    },
+    {
+      "id": "aa334901221c",
+      "source_path": "./examples/sample_invoices\\电子发票_20240116_002.pdf",
+      "filename": "电子发票_20240116_002.pdf",
+      "size": 46,
+      "mtime": 1781544177.3508272,
+      "matched_rule": "电子发票PDF"
+    }
+  ],
+  "plans": {
+    "92b00c59d763": {
+      "id": "92b00c59d763",
+      "created_at": "2026-06-16T01:22:58.105216",
+      "moves": [
+        {
+          "id": "f05766623c67",
+          "source_path": "./examples/sample_invoices\\电子发票_20240115_001.pdf",
+          "target_path": "./examples/archived\\electronic\\电子发票_20240115_001.pdf",
+          "filename": "电子发票_20240115_001.pdf",
+          "matched_rule": "电子发票PDF",
+          "conflict_type": null,
+          "conflict_detail": null
+        },
+        {
+          "id": "517aff2f11f4",
+          "source_path": "./examples/sample_invoices\\电子发票_20240116_002.pdf",
+          "target_path": "./examples/archived\\electronic\\电子发票_20240116_002.pdf",
+          "filename": "电子发票_20240116_002.pdf",
+          "matched_rule": "电子发票PDF",
+          "conflict_type": null,
+          "conflict_detail": null
+        }
+      ],
+      "has_conflicts": false
+    }
+  },
+  "runs": {
+    "815d0688582b": {
+      "id": "815d0688582b",
+      "plan_id": "92b00c59d763",
+      "created_at": "2026-06-16T01:22:58.458743",
+      "dry_run": false,
+      "completed_at": "2026-06-16T01:22:58.462835",
+      "moves": [
+        {
+          "id": "8a4473b57006",
+          "run_id": "815d0688582b",
+          "source_path": "./examples/sample_invoices\\电子发票_20240115_001.pdf",
+          "target_path": "./examples/archived\\electronic\\电子发票_20240115_001.pdf",
+          "filename": "电子发票_20240115_001.pdf",
+          "matched_rule": "电子发票PDF",
+          "status": "skipped_conflict",
+          "timestamp": "2026-06-16T01:22:58.459790",
+          "error_message": "执行时目标已存在: ./examples/archived\\electronic\\电子发票_20240115_001.pdf"
+        },
+        {
+          "id": "48ff2e2ba149",
+          "run_id": "815d0688582b",
+          "source_path": "./examples/sample_invoices\\电子发票_20240116_002.pdf",
+          "target_path": "./examples/archived\\electronic\\电子发票_20240116_002.pdf",
+          "filename": "电子发票_20240116_002.pdf",
+          "matched_rule": "电子发票PDF",
+          "status": "moved",
+          "timestamp": "2026-06-16T01:22:58.461821",
+          "error_message": null
+        }
+      ],
+      "is_undone": false
+    }
+  },
+  "undo_records": [],
+  "last_scan": "2026-06-16T01:22:57.755195",
+  "last_plan": "92b00c59d763",
+  "created_at": "2026-06-16T01:22:57.755195"
+}
