@@ -1,0 +1,47 @@
+# 发票整理配置 - 正常配置
+source_dir: "./examples/sample_invoices"
+dest_dir: "./examples/archived"
+state_file: "./examples/.state/invoice_state.json"
+recursive: true
+file_extensions:
+  - pdf
+  - jpg
+  - png
+  - xlsx
+  - docx
+
+rules:
+  - name: "增值税专用发票"
+    pattern: "*增值税*专用*.pdf"
+    target: "vat_special"
+    description: "增值税专用发票归档"
+
+  - name: "增值税普通发票"
+    pattern: "*增值税*普通*.pdf"
+    target: "vat_normal"
+    description: "增值税普通发票归档"
+
+  - name: "电子发票PDF"
+    pattern: "*电子*.pdf"
+    target: "electronic"
+    description: "电子发票归档"
+
+  - name: "发票图片JPG"
+    pattern: "*发票*.jpg"
+    target: "images/jpg"
+    description: "发票图片归档 (JPG)"
+
+  - name: "发票图片PNG"
+    pattern: "*发票*.png"
+    target: "images/png"
+    description: "发票图片归档 (PNG)"
+
+  - name: "报销单Excel"
+    pattern: "*报销*.xlsx"
+    target: "reimbursement"
+    description: "报销表单归档"
+
+  - name: "合同文档"
+    pattern: "*合同*.docx"
+    target: "contracts"
+    description: "合同文档归档"

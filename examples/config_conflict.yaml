@@ -1,0 +1,25 @@
+# 发票整理配置 - 冲突规则配置（用于测试 plan 失败）
+source_dir: "./examples/sample_invoices"
+dest_dir: "./examples/archived"
+state_file: "./examples/.state/invoice_state_conflict.json"
+recursive: true
+file_extensions:
+  - pdf
+  - jpg
+  - png
+
+rules:
+  - name: "规则A-增值税专票"
+    pattern: "*增值税*专用*.pdf"
+    target: "same_folder"
+    description: "第一条规则"
+
+  - name: "规则B-增值税普票"
+    pattern: "*增值税*普通*.pdf"
+    target: "same_folder"
+    description: "第二条规则 - 与规则A映射同一目标，应该导致 plan 失败"
+
+  - name: "发票图片"
+    pattern: "*发票*.jpg"
+    target: "images"
+    description: "正常规则"
