@@ -1,0 +1,46 @@
+﻿=== 预案摘要 ===
+预案ID,528d5c54bcda
+创建时间,2026-06-16T00:50:55.862499
+总文件数,9
+匹配规则数,9
+未匹配规则数,0
+冲突项数,1
+新建目录数,0
+
+=== 各规则文件数 ===
+规则名,文件数
+发票图片JPG,1
+发票图片PNG,1
+合同文档,1
+增值税专用发票,2
+增值税普通发票,1
+报销单Excel,1
+电子发票PDF,2
+
+=== 各目标目录文件数 ===
+目标目录,文件数,是否新建
+./examples/archived\contracts,1,否
+./examples/archived\electronic,2,否
+./examples/archived\images/jpg,1,否
+./examples/archived\images/png,1,否
+./examples/archived\reimbursement,1,否
+./examples/archived\vat_normal,1,否
+./examples/archived\vat_special,2,否
+
+=== 同目标目录的规则 ===
+目标目录,规则列表
+
+=== 移动计划详情 ===
+文件名,源路径,目标路径,匹配规则,冲突类型,冲突详情
+2024年1月增值税专用发票_12345.pdf,./examples/sample_invoices\2024年1月增值税专用发票_12345.pdf,./examples/archived\vat_special\2024年1月增值税专用发票_12345.pdf,增值税专用发票,target_exists,目标文件已存在: ./examples/archived\vat_special\2024年1月增值税专用发票_12345.pdf
+2024年1月增值税专用发票_67890.pdf,./examples/sample_invoices\2024年1月增值税专用发票_67890.pdf,./examples/archived\vat_special\2024年1月增值税专用发票_67890.pdf,增值税专用发票,,
+2024年2月增值税普通发票_ABCDE.pdf,./examples/sample_invoices\2024年2月增值税普通发票_ABCDE.pdf,./examples/archived\vat_normal\2024年2月增值税普通发票_ABCDE.pdf,增值税普通发票,,
+出差报销单_202401.xlsx,./examples/sample_invoices\出差报销单_202401.xlsx,./examples/archived\reimbursement\出差报销单_202401.xlsx,报销单Excel,,
+发票扫描件_出租车发票.png,./examples/sample_invoices\发票扫描件_出租车发票.png,./examples/archived\images/png\发票扫描件_出租车发票.png,发票图片PNG,,
+发票照片_餐厅发票.jpg,./examples/sample_invoices\发票照片_餐厅发票.jpg,./examples/archived\images/jpg\发票照片_餐厅发票.jpg,发票图片JPG,,
+电子发票_20240115_001.pdf,./examples/sample_invoices\电子发票_20240115_001.pdf,./examples/archived\electronic\电子发票_20240115_001.pdf,电子发票PDF,,
+电子发票_20240116_002.pdf,./examples/sample_invoices\电子发票_20240116_002.pdf,./examples/archived\electronic\电子发票_20240116_002.pdf,电子发票PDF,,
+采购合同_供应商A.docx,./examples/sample_invoices\采购合同_供应商A.docx,./examples/archived\contracts\采购合同_供应商A.docx,合同文档,,
+
+=== 未匹配规则文件 ===
+文件名,源路径,大小

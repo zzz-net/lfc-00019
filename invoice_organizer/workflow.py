@@ -10,7 +10,7 @@ from typing import List, Optional, Tuple, Dict, Any
 from collections import defaultdict
 
 from .models import (
-    Config, Rule, ScannedFile, PlannedMove, ExecutedMove, UndoRecord,
+    Config, Rule, ScannedFile, PlannedMove, ExecutedMove, UndoRecord, PlanSummary,
     generate_id, now_iso,
 )
 from .storage import StateStore
@@ -97,17 +97,6 @@ def build_plan(config: Config, scanned_files: List[ScannedFile]) -> Tuple[List[P
 
         target_counter[target_path].append(sf.source_path)
 
-    rule_targets: Dict[str, List[str]] = defaultdict(list)
-    for rule in config.rules:
-        full_target = os.path.join(config.dest_dir, rule.target)
-        rule_targets[full_target].append(rule.name)
-
-    for full_target, rule_names in rule_targets.items():
-        if len(rule_names) > 1:
-            errors.append(
-                f"规则冲突检测失败: 多条规则 ({', '.join(rule_names)}) 映射到同一目标路径: {full_target}"
-            )
-
     for sf in scanned_files:
         if not sf.matched_rule:
             continue
@@ -143,24 +132,146 @@ def build_plan(config: Config, scanned_files: List[ScannedFile]) -> Tuple[List[P
     return moves, errors
 
 
+def build_plan_summary(
+    config: Config,
+    scanned_files: List[ScannedFile],
+    moves: List[PlannedMove],
+) -> PlanSummary:
+    """
+    构建预案摘要：未命中文件、同目录规则、新建目录等
+    """
+    summary = PlanSummary()
+
+    summary.total_files = len(scanned_files)
+    summary.matched_files = sum(1 for f in scanned_files if f.matched_rule)
+    summary.unmatched_files = summary.total_files - summary.matched_files
+
+    target_to_rules: Dict[str, List[str]] = defaultdict(list)
+    for rule in config.rules:
+        full_target = os.path.join(config.dest_dir, rule.target)
+        target_to_rules[full_target].append(rule.name)
+
+    for target, rule_names in target_to_rules.items():
+        if len(rule_names) > 1:
+            summary.rules_with_same_target[target] = rule_names
+
+    files_per_rule: Dict[str, int] = defaultdict(int)
+    files_per_target: Dict[str, int] = defaultdict(int)
+    target_dirs_used: set = set()
+
+    for move in moves:
+        files_per_rule[move.matched_rule] += 1
+        target_dir = os.path.dirname(move.target_path)
+        files_per_target[target_dir] += 1
+        target_dirs_used.add(target_dir)
+
+    summary.files_per_rule = dict(files_per_rule)
+    summary.files_per_target_dir = dict(files_per_target)
+
+    new_dirs = []
+    for td in sorted(target_dirs_used):
+        if not os.path.exists(td):
+            new_dirs.append(td)
+    summary.new_target_dirs = new_dirs
+
+    conflicts = [m for m in moves if m.conflict_type is not None]
+    summary.conflict_count = len(conflicts)
+    summary.conflict_details = [
+        f"{m.filename}: {m.conflict_type} - {m.conflict_detail}"
+        for m in conflicts
+    ]
+
+    return summary
+
+
+def filter_moves(
+    moves: List[PlannedMove],
+    filter_rules: Optional[List[str]] = None,
+    filter_file_types: Optional[List[str]] = None,
+    filter_target_dirs: Optional[List[str]] = None,
+) -> Tuple[List[PlannedMove], List[PlannedMove]]:
+    """
+    按条件筛选移动计划
+    返回: (选中的, 被跳过的)
+    """
+    selected: List[PlannedMove] = []
+    skipped: List[PlannedMove] = []
+
+    for move in moves:
+        keep = True
+
+        if filter_rules:
+            if move.matched_rule not in filter_rules:
+                keep = False
+
+        if keep and filter_file_types:
+            ext = os.path.splitext(move.filename)[1].lower().lstrip(".")
+            if ext not in [e.lower().lstrip(".") for e in filter_file_types]:
+                keep = False
+
+        if keep and filter_target_dirs:
+            target_dir = os.path.dirname(move.target_path)
+            matched_dir = False
+            for fd in filter_target_dirs:
+                if target_dir == fd or target_dir.endswith(fd) or fd in target_dir:
+                    matched_dir = True
+                    break
+            if not matched_dir:
+                keep = False
+
+        if keep:
+            selected.append(move)
+        else:
+            skipped.append(move)
+
+    return selected, skipped
+
+
 def apply_plan(
     config: Config,
     store: StateStore,
     plan_id: str,
     moves: List[PlannedMove],
     dry_run: bool = False,
-) -> Tuple[str, List[ExecutedMove], int, int, int]:
+    filter_rules: Optional[List[str]] = None,
+    filter_file_types: Optional[List[str]] = None,
+    filter_target_dirs: Optional[List[str]] = None,
+) -> Tuple[str, List[ExecutedMove], int, int, int, int]:
     """
     执行归档预案
-    返回: (run_id, 执行记录, 成功数, 跳过冲突数, 失败数)
+    返回: (run_id, 执行记录, 成功数, 跳过冲突数, 人工跳过数, 失败数)
     """
     run_id = store.create_run(plan_id, dry_run)
     executed: List[ExecutedMove] = []
     success = 0
-    skipped = 0
+    skipped_conflict = 0
+    skipped_manual = 0
     failed = 0
 
-    for move in moves:
+    selected_moves, manually_skipped = filter_moves(
+        moves,
+        filter_rules=filter_rules,
+        filter_file_types=filter_file_types,
+        filter_target_dirs=filter_target_dirs,
+    )
+
+    for move in manually_skipped:
+        em = ExecutedMove(
+            id=generate_id(),
+            run_id=run_id,
+            source_path=move.source_path,
+            target_path=move.target_path,
+            filename=move.filename,
+            matched_rule=move.matched_rule,
+            status="skipped_manual",
+            timestamp=now_iso(),
+            error_message=_describe_skip_reason(move, filter_rules, filter_file_types, filter_target_dirs),
+        )
+        executed.append(em)
+        store.add_executed_move(run_id, em)
+        skipped_manual += 1
+
+    for move in selected_moves:
         if move.conflict_type is not None:
             em = ExecutedMove(
                 id=generate_id(),
@@ -175,7 +286,7 @@ def apply_plan(
             )
             executed.append(em)
             store.add_executed_move(run_id, em)
-            skipped += 1
+            skipped_conflict += 1
             continue
 
         if dry_run:
@@ -247,7 +358,33 @@ def apply_plan(
             failed += 1
 
     store.complete_run(run_id)
-    return run_id, executed, success, skipped, failed
+    return run_id, executed, success, skipped_conflict, skipped_manual, failed
+
+
+def _describe_skip_reason(
+    move: PlannedMove,
+    filter_rules: Optional[List[str]],
+    filter_file_types: Optional[List[str]],
+    filter_target_dirs: Optional[List[str]],
+) -> str:
+    """生成人工跳过的原因描述"""
+    reasons = []
+    if filter_rules and move.matched_rule not in filter_rules:
+        reasons.append(f"规则不在筛选范围内: {move.matched_rule}")
+    if filter_file_types:
+        ext = os.path.splitext(move.filename)[1].lower().lstrip(".")
+        if ext not in [e.lower().lstrip(".") for e in filter_file_types]:
+            reasons.append(f"文件类型不在筛选范围内: .{ext}")
+    if filter_target_dirs:
+        target_dir = os.path.dirname(move.target_path)
+        matched = False
+        for fd in filter_target_dirs:
+            if target_dir == fd or target_dir.endswith(fd) or fd in target_dir:
+                matched = True
+                break
+        if not matched:
+            reasons.append(f"目标目录不在筛选范围内: {target_dir}")
+    return "; ".join(reasons) if reasons else "人工筛选跳过"
 
 
 def undo_run(
@@ -401,6 +538,85 @@ def export_logs(
                 ])
 
         return 1
+
+    else:
+        raise ValueError(f"不支持的导出格式: {format}")
+
+
+def export_plan(
+    plan_data: Dict[str, Any],
+    summary: PlanSummary,
+    scanned_files: List[ScannedFile],
+    output_path: str,
+    format: str = "json",
+) -> None:
+    """
+    导出单个预案及其摘要，便于人工复核
+    """
+    unmatched_files = [f for f in scanned_files if not f.matched_rule]
+
+    if format == "json":
+        export_data = {
+            "plan_id": plan_data.get("id"),
+            "created_at": plan_data.get("created_at"),
+            "has_conflicts": plan_data.get("has_conflicts"),
+            "summary": summary.to_dict(),
+            "moves": plan_data.get("moves", []),
+            "unmatched_files": [f.to_dict() for f in unmatched_files],
+        }
+        with open(output_path, "w", encoding="utf-8") as f:
+            json.dump(export_data, f, ensure_ascii=False, indent=2)
+
+    elif format == "csv":
+        with open(output_path, "w", encoding="utf-8-sig", newline="") as f:
+            writer = csv.writer(f)
+
+            writer.writerow(["=== 预案摘要 ==="])
+            writer.writerow(["预案ID", plan_data.get("id", "")])
+            writer.writerow(["创建时间", plan_data.get("created_at", "")])
+            writer.writerow(["总文件数", summary.total_files])
+            writer.writerow(["匹配规则数", summary.matched_files])
+            writer.writerow(["未匹配规则数", summary.unmatched_files])
+            writer.writerow(["冲突项数", summary.conflict_count])
+            writer.writerow(["新建目录数", len(summary.new_target_dirs)])
+
+            writer.writerow([])
+            writer.writerow(["=== 各规则文件数 ==="])
+            writer.writerow(["规则名", "文件数"])
+            for rule, count in sorted(summary.files_per_rule.items()):
+                writer.writerow([rule, count])
+
+            writer.writerow([])
+            writer.writerow(["=== 各目标目录文件数 ==="])
+            writer.writerow(["目标目录", "文件数", "是否新建"])
+            for tdir, count in sorted(summary.files_per_target_dir.items()):
+                is_new = "是" if tdir in summary.new_target_dirs else "否"
+                writer.writerow([tdir, count, is_new])
+
+            writer.writerow([])
+            writer.writerow(["=== 同目标目录的规则 ==="])
+            writer.writerow(["目标目录", "规则列表"])
+            for tdir, rules in sorted(summary.rules_with_same_target.items()):
+                writer.writerow([tdir, ", ".join(rules)])
+
+            writer.writerow([])
+            writer.writerow(["=== 移动计划详情 ==="])
+            writer.writerow(["文件名", "源路径", "目标路径", "匹配规则", "冲突类型", "冲突详情"])
+            for move in plan_data.get("moves", []):
+                writer.writerow([
+                    move.get("filename", ""),
+                    move.get("source_path", ""),
+                    move.get("target_path", ""),
+                    move.get("matched_rule", ""),
+                    move.get("conflict_type", ""),
+                    move.get("conflict_detail", ""),
+                ])
+
+            writer.writerow([])
+            writer.writerow(["=== 未匹配规则文件 ==="])
+            writer.writerow(["文件名", "源路径", "大小"])
+            for f in unmatched_files:
+                writer.writerow([f.filename, f.source_path, f.size])
 
     else:
         raise ValueError(f"不支持的导出格式: {format}")

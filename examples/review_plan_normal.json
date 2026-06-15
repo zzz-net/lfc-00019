@@ -1,0 +1,125 @@
+{
+  "plan_id": "b11f5fa60185",
+  "created_at": "2026-06-16T00:59:02.922319",
+  "has_conflicts": true,
+  "summary": {
+    "total_files": 9,
+    "matched_files": 9,
+    "unmatched_files": 0,
+    "new_target_dirs": [
+      "./examples/archived\\contracts",
+      "./examples/archived\\electronic",
+      "./examples/archived\\images/jpg",
+      "./examples/archived\\images/png",
+      "./examples/archived\\reimbursement",
+      "./examples/archived\\vat_normal"
+    ],
+    "rules_with_same_target": {},
+    "files_per_rule": {
+      "增值税专用发票": 2,
+      "增值税普通发票": 1,
+      "报销单Excel": 1,
+      "发票图片PNG": 1,
+      "发票图片JPG": 1,
+      "电子发票PDF": 2,
+      "合同文档": 1
+    },
+    "files_per_target_dir": {
+      "./examples/archived\\vat_special": 2,
+      "./examples/archived\\vat_normal": 1,
+      "./examples/archived\\reimbursement": 1,
+      "./examples/archived\\images/png": 1,
+      "./examples/archived\\images/jpg": 1,
+      "./examples/archived\\electronic": 2,
+      "./examples/archived\\contracts": 1
+    },
+    "conflict_count": 1,
+    "conflict_details": [
+      "2024年1月增值税专用发票_12345.pdf: target_exists - 目标文件已存在: ./examples/archived\\vat_special\\2024年1月增值税专用发票_12345.pdf"
+    ]
+  },
+  "moves": [
+    {
+      "id": "75a2818b3137",
+      "source_path": "./examples/sample_invoices\\2024年1月增值税专用发票_12345.pdf",
+      "target_path": "./examples/archived\\vat_special\\2024年1月增值税专用发票_12345.pdf",
+      "filename": "2024年1月增值税专用发票_12345.pdf",
+      "matched_rule": "增值税专用发票",
+      "conflict_type": "target_exists",
+      "conflict_detail": "目标文件已存在: ./examples/archived\\vat_special\\2024年1月增值税专用发票_12345.pdf"
+    },
+    {
+      "id": "72e3bb249f11",
+      "source_path": "./examples/sample_invoices\\2024年1月增值税专用发票_67890.pdf",
+      "target_path": "./examples/archived\\vat_special\\2024年1月增值税专用发票_67890.pdf",
+      "filename": "2024年1月增值税专用发票_67890.pdf",
+      "matched_rule": "增值税专用发票",
+      "conflict_type": null,
+      "conflict_detail": null
+    },
+    {
+      "id": "d9ba90dc1feb",
+      "source_path": "./examples/sample_invoices\\2024年2月增值税普通发票_ABCDE.pdf",
+      "target_path": "./examples/archived\\vat_normal\\2024年2月增值税普通发票_ABCDE.pdf",
+      "filename": "2024年2月增值税普通发票_ABCDE.pdf",
+      "matched_rule": "增值税普通发票",
+      "conflict_type": null,
+      "conflict_detail": null
+    },
+    {
+      "id": "d4ae1419a7b7",
+      "source_path": "./examples/sample_invoices\\出差报销单_202401.xlsx",
+      "target_path": "./examples/archived\\reimbursement\\出差报销单_202401.xlsx",
+      "filename": "出差报销单_202401.xlsx",
+      "matched_rule": "报销单Excel",
+      "conflict_type": null,
+      "conflict_detail": null
+    },
+    {
+      "id": "b324aab05054",
+      "source_path": "./examples/sample_invoices\\发票扫描件_出租车发票.png",
+      "target_path": "./examples/archived\\images/png\\发票扫描件_出租车发票.png",
+      "filename": "发票扫描件_出租车发票.png",
+      "matched_rule": "发票图片PNG",
+      "conflict_type": null,
+      "conflict_detail": null
+    },
+    {
+      "id": "dd9e34203ecf",
+      "source_path": "./examples/sample_invoices\\发票照片_餐厅发票.jpg",
+      "target_path": "./examples/archived\\images/jpg\\发票照片_餐厅发票.jpg",
+      "filename": "发票照片_餐厅发票.jpg",
+      "matched_rule": "发票图片JPG",
+      "conflict_type": null,
+      "conflict_detail": null
+    },
+    {
+      "id": "719e7bc2da6e",
+      "source_path": "./examples/sample_invoices\\电子发票_20240115_001.pdf",
+      "target_path": "./examples/archived\\electronic\\电子发票_20240115_001.pdf",
+      "filename": "电子发票_20240115_001.pdf",
+      "matched_rule": "电子发票PDF",
+      "conflict_type": null,
+      "conflict_detail": null
+    },
+    {
+      "id": "e0acc156fd49",
+      "source_path": "./examples/sample_invoices\\电子发票_20240116_002.pdf",
+      "target_path": "./examples/archived\\electronic\\电子发票_20240116_002.pdf",
+      "filename": "电子发票_20240116_002.pdf",
+      "matched_rule": "电子发票PDF",
+      "conflict_type": null,
+      "conflict_detail": null
+    },
+    {
+      "id": "1222f5b8736e",
+      "source_path": "./examples/sample_invoices\\采购合同_供应商A.docx",
+      "target_path": "./examples/archived\\contracts\\采购合同_供应商A.docx",
+      "filename": "采购合同_供应商A.docx",
+      "matched_rule": "合同文档",
+      "conflict_type": null,
+      "conflict_detail": null
+    }
+  ],
+  "unmatched_files": []
+}

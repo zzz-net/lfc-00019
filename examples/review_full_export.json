@@ -338,17 +338,10 @@
           "error_message": null
         }
       ],
-      "is_undone": true
+      "is_undone": false
     }
   },
-  "undo_records": [
-    {
-      "run_id": "4f89ebbc8bcd",
-      "undo_timestamp": "2026-06-16T01:02:39.579146",
-      "moves_restored": 1,
-      "status": "completed"
-    }
-  ],
+  "undo_records": [],
   "last_scan": "2026-06-16T01:00:41.122846",
   "last_plan": "5c5cdf86f498",
   "created_at": "2026-06-16T01:00:40.930820"

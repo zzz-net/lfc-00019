@@ -74,6 +74,23 @@ class PlannedMove:
 
 
 @dataclass
+class PlanSummary:
+    """预案摘要信息"""
+    total_files: int = 0
+    matched_files: int = 0
+    unmatched_files: int = 0
+    new_target_dirs: List[str] = field(default_factory=list)
+    rules_with_same_target: Dict[str, List[str]] = field(default_factory=dict)
+    files_per_rule: Dict[str, int] = field(default_factory=dict)
+    files_per_target_dir: Dict[str, int] = field(default_factory=dict)
+    conflict_count: int = 0
+    conflict_details: List[str] = field(default_factory=list)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass
 class ExecutedMove:
     """已执行的移动记录"""
     id: str
@@ -82,7 +99,7 @@ class ExecutedMove:
     target_path: str
     filename: str
     matched_rule: str
-    status: str  # "moved" | "skipped_conflict" | "failed"
+    status: str  # "moved" | "skipped_conflict" | "skipped_manual" | "failed" | "unmatched"
     timestamp: str
     error_message: Optional[str] = None
 
