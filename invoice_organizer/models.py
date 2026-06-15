@@ -9,6 +9,16 @@ import yaml
 import uuid
 
 
+def generate_id() -> str:
+    """生成唯一 ID"""
+    return uuid.uuid4().hex[:12]
+
+
+def now_iso() -> str:
+    """当前时间 ISO 格式"""
+    return datetime.now().isoformat()
+
+
 @dataclass
 class Rule:
     """归档规则：匹配文件模式 -> 目标目录"""
@@ -311,14 +321,222 @@ class ImportLog:
         )
 
 
-def generate_id() -> str:
-    """生成唯一 ID"""
-    return uuid.uuid4().hex[:12]
+@dataclass
+class FileMoveDiff:
+    """单个文件的移动计划差异"""
+    filename: str
+    source_path: str
+    change_type: str  # "added" | "removed" | "target_changed" | "rule_changed" | "conflict_changed" | "unchanged"
+    old_target_path: Optional[str] = None
+    new_target_path: Optional[str] = None
+    old_matched_rule: Optional[str] = None
+    new_matched_rule: Optional[str] = None
+    old_conflict_type: Optional[str] = None
+    new_conflict_type: Optional[str] = None
+    old_conflict_detail: Optional[str] = None
+    new_conflict_detail: Optional[str] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "FileMoveDiff":
+        return cls(**data)
 
 
-def now_iso() -> str:
-    """当前时间 ISO 格式"""
-    return datetime.now().isoformat()
+@dataclass
+class UnmatchedFileDiff:
+    """未命中文件的差异"""
+    filename: str
+    source_path: str
+    change_type: str  # "added" | "removed" | "reason_changed" | "unchanged"
+    old_reason: Optional[str] = None
+    new_reason: Optional[str] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "UnmatchedFileDiff":
+        return cls(**data)
+
+
+@dataclass
+class PlanDiffResult:
+    """两版预案的完整差异对比结果"""
+    old_plan_id: str
+    new_plan_id: str
+    old_snapshot_id: Optional[str] = None
+    new_snapshot_id: Optional[str] = None
+    diff_timestamp: str = field(default_factory=now_iso)
+
+    old_move_count: int = 0
+    new_move_count: int = 0
+    old_unmatched_count: int = 0
+    new_unmatched_count: int = 0
+
+    added_moves: List[FileMoveDiff] = field(default_factory=list)
+    removed_moves: List[FileMoveDiff] = field(default_factory=list)
+    target_changed: List[FileMoveDiff] = field(default_factory=list)
+    rule_changed: List[FileMoveDiff] = field(default_factory=list)
+    conflict_changed: List[FileMoveDiff] = field(default_factory=list)
+    unchanged_moves: List[FileMoveDiff] = field(default_factory=list)
+
+    added_unmatched: List[UnmatchedFileDiff] = field(default_factory=list)
+    removed_unmatched: List[UnmatchedFileDiff] = field(default_factory=list)
+    unchanged_unmatched: List[UnmatchedFileDiff] = field(default_factory=list)
+
+    added_rules: List[str] = field(default_factory=list)
+    removed_rules: List[str] = field(default_factory=list)
+    modified_rules: List[str] = field(default_factory=list)
+
+    config_diff: Optional[Dict[str, Any]] = None
+
+    @property
+    def has_changes(self) -> bool:
+        return (
+            len(self.added_moves) > 0 or
+            len(self.removed_moves) > 0 or
+            len(self.target_changed) > 0 or
+            len(self.rule_changed) > 0 or
+            len(self.conflict_changed) > 0 or
+            len(self.added_unmatched) > 0 or
+            len(self.removed_unmatched) > 0 or
+            len(self.added_rules) > 0 or
+            len(self.removed_rules) > 0 or
+            len(self.modified_rules) > 0
+        )
+
+    @property
+    def total_changed_moves(self) -> int:
+        return (
+            len(self.added_moves) +
+            len(self.removed_moves) +
+            len(self.target_changed) +
+            len(self.rule_changed) +
+            len(self.conflict_changed)
+        )
+
+    def to_dict(self) -> Dict[str, Any]:
+        result = {
+            "old_plan_id": self.old_plan_id,
+            "new_plan_id": self.new_plan_id,
+            "old_snapshot_id": self.old_snapshot_id,
+            "new_snapshot_id": self.new_snapshot_id,
+            "diff_timestamp": self.diff_timestamp,
+            "old_move_count": self.old_move_count,
+            "new_move_count": self.new_move_count,
+            "old_unmatched_count": self.old_unmatched_count,
+            "new_unmatched_count": self.new_unmatched_count,
+            "added_moves": [m.to_dict() for m in self.added_moves],
+            "removed_moves": [m.to_dict() for m in self.removed_moves],
+            "target_changed": [m.to_dict() for m in self.target_changed],
+            "rule_changed": [m.to_dict() for m in self.rule_changed],
+            "conflict_changed": [m.to_dict() for m in self.conflict_changed],
+            "unchanged_moves": [m.to_dict() for m in self.unchanged_moves],
+            "added_unmatched": [u.to_dict() for u in self.added_unmatched],
+            "removed_unmatched": [u.to_dict() for u in self.removed_unmatched],
+            "unchanged_unmatched": [u.to_dict() for u in self.unchanged_unmatched],
+            "added_rules": self.added_rules,
+            "removed_rules": self.removed_rules,
+            "modified_rules": self.modified_rules,
+            "has_changes": self.has_changes,
+            "total_changed_moves": self.total_changed_moves,
+        }
+        if self.config_diff:
+            result["config_diff"] = self.config_diff
+        return result
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "PlanDiffResult":
+        return cls(
+            old_plan_id=data["old_plan_id"],
+            new_plan_id=data["new_plan_id"],
+            old_snapshot_id=data.get("old_snapshot_id"),
+            new_snapshot_id=data.get("new_snapshot_id"),
+            diff_timestamp=data.get("diff_timestamp", now_iso()),
+            old_move_count=data.get("old_move_count", 0),
+            new_move_count=data.get("new_move_count", 0),
+            old_unmatched_count=data.get("old_unmatched_count", 0),
+            new_unmatched_count=data.get("new_unmatched_count", 0),
+            added_moves=[FileMoveDiff.from_dict(m) for m in data.get("added_moves", [])],
+            removed_moves=[FileMoveDiff.from_dict(m) for m in data.get("removed_moves", [])],
+            target_changed=[FileMoveDiff.from_dict(m) for m in data.get("target_changed", [])],
+            rule_changed=[FileMoveDiff.from_dict(m) for m in data.get("rule_changed", [])],
+            conflict_changed=[FileMoveDiff.from_dict(m) for m in data.get("conflict_changed", [])],
+            unchanged_moves=[FileMoveDiff.from_dict(m) for m in data.get("unchanged_moves", [])],
+            added_unmatched=[UnmatchedFileDiff.from_dict(u) for u in data.get("added_unmatched", [])],
+            removed_unmatched=[UnmatchedFileDiff.from_dict(u) for u in data.get("removed_unmatched", [])],
+            unchanged_unmatched=[UnmatchedFileDiff.from_dict(u) for u in data.get("unchanged_unmatched", [])],
+            added_rules=data.get("added_rules", []),
+            removed_rules=data.get("removed_rules", []),
+            modified_rules=data.get("modified_rules", []),
+            config_diff=data.get("config_diff"),
+        )
+
+
+@dataclass
+class PlanLock:
+    """预案版本锁定记录
+
+    锁定后 apply 只能执行被锁定的版本，
+    如果配置变更或重新 plan 导致版本不一致，执行将被拦截。
+    """
+    lock_id: str
+    snapshot_id: str
+    plan_id: str
+    locked_at: str
+    locked_by: str = "cli"
+    reason: Optional[str] = None
+    is_active: bool = True
+    released_at: Optional[str] = None
+    release_reason: Optional[str] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "PlanLock":
+        return cls(
+            lock_id=data["lock_id"],
+            snapshot_id=data["snapshot_id"],
+            plan_id=data["plan_id"],
+            locked_at=data["locked_at"],
+            locked_by=data.get("locked_by", "cli"),
+            reason=data.get("reason"),
+            is_active=data.get("is_active", True),
+            released_at=data.get("released_at"),
+            release_reason=data.get("release_reason"),
+        )
+
+
+@dataclass
+class LockViolation:
+    """锁定被违反的记录 - 用于审计和拦截提示"""
+    violation_id: str
+    lock_id: str
+    snapshot_id: str
+    plan_id: str
+    violation_timestamp: str
+    violation_type: str  # "replan_detected" | "config_changed" | "wrong_snapshot"
+    violation_detail: str
+    blocked: bool = True  # 是否被拦截
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "LockViolation":
+        return cls(
+            violation_id=data["violation_id"],
+            lock_id=data["lock_id"],
+            snapshot_id=data["snapshot_id"],
+            plan_id=data["plan_id"],
+            violation_timestamp=data["violation_timestamp"],
+            violation_type=data["violation_type"],
+            violation_detail=data["violation_detail"],
+            blocked=data.get("blocked", True),
+        )
 
 
 def load_config(config_path: str) -> Config:

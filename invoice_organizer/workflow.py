@@ -13,6 +13,7 @@ from .models import (
     Config, Rule, ScannedFile, PlannedMove, ExecutedMove, UndoRecord, PlanSummary,
     ConfigSnapshot, BatchSnapshot, UnmatchedFileInfo, NewDirInfo,
     ConfigDiffResult, ImportValidationResult,
+    PlanDiffResult, FileMoveDiff, UnmatchedFileDiff,
     generate_id, now_iso,
 )
 from .storage import StateStore
@@ -873,3 +874,341 @@ def snapshot_to_planned_moves(snapshot: BatchSnapshot) -> List[PlannedMove]:
         )
         for m in snapshot.moves
     ]
+
+
+# ============================================================
+# 预案版本对比相关功能
+# ============================================================
+
+def diff_plans(
+    old_snapshot: BatchSnapshot,
+    new_snapshot: BatchSnapshot,
+) -> PlanDiffResult:
+    """
+    对比两版预案/快照的差异
+
+    返回详细的差异结果，包括：
+    - 文件去向变化
+    - 规则增删改
+    - 冲突状态变化
+    - 未命中文件变化
+    """
+    result = PlanDiffResult(
+        old_plan_id=old_snapshot.plan_id,
+        new_plan_id=new_snapshot.plan_id,
+        old_snapshot_id=old_snapshot.snapshot_id,
+        new_snapshot_id=new_snapshot.snapshot_id,
+        old_move_count=len(old_snapshot.moves),
+        new_move_count=len(new_snapshot.moves),
+        old_unmatched_count=len(old_snapshot.unmatched_files),
+        new_unmatched_count=len(new_snapshot.unmatched_files),
+    )
+
+    old_moves_by_path: Dict[str, Dict[str, Any]] = {}
+    for m in old_snapshot.moves:
+        old_moves_by_path[m["source_path"]] = m
+
+    new_moves_by_path: Dict[str, Dict[str, Any]] = {}
+    for m in new_snapshot.moves:
+        new_moves_by_path[m["source_path"]] = m
+
+    old_unmatched_by_path: Dict[str, UnmatchedFileInfo] = {}
+    for u in old_snapshot.unmatched_files:
+        old_unmatched_by_path[u.source_path] = u
+
+    new_unmatched_by_path: Dict[str, UnmatchedFileInfo] = {}
+    for u in new_snapshot.unmatched_files:
+        new_unmatched_by_path[u.source_path] = u
+
+    all_source_paths = set(old_moves_by_path.keys()) | set(new_moves_by_path.keys())
+
+    for src_path in sorted(all_source_paths):
+        old_move = old_moves_by_path.get(src_path)
+        new_move = new_moves_by_path.get(src_path)
+
+        if old_move and not new_move:
+            result.removed_moves.append(FileMoveDiff(
+                filename=old_move["filename"],
+                source_path=src_path,
+                change_type="removed",
+                old_target_path=old_move["target_path"],
+                old_matched_rule=old_move["matched_rule"],
+                old_conflict_type=old_move.get("conflict_type"),
+                old_conflict_detail=old_move.get("conflict_detail"),
+            ))
+        elif not old_move and new_move:
+            result.added_moves.append(FileMoveDiff(
+                filename=new_move["filename"],
+                source_path=src_path,
+                change_type="added",
+                new_target_path=new_move["target_path"],
+                new_matched_rule=new_move["matched_rule"],
+                new_conflict_type=new_move.get("conflict_type"),
+                new_conflict_detail=new_move.get("conflict_detail"),
+            ))
+        else:
+            target_changed = old_move["target_path"] != new_move["target_path"]
+            rule_changed = old_move["matched_rule"] != new_move["matched_rule"]
+            conflict_changed = (
+                old_move.get("conflict_type") != new_move.get("conflict_type") or
+                old_move.get("conflict_detail") != new_move.get("conflict_detail")
+            )
+
+            diff = FileMoveDiff(
+                filename=old_move["filename"],
+                source_path=src_path,
+                change_type="unchanged",
+                old_target_path=old_move["target_path"],
+                new_target_path=new_move["target_path"],
+                old_matched_rule=old_move["matched_rule"],
+                new_matched_rule=new_move["matched_rule"],
+                old_conflict_type=old_move.get("conflict_type"),
+                new_conflict_type=new_move.get("conflict_type"),
+                old_conflict_detail=old_move.get("conflict_detail"),
+                new_conflict_detail=new_move.get("conflict_detail"),
+            )
+
+            if target_changed:
+                diff.change_type = "target_changed"
+                result.target_changed.append(diff)
+            elif rule_changed:
+                diff.change_type = "rule_changed"
+                result.rule_changed.append(diff)
+            elif conflict_changed:
+                diff.change_type = "conflict_changed"
+                result.conflict_changed.append(diff)
+            else:
+                result.unchanged_moves.append(diff)
+
+    all_unmatched_paths = set(old_unmatched_by_path.keys()) | set(new_unmatched_by_path.keys())
+
+    for src_path in sorted(all_unmatched_paths):
+        old_u = old_unmatched_by_path.get(src_path)
+        new_u = new_unmatched_by_path.get(src_path)
+
+        if old_u and not new_u:
+            result.removed_unmatched.append(UnmatchedFileDiff(
+                filename=old_u.filename,
+                source_path=src_path,
+                change_type="removed",
+                old_reason=old_u.reason,
+            ))
+        elif not old_u and new_u:
+            result.added_unmatched.append(UnmatchedFileDiff(
+                filename=new_u.filename,
+                source_path=src_path,
+                change_type="added",
+                new_reason=new_u.reason,
+            ))
+        else:
+            if old_u.reason != new_u.reason:
+                result.added_unmatched.append(UnmatchedFileDiff(
+                    filename=old_u.filename,
+                    source_path=src_path,
+                    change_type="reason_changed",
+                    old_reason=old_u.reason,
+                    new_reason=new_u.reason,
+                ))
+            else:
+                result.unchanged_unmatched.append(UnmatchedFileDiff(
+                    filename=old_u.filename,
+                    source_path=src_path,
+                    change_type="unchanged",
+                    old_reason=old_u.reason,
+                    new_reason=new_u.reason,
+                ))
+
+    old_rule_map: Dict[str, Dict[str, Any]] = {r["name"]: r for r in old_snapshot.config_snapshot.rules}
+    new_rule_map: Dict[str, Dict[str, Any]] = {r["name"]: r for r in new_snapshot.config_snapshot.rules}
+
+    all_rule_names = set(old_rule_map.keys()) | set(new_rule_map.keys())
+
+    for name in sorted(all_rule_names):
+        if name in new_rule_map and name not in old_rule_map:
+            result.added_rules.append(name)
+        elif name not in new_rule_map and name in old_rule_map:
+            result.removed_rules.append(name)
+        else:
+            old_r = old_rule_map[name]
+            new_r = new_rule_map[name]
+            if (old_r.get("pattern") != new_r.get("pattern") or
+                old_r.get("target") != new_r.get("target") or
+                old_r.get("description") != new_r.get("description")):
+                result.modified_rules.append(name)
+
+    config_diff = diff_config_snapshots(old_snapshot.config_snapshot, new_snapshot.config_snapshot)
+    if config_diff.has_diff:
+        result.config_diff = config_diff.to_dict()
+
+    return result
+
+
+def diff_config_snapshots(old_config: ConfigSnapshot, new_config: ConfigSnapshot) -> ConfigDiffResult:
+    """
+    比较两个配置快照的差异
+    """
+    added_rules: List[str] = []
+    removed_rules: List[str] = []
+    modified_rules: List[str] = []
+
+    old_rule_map: Dict[str, Dict[str, Any]] = {r["name"]: r for r in old_config.rules}
+    new_rule_map: Dict[str, Dict[str, Any]] = {r["name"]: r for r in new_config.rules}
+
+    all_rule_names = set(old_rule_map.keys()) | set(new_rule_map.keys())
+
+    for name in all_rule_names:
+        if name in new_rule_map and name not in old_rule_map:
+            added_rules.append(name)
+        elif name not in new_rule_map and name in old_rule_map:
+            removed_rules.append(name)
+        else:
+            old_r = old_rule_map[name]
+            new_r = new_rule_map[name]
+            if (old_r.get("pattern") != new_r.get("pattern") or
+                old_r.get("target") != new_r.get("target") or
+                old_r.get("description") != new_r.get("description")):
+                modified_rules.append(name)
+
+    source_dir_changed = old_config.source_dir != new_config.source_dir
+    dest_dir_changed = old_config.dest_dir != new_config.dest_dir
+    extensions_changed = old_config.file_extensions != new_config.file_extensions
+    recursive_changed = old_config.recursive != new_config.recursive
+
+    has_diff = (
+        len(added_rules) > 0 or
+        len(removed_rules) > 0 or
+        len(modified_rules) > 0 or
+        source_dir_changed or
+        dest_dir_changed or
+        extensions_changed or
+        recursive_changed
+    )
+
+    return ConfigDiffResult(
+        has_diff=has_diff,
+        added_rules=sorted(added_rules),
+        removed_rules=sorted(removed_rules),
+        modified_rules=sorted(modified_rules),
+        source_dir_changed=source_dir_changed,
+        dest_dir_changed=dest_dir_changed,
+        extensions_changed=extensions_changed,
+        recursive_changed=recursive_changed,
+    )
+
+
+def export_plan_diff(
+    diff_result: PlanDiffResult,
+    output_path: str,
+    format: str = "json",
+) -> None:
+    """
+    导出预案差异对比结果为 JSON 或 CSV 格式
+    """
+    if format == "json":
+        with open(output_path, "w", encoding="utf-8") as f:
+            json.dump(diff_result.to_dict(), f, ensure_ascii=False, indent=2)
+
+    elif format == "csv":
+        with open(output_path, "w", encoding="utf-8-sig", newline="") as f:
+            writer = csv.writer(f)
+
+            writer.writerow(["=== 预案差异对比摘要 ==="])
+            writer.writerow(["旧预案ID", diff_result.old_plan_id])
+            writer.writerow(["新预案ID", diff_result.new_plan_id])
+            writer.writerow(["旧快照ID", diff_result.old_snapshot_id or ""])
+            writer.writerow(["新快照ID", diff_result.new_snapshot_id or ""])
+            writer.writerow(["对比时间", diff_result.diff_timestamp])
+            writer.writerow(["旧移动计划数", diff_result.old_move_count])
+            writer.writerow(["新移动计划数", diff_result.new_move_count])
+            writer.writerow(["旧未命中数", diff_result.old_unmatched_count])
+            writer.writerow(["新未命中数", diff_result.new_unmatched_count])
+            writer.writerow(["有变化", "是" if diff_result.has_changes else "否"])
+            writer.writerow(["变化的移动项数", diff_result.total_changed_moves])
+
+            writer.writerow([])
+            writer.writerow(["=== 规则变化 ==="])
+            writer.writerow(["变化类型", "规则名"])
+            for r in diff_result.added_rules:
+                writer.writerow(["新增", r])
+            for r in diff_result.removed_rules:
+                writer.writerow(["删除", r])
+            for r in diff_result.modified_rules:
+                writer.writerow(["修改", r])
+
+            if diff_result.config_diff:
+                writer.writerow([])
+                writer.writerow(["=== 配置差异 ==="])
+                cd = diff_result.config_diff
+                if cd.get("source_dir_changed"):
+                    writer.writerow(["源目录变更", "是"])
+                if cd.get("dest_dir_changed"):
+                    writer.writerow(["目标目录变更", "是"])
+                if cd.get("extensions_changed"):
+                    writer.writerow(["扩展名过滤变更", "是"])
+                if cd.get("recursive_changed"):
+                    writer.writerow(["递归扫描变更", "是"])
+
+            writer.writerow([])
+            writer.writerow(["=== 新增移动项 ==="])
+            writer.writerow(["文件名", "源路径", "目标路径", "匹配规则", "冲突类型"])
+            for m in diff_result.added_moves:
+                writer.writerow([
+                    m.filename, m.source_path,
+                    m.new_target_path or "", m.new_matched_rule or "",
+                    m.new_conflict_type or "",
+                ])
+
+            writer.writerow([])
+            writer.writerow(["=== 删除移动项 ==="])
+            writer.writerow(["文件名", "源路径", "原目标路径", "原匹配规则", "原冲突类型"])
+            for m in diff_result.removed_moves:
+                writer.writerow([
+                    m.filename, m.source_path,
+                    m.old_target_path or "", m.old_matched_rule or "",
+                    m.old_conflict_type or "",
+                ])
+
+            writer.writerow([])
+            writer.writerow(["=== 目标路径变化 ==="])
+            writer.writerow(["文件名", "源路径", "原目标路径", "新目标路径", "原规则", "新规则"])
+            for m in diff_result.target_changed:
+                writer.writerow([
+                    m.filename, m.source_path,
+                    m.old_target_path or "", m.new_target_path or "",
+                    m.old_matched_rule or "", m.new_matched_rule or "",
+                ])
+
+            writer.writerow([])
+            writer.writerow(["=== 匹配规则变化 ==="])
+            writer.writerow(["文件名", "源路径", "原规则", "新规则", "目标路径"])
+            for m in diff_result.rule_changed:
+                writer.writerow([
+                    m.filename, m.source_path,
+                    m.old_matched_rule or "", m.new_matched_rule or "",
+                    m.new_target_path or "",
+                ])
+
+            writer.writerow([])
+            writer.writerow(["=== 冲突状态变化 ==="])
+            writer.writerow(["文件名", "源路径", "原冲突类型", "新冲突类型", "原冲突详情", "新冲突详情"])
+            for m in diff_result.conflict_changed:
+                writer.writerow([
+                    m.filename, m.source_path,
+                    m.old_conflict_type or "", m.new_conflict_type or "",
+                    m.old_conflict_detail or "", m.new_conflict_detail or "",
+                ])
+
+            writer.writerow([])
+            writer.writerow(["=== 新增未命中文件 ==="])
+            writer.writerow(["文件名", "源路径", "原因"])
+            for u in diff_result.added_unmatched:
+                writer.writerow([u.filename, u.source_path, u.new_reason or ""])
+
+            writer.writerow([])
+            writer.writerow(["=== 删除未命中文件 ==="])
+            writer.writerow(["文件名", "源路径", "原因"])
+            for u in diff_result.removed_unmatched:
+                writer.writerow([u.filename, u.source_path, u.old_reason or ""])
+
+    else:
+        raise ValueError(f"不支持的导出格式: {format}")

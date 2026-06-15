@@ -8,7 +8,7 @@ from datetime import datetime
 
 from .models import (
     ScannedFile, PlannedMove, ExecutedMove, UndoRecord,
-    BatchSnapshot, ImportLog,
+    BatchSnapshot, ImportLog, PlanLock, LockViolation,
     generate_id, now_iso,
 )
 
@@ -35,9 +35,13 @@ class StateStore:
             "undo_records": [],
             "snapshots": {},
             "import_logs": [],
+            "plan_locks": [],
+            "lock_violations": [],
+            "plan_diffs": [],
             "last_scan": None,
             "last_plan": None,
             "last_snapshot": None,
+            "active_lock_id": None,
             "created_at": now_iso(),
         }
 
@@ -229,6 +233,155 @@ class StateStore:
         if logs:
             return ImportLog.from_dict(logs[-1])
         return None
+
+    # ---- 预案版本锁定 ----
+
+    def create_lock(self, snapshot_id: str, plan_id: str, reason: Optional[str] = None) -> PlanLock:
+        """创建一个新的预案版本锁定
+
+        同时会先释放之前的活动锁定。
+        """
+        self.release_active_lock(reason="新锁定取代旧锁定")
+
+        lock = PlanLock(
+            lock_id=generate_id(),
+            snapshot_id=snapshot_id,
+            plan_id=plan_id,
+            locked_at=now_iso(),
+            reason=reason,
+            is_active=True,
+        )
+
+        if "plan_locks" not in self._data:
+            self._data["plan_locks"] = []
+        self._data["plan_locks"].append(lock.to_dict())
+        self._data["active_lock_id"] = lock.lock_id
+        self.save()
+        return lock
+
+    def get_active_lock(self) -> Optional[PlanLock]:
+        """获取当前活动的锁定"""
+        active_lock_id = self._data.get("active_lock_id")
+        if not active_lock_id:
+            return None
+
+        for lock_data in self._data.get("plan_locks", []):
+            if lock_data.get("lock_id") == active_lock_id and lock_data.get("is_active", False):
+                return PlanLock.from_dict(lock_data)
+        return None
+
+    def get_lock(self, lock_id: str) -> Optional[PlanLock]:
+        """获取指定的锁定记录"""
+        for lock_data in self._data.get("plan_locks", []):
+            if lock_data.get("lock_id") == lock_id:
+                return PlanLock.from_dict(lock_data)
+        return None
+
+    def get_all_locks(self) -> List[PlanLock]:
+        """获取所有锁定记录"""
+        return [
+            PlanLock.from_dict(l)
+            for l in self._data.get("plan_locks", [])
+        ]
+
+    def release_active_lock(self, reason: Optional[str] = None) -> bool:
+        """释放当前活动的锁定"""
+        active_lock = self.get_active_lock()
+        if not active_lock:
+            return False
+
+        for lock_data in self._data.get("plan_locks", []):
+            if lock_data.get("lock_id") == active_lock.lock_id:
+                lock_data["is_active"] = False
+                lock_data["released_at"] = now_iso()
+                lock_data["release_reason"] = reason or "手动释放"
+                break
+
+        self._data["active_lock_id"] = None
+        self.save()
+        return True
+
+    def release_lock(self, lock_id: str, reason: Optional[str] = None) -> bool:
+        """释放指定的锁定"""
+        found = False
+        for lock_data in self._data.get("plan_locks", []):
+            if lock_data.get("lock_id") == lock_id:
+                lock_data["is_active"] = False
+                lock_data["released_at"] = now_iso()
+                lock_data["release_reason"] = reason or "手动释放"
+                found = True
+                break
+
+        if found and self._data.get("active_lock_id") == lock_id:
+            self._data["active_lock_id"] = None
+
+        if found:
+            self.save()
+        return found
+
+    # ---- 锁定违规记录 ----
+
+    def add_lock_violation(self, violation: LockViolation) -> None:
+        """添加一条锁定违规记录"""
+        if "lock_violations" not in self._data:
+            self._data["lock_violations"] = []
+        self._data["lock_violations"].append(violation.to_dict())
+        self.save()
+
+    def get_lock_violations(self) -> List[LockViolation]:
+        """获取所有锁定违规记录"""
+        return [
+            LockViolation.from_dict(v)
+            for v in self._data.get("lock_violations", [])
+        ]
+
+    def get_lock_violations_by_lock(self, lock_id: str) -> List[LockViolation]:
+        """获取指定锁定的所有违规记录"""
+        return [
+            v for v in self.get_lock_violations()
+            if v.lock_id == lock_id
+        ]
+
+    # ---- 预案差异记录 ----
+
+    def save_plan_diff(self, diff_data: Dict[str, Any]) -> str:
+        """保存预案差异记录
+
+        返回差异记录的 ID
+        """
+        diff_id = generate_id()
+        diff_record = {
+            "diff_id": diff_id,
+            "created_at": now_iso(),
+            "diff_data": diff_data,
+        }
+        if "plan_diffs" not in self._data:
+            self._data["plan_diffs"] = []
+        self._data["plan_diffs"].append(diff_record)
+        self.save()
+        return diff_id
+
+    def get_plan_diff(self, diff_id: str) -> Optional[Dict[str, Any]]:
+        """获取指定的预案差异记录"""
+        for diff_record in self._data.get("plan_diffs", []):
+            if diff_record.get("diff_id") == diff_id:
+                return diff_record.get("diff_data")
+        return None
+
+    def list_plan_diffs(self) -> List[Dict[str, Any]]:
+        """列出所有预案差异记录（摘要）"""
+        result = []
+        for diff_record in self._data.get("plan_diffs", []):
+            diff_data = diff_record.get("diff_data", {})
+            result.append({
+                "diff_id": diff_record.get("diff_id"),
+                "created_at": diff_record.get("created_at"),
+                "old_plan_id": diff_data.get("old_plan_id"),
+                "new_plan_id": diff_data.get("new_plan_id"),
+                "has_changes": diff_data.get("has_changes", False),
+                "total_changed_moves": diff_data.get("total_changed_moves", 0),
+            })
+        return sorted(result, key=lambda x: x["created_at"], reverse=True)
 
     # ---- 完整数据导出 ----
 

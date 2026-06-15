@@ -3,11 +3,11 @@ from __future__ import annotations
 
 import os
 import sys
-from typing import Optional
+from typing import Optional, Tuple
 
 import click
 
-from .models import load_config, generate_id, ImportLog, now_iso
+from .models import load_config, generate_id, ImportLog, now_iso, LockViolation
 from .storage import StateStore
 from .workflow import (
     scan_directory, build_plan, build_plan_summary, apply_plan,
@@ -15,6 +15,7 @@ from .workflow import (
     create_batch_snapshot, diff_config, validate_import_snapshot,
     load_snapshot_from_file, export_snapshot_to_file,
     snapshot_to_planned_moves,
+    diff_plans, export_plan_diff,
 )
 
 
@@ -241,6 +242,28 @@ def cmd_apply(
 
     snapshot_id = snapshot.snapshot_id
     plan_id = snapshot.plan_id
+
+    allowed, reject_reason = _check_lock_before_apply(store, snapshot)
+    if not allowed:
+        click.echo(click.style("[错误] 执行被版本锁定拦截！", fg="red", bold=True))
+        click.echo(click.style(f"  {reject_reason}", fg="red"))
+        active_lock = store.get_active_lock()
+        if active_lock:
+            click.echo()
+            click.echo(click.style("[锁定信息]", fg="yellow"))
+            click.echo(f"  锁定 ID: {active_lock.lock_id}")
+            click.echo(f"  锁定快照: {active_lock.snapshot_id}")
+            click.echo(f"  锁定预案: {active_lock.plan_id}")
+            click.echo(f"  锁定时间: {active_lock.locked_at}")
+            if active_lock.reason:
+                click.echo(f"  锁定原因: {active_lock.reason}")
+        click.echo()
+        click.echo("  你可以：")
+        click.echo("    1. 使用 -s 指定锁定的快照 ID 执行")
+        click.echo(f"       python -m invoice_organizer apply -c {config_path} -s {active_lock.snapshot_id if active_lock else ''}")
+        click.echo("    2. 使用 unlock-plan 释放锁定后再执行")
+        click.echo(f"       python -m invoice_organizer unlock-plan -c {config_path}")
+        sys.exit(1)
 
     diff_result = diff_config(config, snapshot.config_snapshot)
     if diff_result.has_diff and not force_snapshot:
@@ -718,6 +741,368 @@ def cmd_import_snapshot(config_path: str, input_path: str, yes: bool, verbose: b
 
     click.echo(click.style(f"\n[导入成功] 快照已保存: {snapshot.snapshot_id}", fg="green"))
     click.echo(f"  可使用 apply -s {snapshot.snapshot_id} 执行，或 export-snapshot 导出复核。")
+
+
+@cli.command("diff-plans", help="对比两版预案的差异，支持导出 JSON/CSV")
+@click.option("-c", "--config", "config_path", required=True, type=click.Path(),
+              help="配置文件路径 (YAML)")
+@click.option("--old-snapshot", "old_snapshot_id", help="旧版快照 ID (默认使用倒数第二个)")
+@click.option("--new-snapshot", "new_snapshot_id", help="新版快照 ID (默认使用最新的)")
+@click.option("-o", "--output", "output_path", help="导出文件路径 (不指定则仅显示)")
+@click.option("-f", "--format", "format", type=click.Choice(["json", "csv"]), default="json",
+              help="导出格式 (默认: json)")
+@click.option("-v", "--verbose", is_flag=True, help="显示详细信息")
+@click.option("--save", "save_diff", is_flag=True, help="保存差异记录到状态文件")
+def cmd_diff_plans(
+    config_path: str,
+    old_snapshot_id: Optional[str],
+    new_snapshot_id: Optional[str],
+    output_path: Optional[str],
+    format: str,
+    verbose: bool,
+    save_diff: bool,
+):
+    try:
+        config = load_config(config_path)
+    except Exception as e:
+        click.echo(f"[错误] 加载配置失败: {e}", err=True)
+        sys.exit(1)
+
+    store = _get_store(config)
+    snapshots = store.list_snapshots()
+
+    if len(snapshots) < 2:
+        click.echo("[错误] 至少需要两个快照才能对比。请先执行至少两次 plan。", err=True)
+        sys.exit(1)
+
+    if new_snapshot_id:
+        new_snapshot = store.get_snapshot(new_snapshot_id)
+        if not new_snapshot:
+            click.echo(f"[错误] 未找到新版快照: {new_snapshot_id}", err=True)
+            sys.exit(1)
+    else:
+        new_snapshot = store.get_last_snapshot()
+        if not new_snapshot:
+            click.echo("[错误] 未找到快照。", err=True)
+            sys.exit(1)
+
+    if old_snapshot_id:
+        old_snapshot = store.get_snapshot(old_snapshot_id)
+        if not old_snapshot:
+            click.echo(f"[错误] 未找到旧版快照: {old_snapshot_id}", err=True)
+            sys.exit(1)
+    else:
+        all_snaps = sorted(snapshots, key=lambda s: s["created_at"])
+        if len(all_snaps) < 2:
+            click.echo("[错误] 至少需要两个快照才能对比。", err=True)
+            sys.exit(1)
+        old_snapshot_id = all_snaps[-2]["snapshot_id"]
+        old_snapshot = store.get_snapshot(old_snapshot_id)
+
+    diff_result = diff_plans(old_snapshot, new_snapshot)
+
+    click.echo(click.style("[预案差异对比]", fg="cyan", bold=True))
+    click.echo(f"  旧版: 预案 {diff_result.old_plan_id} / 快照 {diff_result.old_snapshot_id}")
+    click.echo(f"  新版: 预案 {diff_result.new_plan_id} / 快照 {diff_result.new_snapshot_id}")
+    click.echo(f"  对比时间: {diff_result.diff_timestamp}")
+    click.echo()
+
+    click.echo(click.style("[移动计划变化]", fg="cyan"))
+    click.echo(f"  旧版移动项: {diff_result.old_move_count}")
+    click.echo(f"  新版移动项: {diff_result.new_move_count}")
+    click.echo(f"  新增: {len(diff_result.added_moves)}")
+    click.echo(f"  删除: {len(diff_result.removed_moves)}")
+    click.echo(f"  目标路径变化: {len(diff_result.target_changed)}")
+    click.echo(f"  匹配规则变化: {len(diff_result.rule_changed)}")
+    click.echo(f"  冲突状态变化: {len(diff_result.conflict_changed)}")
+    click.echo(f"  未变化: {len(diff_result.unchanged_moves)}")
+
+    if diff_result.total_changed_moves > 0:
+        click.echo(click.style(f"  总计变化: {diff_result.total_changed_moves} 项", fg="yellow"))
+    else:
+        click.echo(click.style(f"  无变化", fg="green"))
+
+    click.echo()
+    click.echo(click.style("[未命中文件变化]", fg="cyan"))
+    click.echo(f"  旧版未命中: {diff_result.old_unmatched_count}")
+    click.echo(f"  新版未命中: {diff_result.new_unmatched_count}")
+    click.echo(f"  新增未命中: {len(diff_result.added_unmatched)}")
+    click.echo(f"  不再未命中: {len(diff_result.removed_unmatched)}")
+
+    click.echo()
+    click.echo(click.style("[规则变化]", fg="cyan"))
+    if diff_result.added_rules:
+        click.echo(click.style(f"  新增规则: {', '.join(diff_result.added_rules)}", fg="green"))
+    if diff_result.removed_rules:
+        click.echo(click.style(f"  删除规则: {', '.join(diff_result.removed_rules)}", fg="red"))
+    if diff_result.modified_rules:
+        click.echo(click.style(f"  修改规则: {', '.join(diff_result.modified_rules)}", fg="yellow"))
+    if not diff_result.added_rules and not diff_result.removed_rules and not diff_result.modified_rules:
+        click.echo(f"  规则无变化")
+
+    if diff_result.config_diff:
+        click.echo()
+        click.echo(click.style("[配置差异]", fg="yellow"))
+        cd = diff_result.config_diff
+        if cd.get("source_dir_changed"):
+            click.echo(f"  - 源目录变更")
+        if cd.get("dest_dir_changed"):
+            click.echo(f"  - 目标目录变更")
+        if cd.get("extensions_changed"):
+            click.echo(f"  - 文件扩展名过滤变更")
+        if cd.get("recursive_changed"):
+            click.echo(f"  - 递归扫描变更")
+
+    if verbose:
+        if diff_result.target_changed:
+            click.echo()
+            click.echo(click.style("[详情] 目标路径变化的文件:", fg="cyan"))
+            for m in diff_result.target_changed:
+                click.echo(f"  ! {m.filename}")
+                click.echo(f"    旧: {m.old_target_path}")
+                click.echo(f"    新: {m.new_target_path}")
+                click.echo(f"    规则: {m.old_matched_rule} -> {m.new_matched_rule}")
+
+        if diff_result.conflict_changed:
+            click.echo()
+            click.echo(click.style("[详情] 冲突状态变化的文件:", fg="yellow"))
+            for m in diff_result.conflict_changed:
+                old_status = m.old_conflict_type or "(无冲突)"
+                new_status = m.new_conflict_type or "(无冲突)"
+                click.echo(f"  ! {m.filename}: {old_status} -> {new_status}")
+
+        if diff_result.added_moves:
+            click.echo()
+            click.echo(click.style("[详情] 新增的移动项:", fg="green"))
+            for m in diff_result.added_moves:
+                conflict_tag = f" [冲突: {m.new_conflict_type}]" if m.new_conflict_type else ""
+                click.echo(f"  + {m.filename} -> {m.new_target_path} [{m.new_matched_rule}]{conflict_tag}")
+
+        if diff_result.removed_moves:
+            click.echo()
+            click.echo(click.style("[详情] 删除的移动项:", fg="red"))
+            for m in diff_result.removed_moves:
+                click.echo(f"  - {m.filename} (原去向: {m.old_target_path})")
+
+    if save_diff:
+        diff_id = store.save_plan_diff(diff_result.to_dict())
+        click.echo()
+        click.echo(click.style(f"[差异已保存] ID: {diff_id}", fg="green"))
+
+    if output_path:
+        try:
+            export_plan_diff(diff_result, output_path, format=format)
+            click.echo()
+            click.echo(click.style(f"[导出成功] 差异文件: {output_path}", fg="green"))
+            click.echo(f"  格式: {format.upper()}")
+        except Exception as e:
+            click.echo(f"[错误] 导出失败: {e}", err=True)
+            sys.exit(1)
+
+
+@cli.command("lock-plan", help="锁定某个预案版本，apply 时只能执行该版本")
+@click.option("-c", "--config", "config_path", required=True, type=click.Path(),
+              help="配置文件路径 (YAML)")
+@click.option("-s", "--snapshot-id", "snapshot_id", help="指定快照 ID (默认使用最新的)")
+@click.option("-p", "--plan-id", "plan_id", help="指定预案 ID (优先级低于 snapshot-id)")
+@click.option("--reason", help="锁定原因")
+@click.option("-v", "--verbose", is_flag=True, help="显示详细信息")
+def cmd_lock_plan(
+    config_path: str,
+    snapshot_id: Optional[str],
+    plan_id: Optional[str],
+    reason: Optional[str],
+    verbose: bool,
+):
+    try:
+        config = load_config(config_path)
+    except Exception as e:
+        click.echo(f"[错误] 加载配置失败: {e}", err=True)
+        sys.exit(1)
+
+    store = _get_store(config)
+
+    if snapshot_id:
+        snapshot = store.get_snapshot(snapshot_id)
+        if not snapshot:
+            click.echo(f"[错误] 未找到快照: {snapshot_id}", err=True)
+            sys.exit(1)
+    elif plan_id:
+        snapshot = store.get_snapshot_by_plan_id(plan_id)
+        if not snapshot:
+            click.echo(f"[错误] 预案 {plan_id} 没有对应的快照", err=True)
+            sys.exit(1)
+    else:
+        snapshot = store.get_last_snapshot()
+        if not snapshot:
+            click.echo("[错误] 未找到快照，请先执行 plan 命令。", err=True)
+            sys.exit(1)
+
+    existing_lock = store.get_active_lock()
+    if existing_lock:
+        click.echo(click.style(f"[提示] 已有活动锁定: {existing_lock.lock_id}", fg="yellow"))
+        click.echo(f"  旧锁定将被新锁定取代。")
+
+    lock = store.create_lock(
+        snapshot_id=snapshot.snapshot_id,
+        plan_id=snapshot.plan_id,
+        reason=reason,
+    )
+
+    click.echo(click.style(f"[锁定成功] 锁定 ID: {lock.lock_id}", fg="green"))
+    click.echo(f"  快照 ID: {lock.snapshot_id}")
+    click.echo(f"  预案 ID: {lock.plan_id}")
+    click.echo(f"  锁定时间: {lock.locked_at}")
+    if lock.reason:
+        click.echo(f"  锁定原因: {lock.reason}")
+
+    click.echo()
+    click.echo(click.style("[注意]", fg="yellow", bold=True))
+    click.echo("  锁定后，如果重新 plan 或配置发生变化，")
+    click.echo("  apply 命令将被拦截，不会悄悄执行最新结果。")
+    click.echo("  如需解锁，请使用 unlock-plan 命令。")
+
+    if verbose:
+        click.echo()
+        click.echo(f"  移动计划数: {len(snapshot.moves)}")
+        click.echo(f"  未命中文件: {len(snapshot.unmatched_files)}")
+        click.echo(f"  有冲突: {'是' if snapshot.has_conflicts else '否'}")
+
+
+@cli.command("unlock-plan", help="释放预案版本锁定")
+@click.option("-c", "--config", "config_path", required=True, type=click.Path(),
+              help="配置文件路径 (YAML)")
+@click.option("-l", "--lock-id", "lock_id", help="指定锁定 ID (默认释放当前活动锁定)")
+@click.option("--reason", help="释放原因")
+@click.option("-v", "--verbose", is_flag=True, help="显示详细信息")
+def cmd_unlock_plan(
+    config_path: str,
+    lock_id: Optional[str],
+    reason: Optional[str],
+    verbose: bool,
+):
+    try:
+        config = load_config(config_path)
+    except Exception as e:
+        click.echo(f"[错误] 加载配置失败: {e}", err=True)
+        sys.exit(1)
+
+    store = _get_store(config)
+
+    if lock_id:
+        lock = store.get_lock(lock_id)
+        if not lock:
+            click.echo(f"[错误] 未找到锁定记录: {lock_id}", err=True)
+            sys.exit(1)
+        if not lock.is_active:
+            click.echo(click.style(f"[提示] 锁定 {lock_id} 已经是非活动状态。", fg="yellow"))
+            return
+        success = store.release_lock(lock_id, reason=reason)
+    else:
+        active_lock = store.get_active_lock()
+        if not active_lock:
+            click.echo("[提示] 当前没有活动锁定。")
+            return
+        success = store.release_active_lock(reason=reason)
+        lock = active_lock
+
+    if success:
+        click.echo(click.style(f"[解锁成功] 锁定 ID: {lock.lock_id}", fg="green"))
+        click.echo(f"  原快照 ID: {lock.snapshot_id}")
+        click.echo(f"  原预案 ID: {lock.plan_id}")
+        click.echo(f"  锁定时长: {lock.locked_at} ~ {lock.released_at}")
+        if reason:
+            click.echo(f"  释放原因: {reason}")
+    else:
+        click.echo("[错误] 解锁失败。", err=True)
+        sys.exit(1)
+
+    if verbose:
+        violations = store.get_lock_violations_by_lock(lock.lock_id)
+        if violations:
+            click.echo()
+            click.echo(click.style(f"[锁定期间违规记录: {len(violations)} 条]", fg="yellow"))
+            for v in violations:
+                status = "已拦截" if v.blocked else "未拦截"
+                click.echo(f"  - {v.violation_timestamp}: {v.violation_type} [{status}]")
+                click.echo(f"    {v.violation_detail}")
+
+
+@cli.command("list-locks", help="列出所有预案锁定记录")
+@click.option("-c", "--config", "config_path", required=True, type=click.Path(),
+              help="配置文件路径 (YAML)")
+@click.option("-v", "--verbose", is_flag=True, help="显示详细信息")
+def cmd_list_locks(config_path: str, verbose: bool):
+    try:
+        config = load_config(config_path)
+    except Exception as e:
+        click.echo(f"[错误] 加载配置失败: {e}", err=True)
+        sys.exit(1)
+
+    store = _get_store(config)
+    locks = store.get_all_locks()
+
+    if not locks:
+        click.echo("暂无锁定记录。")
+        return
+
+    locks_sorted = sorted(locks, key=lambda l: l.locked_at, reverse=True)
+
+    click.echo(f"{'锁定ID':<14} {'状态':<8} {'快照ID':<14} {'预案ID':<14} {'锁定时间':<27}")
+    click.echo("-" * 90)
+    for lock in locks_sorted:
+        status = "活动" if lock.is_active else "已释放"
+        locked_at = lock.locked_at[:26]
+        click.echo(
+            f"{lock.lock_id:<14} {status:<8} {lock.snapshot_id:<14} "
+            f"{lock.plan_id:<14} {locked_at:<27}"
+        )
+
+    if verbose:
+        active_lock = store.get_active_lock()
+        if active_lock:
+            violations = store.get_lock_violations_by_lock(active_lock.lock_id)
+            if violations:
+                click.echo()
+                click.echo(click.style(f"[当前活动锁定违规记录: {len(violations)} 条]", fg="yellow"))
+                for v in violations:
+                    status = "已拦截" if v.blocked else "未拦截"
+                    click.echo(f"  - {v.violation_timestamp[:26]}: {v.violation_type} [{status}]")
+                    click.echo(f"    {v.violation_detail}")
+
+
+def _check_lock_before_apply(store: StateStore, snapshot) -> Tuple[bool, Optional[str]]:
+    """
+    检查锁定状态，判断是否允许执行 apply
+
+    返回: (是否允许执行, 拒绝原因)
+    """
+    active_lock = store.get_active_lock()
+    if not active_lock:
+        return True, None
+
+    if snapshot.snapshot_id == active_lock.snapshot_id:
+        return True, None
+
+    violation_type = "wrong_snapshot"
+    detail = (
+        f"锁定的快照 {active_lock.snapshot_id} 与当前执行的快照 {snapshot.snapshot_id} 不一致。"
+        f" 请确认是否使用了正确的版本，或先 unlock-plan 释放锁定。"
+    )
+
+    violation = LockViolation(
+        violation_id=generate_id(),
+        lock_id=active_lock.lock_id,
+        snapshot_id=snapshot.snapshot_id,
+        plan_id=snapshot.plan_id,
+        violation_timestamp=now_iso(),
+        violation_type=violation_type,
+        violation_detail=detail,
+        blocked=True,
+    )
+    store.add_lock_violation(violation)
+
+    return False, detail
 
 
 def main():

@@ -1,0 +1,50 @@
+﻿=== 预案差异对比摘要 ===
+旧预案ID,5003f9e0cb9d
+新预案ID,5ca444a669f0
+旧快照ID,d2011333ac0b
+新快照ID,ac099d83cf4a
+对比时间,2026-06-16T02:54:02.905716
+旧移动计划数,7
+新移动计划数,6
+旧未命中数,0
+新未命中数,0
+有变化,是
+变化的移动项数,4
+
+=== 规则变化 ===
+变化类型,规则名
+新增,Markdown文档
+新增,发票图片
+新增,文本文档
+删除,发票图片JPG
+修改,发票图片PNG
+修改,增值税专用发票
+修改,增值税普通发票
+
+=== 配置差异 ===
+扩展名过滤变更,是
+
+=== 新增移动项 ===
+文件名,源路径,目标路径,匹配规则,冲突类型
+
+=== 删除移动项 ===
+文件名,源路径,原目标路径,原匹配规则,原冲突类型
+发票照片_餐厅发票.jpg,./examples/reviewer_workspace/source\发票照片_餐厅发票.jpg,./examples/reviewer_workspace/dest\images/jpg\发票照片_餐厅发票.jpg,发票图片JPG,
+
+=== 目标路径变化 ===
+文件名,源路径,原目标路径,新目标路径,原规则,新规则
+2024年1月增值税专用发票_A001.pdf,./examples/reviewer_workspace/source\2024年1月增值税专用发票_A001.pdf,./examples/reviewer_workspace/dest\vat_special\2024年1月增值税专用发票_A001.pdf,./examples/reviewer_workspace/dest\vat/special\2024年1月增值税专用发票_A001.pdf,增值税专用发票,增值税专用发票
+2024年2月增值税普通发票_B002.pdf,./examples/reviewer_workspace/source\2024年2月增值税普通发票_B002.pdf,./examples/reviewer_workspace/dest\vat_normal\2024年2月增值税普通发票_B002.pdf,./examples/reviewer_workspace/dest\vat/normal\2024年2月增值税普通发票_B002.pdf,增值税普通发票,增值税普通发票
+发票扫描件_出租车发票.png,./examples/reviewer_workspace/source\发票扫描件_出租车发票.png,./examples/reviewer_workspace/dest\images/png\发票扫描件_出租车发票.png,./examples/reviewer_workspace/dest\images\发票扫描件_出租车发票.png,发票图片PNG,发票图片PNG
+
+=== 匹配规则变化 ===
+文件名,源路径,原规则,新规则,目标路径
+
+=== 冲突状态变化 ===
+文件名,源路径,原冲突类型,新冲突类型,原冲突详情,新冲突详情
+
+=== 新增未命中文件 ===
+文件名,源路径,原因
+
+=== 删除未命中文件 ===
+文件名,源路径,原因

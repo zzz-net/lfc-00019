@@ -1,0 +1,49 @@
+﻿source_dir: "./examples/reviewer_workspace/source"
+dest_dir: "./examples/reviewer_workspace/dest"
+state_file: "./examples/reviewer_workspace/.state/review_state.json"
+recursive: true
+file_extensions:
+  - pdf
+  - jpg
+  - png
+  - xlsx
+  - docx
+  - txt
+  - md
+rules:
+  - name: "增值税专用发票"
+    pattern: "*增值税*专用*.pdf"
+    target: "vat/special"
+    description: "专用发票改到子目录"
+  - name: "增值税普通发票"
+    pattern: "*增值税*普通*.pdf"
+    target: "vat/normal"
+    description: "普通发票改到子目录"
+  - name: "电子发票PDF"
+    pattern: "*电子*.pdf"
+    target: "electronic"
+    description: "电子发票归档"
+  - name: "发票图片"
+    pattern: "*发票*.jpg"
+    target: "images"
+    description: "JPG并入统一图片目录"
+  - name: "发票图片PNG"
+    pattern: "*发票*.png"
+    target: "images"
+    description: "PNG并入统一图片目录"
+  - name: "报销单Excel"
+    pattern: "*报销*.xlsx"
+    target: "reimbursement"
+    description: "报销单归档"
+  - name: "合同文档"
+    pattern: "*合同*.docx"
+    target: "contracts"
+    description: "合同归档"
+  - name: "文本文档"
+    pattern: "*.txt"
+    target: "misc"
+    description: "杂项文本"
+  - name: "Markdown文档"
+    pattern: "*.md"
+    target: "misc"
+    description: "杂项Markdown"

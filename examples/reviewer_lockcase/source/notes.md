@@ -1,0 +1,1 @@
+﻿lockcase generated: notes.md
