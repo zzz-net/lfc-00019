@@ -14,6 +14,7 @@ from .models import (
     ConfigSnapshot, BatchSnapshot, UnmatchedFileInfo, NewDirInfo,
     ConfigDiffResult, ImportValidationResult,
     PlanDiffResult, FileMoveDiff, UnmatchedFileDiff,
+    SnapshotRemark, RemarkValidationResult,
     generate_id, now_iso,
 )
 from .storage import StateStore
@@ -596,6 +597,39 @@ def export_logs(
                     ", ".join(data.get("modified_rules", [])),
                 ])
 
+            writer.writerow([])
+            writer.writerow(["=== 批次快照 ==="])
+            writer.writerow(["快照ID", "创建时间", "预案ID", "移动项数", "有冲突", "备注", "标签", "交接人", "注意事项", "备注更新时间", "备注更新人"])
+            for sid, s in full_state.get("snapshots", {}).items():
+                remark = s.get("remark", {})
+                writer.writerow([
+                    sid,
+                    s.get("created_at", ""),
+                    s.get("plan_id", ""),
+                    len(s.get("moves", [])),
+                    "是" if s.get("has_conflicts") else "否",
+                    remark.get("remark", ""),
+                    ", ".join(remark.get("tags", [])),
+                    remark.get("handler", ""),
+                    remark.get("notes", ""),
+                    remark.get("updated_at", ""),
+                    remark.get("updated_by", ""),
+                ])
+
+            writer.writerow([])
+            writer.writerow(["=== 备注修改历史 ==="])
+            writer.writerow(["历史ID", "快照ID", "修改时间", "修改人", "修改来源", "是否冲突", "冲突详情"])
+            for rh in full_state.get("remark_histories", []):
+                writer.writerow([
+                    rh.get("history_id", ""),
+                    rh.get("snapshot_id", ""),
+                    rh.get("changed_at", ""),
+                    rh.get("changed_by", ""),
+                    rh.get("change_source", ""),
+                    "是" if rh.get("conflict_detected") else "否",
+                    rh.get("conflict_detail", ""),
+                ])
+
         return 1
 
     else:
@@ -712,6 +746,7 @@ def create_batch_snapshot(
     plan_id: str,
     summary: PlanSummary,
     config_path: Optional[str] = None,
+    remark: Optional[SnapshotRemark] = None,
 ) -> BatchSnapshot:
     """
     从 plan 结果创建完整的批次快照
@@ -766,6 +801,7 @@ def create_batch_snapshot(
         new_target_dirs=new_dir_infos,
         has_conflicts=has_conflicts,
         summary=summary.to_dict(),
+        remark=remark or SnapshotRemark(),
     )
 
 
@@ -1268,3 +1304,98 @@ def export_plan_diff(
 
     else:
         raise ValueError(f"不支持的导出格式: {format}")
+
+
+# ============================================================
+# 快照备注相关功能
+# ============================================================
+
+MAX_REMARK_LENGTH = 500
+MAX_HANDLER_LENGTH = 50
+MAX_NOTES_LENGTH = 1000
+MAX_TAG_LENGTH = 30
+MAX_TAGS_COUNT = 10
+
+
+def validate_remark(remark: SnapshotRemark) -> RemarkValidationResult:
+    """
+    验证备注信息的合法性
+
+    检查项：
+    - 备注长度限制
+    - 交接人长度限制
+    - 注意事项长度限制
+    - 标签长度和数量限制
+    - 标签重复检测
+    """
+    errors: List[str] = []
+    warnings: List[str] = []
+
+    if len(remark.remark) > MAX_REMARK_LENGTH:
+        errors.append(
+            f"备注内容过长: {len(remark.remark)} 字符，最大允许 {MAX_REMARK_LENGTH} 字符"
+        )
+
+    if len(remark.handler) > MAX_HANDLER_LENGTH:
+        errors.append(
+            f"交接人过长: {len(remark.handler)} 字符，最大允许 {MAX_HANDLER_LENGTH} 字符"
+        )
+
+    if len(remark.notes) > MAX_NOTES_LENGTH:
+        errors.append(
+            f"注意事项过长: {len(remark.notes)} 字符，最大允许 {MAX_NOTES_LENGTH} 字符"
+        )
+
+    if len(remark.tags) > MAX_TAGS_COUNT:
+        errors.append(
+            f"标签数量过多: {len(remark.tags)} 个，最大允许 {MAX_TAGS_COUNT} 个"
+        )
+
+    seen_tags = set()
+    duplicate_tags = []
+    for tag in remark.tags:
+        if len(tag) > MAX_TAG_LENGTH:
+            errors.append(
+                f"标签过长: '{tag}' ({len(tag)} 字符)，最大允许 {MAX_TAG_LENGTH} 字符"
+            )
+        if not tag.strip():
+            errors.append("标签不能为空字符串")
+        if tag in seen_tags:
+            duplicate_tags.append(tag)
+        seen_tags.add(tag)
+
+    if duplicate_tags:
+        errors.append(f"标签重复: {', '.join(set(duplicate_tags))}")
+
+    if not remark.remark and not remark.tags and not remark.handler and not remark.notes:
+        warnings.append("未提供任何备注信息")
+
+    valid = len(errors) == 0
+    return RemarkValidationResult(valid=valid, errors=errors, warnings=warnings)
+
+
+def build_remark(
+    remark: Optional[str] = None,
+    tags: Optional[List[str]] = None,
+    handler: Optional[str] = None,
+    notes: Optional[str] = None,
+    updated_by: str = "cli",
+) -> SnapshotRemark:
+    """构建备注对象并设置更新时间"""
+    return SnapshotRemark(
+        remark=remark or "",
+        tags=list(tags) if tags else [],
+        handler=handler or "",
+        notes=notes or "",
+        updated_at=now_iso(),
+        updated_by=updated_by,
+    )
+
+
+def export_snapshot_to_file(snapshot: BatchSnapshot, output_path: str) -> None:
+    """
+    导出快照到 JSON 文件（包含备注信息）
+    """
+    data = snapshot.to_dict()
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)

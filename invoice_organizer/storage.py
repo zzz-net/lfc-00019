@@ -9,6 +9,7 @@ from datetime import datetime
 from .models import (
     ScannedFile, PlannedMove, ExecutedMove, UndoRecord,
     BatchSnapshot, ImportLog, PlanLock, LockViolation, ConfigSnapshot,
+    SnapshotRemark, RemarkHistory,
     generate_id, now_iso,
 )
 
@@ -38,6 +39,7 @@ class StateStore:
             "plan_locks": [],
             "lock_violations": [],
             "plan_diffs": [],
+            "remark_histories": [],
             "last_scan": None,
             "last_plan": None,
             "last_snapshot": None,
@@ -221,6 +223,124 @@ class StateStore:
             if sdata.get("plan_id") == plan_id:
                 return BatchSnapshot.from_dict(sdata)
         return None
+
+    def list_snapshots_with_remark(self) -> List[Dict[str, Any]]:
+        """列出所有快照（含备注信息）"""
+        result = []
+        for sid, sdata in self._data.get("snapshots", {}).items():
+            remark = sdata.get("remark", {})
+            result.append({
+                "snapshot_id": sid,
+                "created_at": sdata.get("created_at", ""),
+                "plan_id": sdata.get("plan_id", ""),
+                "move_count": len(sdata.get("moves", [])),
+                "has_conflicts": sdata.get("has_conflicts", False),
+                "imported": sdata.get("imported", False),
+                "import_source": sdata.get("import_source"),
+                "remark": remark.get("remark", ""),
+                "tags": remark.get("tags", []),
+                "handler": remark.get("handler", ""),
+                "notes": remark.get("notes", ""),
+                "remark_updated_at": remark.get("updated_at", ""),
+                "remark_updated_by": remark.get("updated_by", ""),
+            })
+        return sorted(result, key=lambda x: x["created_at"], reverse=True)
+
+    def update_snapshot_remark(
+        self,
+        snapshot_id: str,
+        new_remark: SnapshotRemark,
+        changed_by: str = "cli",
+        change_source: str = "cli",
+        allow_overwrite: bool = False,
+    ) -> Tuple[bool, Optional[RemarkHistory], List[str]]:
+        """
+        更新快照备注
+
+        返回: (是否成功, 历史记录, 错误信息列表)
+        """
+        snapshot = self.get_snapshot(snapshot_id)
+        if not snapshot:
+            return False, None, [f"快照不存在: {snapshot_id}"]
+
+        old_remark = snapshot.remark
+
+        state_file_dir = os.path.dirname(os.path.abspath(self.state_file)) or "."
+        if not os.access(state_file_dir, os.W_OK):
+            return False, None, [f"状态文件目录无写权限: {state_file_dir}"]
+
+        conflicts = []
+        if not old_remark.is_empty() and not allow_overwrite:
+            if old_remark.remark and old_remark.remark != new_remark.remark:
+                conflicts.append(f"备注内容冲突: 旧='{old_remark.remark[:50]}...' 新='{new_remark.remark[:50]}...'")
+            if old_remark.handler and old_remark.handler != new_remark.handler:
+                conflicts.append(f"交接人冲突: 旧='{old_remark.handler}' 新='{new_remark.handler}'")
+            if old_remark.notes and old_remark.notes != new_remark.notes:
+                conflicts.append(f"注意事项冲突: 旧内容长度={len(old_remark.notes)} 新内容长度={len(new_remark.notes)}")
+            old_tags_set = set(old_remark.tags)
+            new_tags_set = set(new_remark.tags)
+            if old_tags_set and old_tags_set != new_tags_set:
+                added = new_tags_set - old_tags_set
+                removed = old_tags_set - new_tags_set
+                if added or removed:
+                    conflicts.append(f"标签冲突: 新增={sorted(added)} 删除={sorted(removed)}")
+
+        conflict_detected = len(conflicts) > 0
+        conflict_detail = "; ".join(conflicts) if conflicts else ""
+
+        if conflict_detected and not allow_overwrite:
+            history = RemarkHistory(
+                history_id=generate_id(),
+                snapshot_id=snapshot_id,
+                old_remark=old_remark,
+                new_remark=new_remark,
+                changed_at=now_iso(),
+                changed_by=changed_by,
+                change_source=change_source,
+                conflict_detected=True,
+                conflict_detail=conflict_detail,
+            )
+            self._add_remark_history(history)
+            self.save()
+            return False, history, conflicts
+
+        snapshot.remark = new_remark
+        self._data["snapshots"][snapshot_id] = snapshot.to_dict()
+
+        history = RemarkHistory(
+            history_id=generate_id(),
+            snapshot_id=snapshot_id,
+            old_remark=old_remark,
+            new_remark=new_remark,
+            changed_at=now_iso(),
+            changed_by=changed_by,
+            change_source=change_source,
+            conflict_detected=conflict_detected,
+            conflict_detail=conflict_detail,
+        )
+        self._add_remark_history(history)
+        self.save()
+
+        return True, history, []
+
+    def _add_remark_history(self, history: RemarkHistory) -> None:
+        """添加备注修改历史记录"""
+        if "remark_histories" not in self._data:
+            self._data["remark_histories"] = []
+        self._data["remark_histories"].append(history.to_dict())
+
+    def get_remark_history(self, snapshot_id: Optional[str] = None) -> List[RemarkHistory]:
+        """获取备注修改历史，可按快照 ID 筛选"""
+        histories = self._data.get("remark_histories", [])
+        result = [RemarkHistory.from_dict(h) for h in histories]
+        if snapshot_id:
+            result = [h for h in result if h.snapshot_id == snapshot_id]
+        return sorted(result, key=lambda h: h.changed_at, reverse=True)
+
+    def get_remark_conflicts(self) -> List[RemarkHistory]:
+        """获取所有备注冲突记录"""
+        histories = self.get_remark_history()
+        return [h for h in histories if h.conflict_detected]
 
     # ---- 导入日志 ----
 

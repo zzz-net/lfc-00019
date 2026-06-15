@@ -7,7 +7,7 @@ from typing import Optional, Tuple
 
 import click
 
-from .models import load_config, generate_id, ImportLog, now_iso, LockViolation, ConfigSnapshot
+from .models import load_config, generate_id, ImportLog, now_iso, LockViolation, ConfigSnapshot, SnapshotRemark
 from .storage import StateStore
 from .workflow import (
     scan_directory, build_plan, build_plan_summary, apply_plan,
@@ -16,6 +16,8 @@ from .workflow import (
     load_snapshot_from_file, export_snapshot_to_file,
     snapshot_to_planned_moves,
     diff_plans, export_plan_diff,
+    validate_remark, build_remark,
+    MAX_REMARK_LENGTH, MAX_HANDLER_LENGTH, MAX_NOTES_LENGTH, MAX_TAG_LENGTH, MAX_TAGS_COUNT,
 )
 
 
@@ -86,8 +88,22 @@ def cmd_scan(config_path: str, verbose: bool):
 @click.option("-c", "--config", "config_path", required=True, type=click.Path(),
               help="配置文件路径 (YAML)")
 @click.option("-p", "--plan-id", "plan_id", help="指定预案 ID (默认自动生成)")
+@click.option("--remark", help=f"批次备注 (最多 {MAX_REMARK_LENGTH} 字符)")
+@click.option("--tag", "tags", multiple=True, help=f"标签，可多次指定 (最多 {MAX_TAGS_COUNT} 个，每个最多 {MAX_TAG_LENGTH} 字符)")
+@click.option("--handler", help=f"交接人 (最多 {MAX_HANDLER_LENGTH} 字符)")
+@click.option("--notes", help=f"注意事项 (最多 {MAX_NOTES_LENGTH} 字符)")
+@click.option("--updated-by", default="cli", help="备注更新人 (默认: cli)")
 @click.option("-v", "--verbose", is_flag=True, help="显示详细信息")
-def cmd_plan(config_path: str, plan_id: Optional[str], verbose: bool):
+def cmd_plan(
+    config_path: str,
+    plan_id: Optional[str],
+    remark: Optional[str],
+    tags: tuple,
+    handler: Optional[str],
+    notes: Optional[str],
+    updated_by: str,
+    verbose: bool,
+):
     try:
         config = load_config(config_path)
     except Exception as e:
@@ -146,6 +162,20 @@ def cmd_plan(config_path: str, plan_id: Optional[str], verbose: bool):
 
     store.save_plan(final_plan_id, moves, has_conflicts)
 
+    remark_obj = None
+    if remark or tags or handler or notes:
+        remark_obj = build_remark(
+            remark=remark, tags=list(tags) if tags else None, handler=handler, notes=notes, updated_by=updated_by)
+        validation = validate_remark(remark_obj)
+        if validation.has_errors:
+            click.echo(click.style("[错误] 备注信息验证失败：", fg="red", bold=True))
+            for err in validation.errors:
+                click.echo(click.style(f"  - {err}", fg="red"))
+            sys.exit(1)
+        if validation.warnings:
+            for warn in validation.warnings:
+                click.echo(click.style(f"[警告] {warn}", fg="yellow"))
+
     snapshot = create_batch_snapshot(
         config=config,
         scanned_files=scanned,
@@ -153,6 +183,7 @@ def cmd_plan(config_path: str, plan_id: Optional[str], verbose: bool):
         plan_id=final_plan_id,
         summary=summary,
         config_path=config_path,
+        remark=remark_obj,
     )
     store.save_snapshot(snapshot)
 
@@ -164,6 +195,20 @@ def cmd_plan(config_path: str, plan_id: Optional[str], verbose: bool):
     click.echo(f"  移动计划: {len(moves)} 条")
     if has_conflicts:
         click.echo(click.style(f"  含冲突: {len(conflicts)} 条", fg="yellow"))
+
+    if remark_obj and not remark_obj.is_empty():
+        click.echo()
+        click.echo(click.style("[备注信息]", fg="cyan"))
+        if remark_obj.remark:
+            click.echo(f"  备注: {remark_obj.remark}")
+        if remark_obj.tags:
+            click.echo(f"  标签: {', '.join(remark_obj.tags)}")
+        if remark_obj.handler:
+            click.echo(f"  交接人: {remark_obj.handler}")
+        if remark_obj.notes:
+            click.echo(f"  注意事项: {remark_obj.notes}")
+        click.echo(f"  更新人: {remark_obj.updated_by}")
+        click.echo(f"  更新时间: {remark_obj.updated_at}")
 
     click.echo()
     click.echo(click.style("[摘要] 按规则分布:", fg="cyan"))
@@ -594,10 +639,32 @@ def cmd_list_runs(config_path: str):
         click.echo(f"{r['id']:<14} {created:<27} {r.get('plan_id',''):<14} {mode:<6} {status:<8} {count:<6}")
 
 
-@cli.command("list-snapshots", help="列出所有批次快照")
+@cli.command("update-snapshot", help="更新批次快照的备注、标签、交接人或注意事项")
 @click.option("-c", "--config", "config_path", required=True, type=click.Path(),
               help="配置文件路径 (YAML)")
-def cmd_list_snapshots(config_path: str):
+@click.option("-s", "--snapshot-id", "snapshot_id", help="指定快照 ID (默认使用最近的)")
+@click.option("--remark", help=f"批次备注 (最多 {MAX_REMARK_LENGTH} 字符)")
+@click.option("--tag", "tags", multiple=True, help=f"标签，可多次指定 (最多 {MAX_TAGS_COUNT} 个，每个最多 {MAX_TAG_LENGTH} 字符)")
+@click.option("--handler", help=f"交接人 (最多 {MAX_HANDLER_LENGTH} 字符)")
+@click.option("--notes", help=f"注意事项 (最多 {MAX_NOTES_LENGTH} 字符)")
+@click.option("--updated-by", default="cli", help="备注更新人 (默认: cli)")
+@click.option("--append-tags", is_flag=True, help="追加标签而不是替换现有标签")
+@click.option("--force", is_flag=True, help="强制覆盖已有备注（忽略冲突检测）")
+@click.option("-y", "--yes", is_flag=True, help="跳过确认提示")
+@click.option("-v", "--verbose", is_flag=True, help="显示详细信息")
+def cmd_update_snapshot(
+    config_path: str,
+    snapshot_id: Optional[str],
+    remark: Optional[str],
+    tags: tuple,
+    handler: Optional[str],
+    notes: Optional[str],
+    updated_by: str,
+    append_tags: bool,
+    force: bool,
+    yes: bool,
+    verbose: bool,
+):
     try:
         config = load_config(config_path)
     except Exception as e:
@@ -605,22 +672,156 @@ def cmd_list_snapshots(config_path: str):
         sys.exit(1)
 
     store = _get_store(config)
-    snapshots = store.list_snapshots()
+
+    if snapshot_id:
+        snapshot = store.get_snapshot(snapshot_id)
+    else:
+        snapshot = store.get_last_snapshot()
+
+    if not snapshot:
+        click.echo("[错误] 未找到批次快照，请先执行 plan 命令。", err=True)
+        sys.exit(1)
+
+    snapshot_id = snapshot.snapshot_id
+    old_remark = snapshot.remark
+
+    if not remark and not tags and not handler and not notes:
+        click.echo("[错误] 至少需要指定 --remark、--tag、--handler 或 --notes 中的一项。", err=True)
+        sys.exit(1)
+
+    new_tags = list(tags) if tags else []
+    if append_tags and old_remark.tags:
+        new_tags = list(old_remark.tags) + new_tags
+
+    final_remark = remark if remark is not None else old_remark.remark
+    final_handler = handler if handler is not None else old_remark.handler
+    final_notes = notes if notes is not None else old_remark.notes
+    final_tags = new_tags if tags or append_tags else old_remark.tags
+
+    new_remark = build_remark(
+        remark=final_remark,
+        tags=final_tags,
+        handler=final_handler,
+        notes=final_notes,
+        updated_by=updated_by,
+    )
+
+    validation = validate_remark(new_remark)
+    if validation.has_errors:
+        click.echo(click.style("[错误] 备注信息验证失败：", fg="red", bold=True))
+        for err in validation.errors:
+            click.echo(click.style(f"  - {err}", fg="red"))
+        sys.exit(1)
+    if validation.warnings:
+        for warn in validation.warnings:
+            click.echo(click.style(f"[警告] {warn}", fg="yellow"))
+
+    click.echo(f"[更新快照] ID: {snapshot_id}")
+    click.echo()
+    click.echo(click.style("[当前备注]", fg="cyan"))
+    if old_remark.remark:
+        click.echo(f"  备注: {old_remark.remark}")
+    if old_remark.tags:
+        click.echo(f"  标签: {', '.join(old_remark.tags)}")
+    if old_remark.handler:
+        click.echo(f"  交接人: {old_remark.handler}")
+    if old_remark.notes:
+        click.echo(f"  注意事项: {old_remark.notes[:100]}..." if len(old_remark.notes) > 100 else f"  注意事项: {old_remark.notes}")
+    if old_remark.updated_at:
+        click.echo(f"  最后更新: {old_remark.updated_at} by {old_remark.updated_by}")
+    if old_remark.is_empty():
+        click.echo("  (无备注信息)")
+
+    click.echo()
+    click.echo(click.style("[更新后备注]", fg="green"))
+    if new_remark.remark:
+        click.echo(f"  备注: {new_remark.remark}")
+    if new_remark.tags:
+        click.echo(f"  标签: {', '.join(new_remark.tags)}")
+    if new_remark.handler:
+        click.echo(f"  交接人: {new_remark.handler}")
+    if new_remark.notes:
+        click.echo(f"  注意事项: {new_remark.notes[:100]}..." if len(new_remark.notes) > 100 else f"  注意事项: {new_remark.notes}")
+    click.echo(f"  更新人: {new_remark.updated_by}")
+
+    if not yes:
+        if not click.confirm("\n确认更新备注信息？", default=False):
+            click.echo("已取消。")
+            sys.exit(0)
+
+    success, history, errors = store.update_snapshot_remark(
+        snapshot_id=snapshot_id,
+        new_remark=new_remark,
+        changed_by=updated_by,
+        change_source="cli",
+        allow_overwrite=True,
+    )
+
+    if not success:
+        click.echo()
+        click.echo(click.style("[错误] 备注更新失败：", fg="red", bold=True))
+        for err in errors:
+            click.echo(click.style(f"  - {err}", fg="red"))
+        sys.exit(1)
+
+    click.echo()
+    click.echo(click.style(f"[更新成功] 快照备注已更新", fg="green"))
+    if history and history.conflict_detected:
+        click.echo(click.style(f"[注意] 已覆盖原有备注：{history.conflict_detail}", fg="yellow"))
+    if verbose and history:
+        click.echo(f"  历史记录 ID: {history.history_id}")
+        click.echo(f"  修改时间: {history.changed_at}")
+
+
+@cli.command("list-snapshots", help="列出所有批次快照")
+@click.option("-c", "--config", "config_path", required=True, type=click.Path(),
+              help="配置文件路径 (YAML)")
+@click.option("-v", "--verbose", is_flag=True, help="显示备注详情")
+def cmd_list_snapshots(config_path: str, verbose: bool):
+    try:
+        config = load_config(config_path)
+    except Exception as e:
+        click.echo(f"[错误] 加载配置失败: {e}", err=True)
+        sys.exit(1)
+
+    store = _get_store(config)
+    snapshots = store.list_snapshots_with_remark()
 
     if not snapshots:
         click.echo("暂无批次快照。")
         return
 
-    click.echo(f"{'快照ID':<14} {'创建时间':<27} {'预案ID':<14} {'移动项':<8} {'冲突':<6} {'来源':<10}")
-    click.echo("-" * 90)
-    for s in snapshots:
-        created = s.get("created_at", "")[:26]
-        has_conflict = "是" if s.get("has_conflicts") else "否"
-        source = "导入" if s.get("imported") else "本地"
-        click.echo(
-            f"{s['snapshot_id']:<14} {created:<27} {s.get('plan_id',''):<14} "
-            f"{s.get('move_count',0):<8} {has_conflict:<6} {source:<10}"
-        )
+    if verbose:
+        click.echo(f"{'快照ID':<14} {'创建时间':<27} {'预案ID':<14} {'移动项':<8} {'冲突':<6} {'来源':<10} {'备注':<30} {'标签':<20} {'交接人':<15}")
+        click.echo("-" * 150)
+        for s in snapshots:
+            created = s.get("created_at", "")[:26]
+            has_conflict = "是" if s.get("has_conflicts") else "否"
+            source = "导入" if s.get("imported") else "本地"
+            remark_display = s.get("remark", "")[:28] + "..." if len(s.get("remark", "")) > 30 else s.get("remark", "")
+            tags_display = ", ".join(s.get("tags", []))[:18] + "..." if len(", ".join(s.get("tags", []))) > 20 else ", ".join(s.get("tags", []))
+            click.echo(
+                f"{s['snapshot_id']:<14} {created:<27} {s.get('plan_id',''):<14} "
+                f"{s.get('move_count',0):<8} {has_conflict:<6} {source:<10} "
+                f"{remark_display:<30} {tags_display:<20} {s.get('handler',''):<15}"
+            )
+            if s.get("notes"):
+                notes_display = s.get("notes", "")[:80] + "..." if len(s.get("notes", "")) > 80 else s.get("notes", "")
+                click.echo(f"  {'':<14} {'':<27} {'':<14} {'':<8} {'':<6} {'':<10} 注意事项: {notes_display}")
+            if s.get("remark_updated_at"):
+                click.echo(f"  {'':<14} {'':<27} {'':<14} {'':<8} {'':<6} {'':<10} 更新时间: {s.get('remark_updated_at', '')} by {s.get('remark_updated_by', '')}")
+    else:
+        click.echo(f"{'快照ID':<14} {'创建时间':<27} {'预案ID':<14} {'移动项':<8} {'冲突':<6} {'来源':<10} {'备注':<30}")
+        click.echo("-" * 110)
+        for s in snapshots:
+            created = s.get("created_at", "")[:26]
+            has_conflict = "是" if s.get("has_conflicts") else "否"
+            source = "导入" if s.get("imported") else "本地"
+            remark_display = s.get("remark", "")[:28] + "..." if len(s.get("remark", "")) > 30 else s.get("remark", "")
+            click.echo(
+                f"{s['snapshot_id']:<14} {created:<27} {s.get('plan_id',''):<14} "
+                f"{s.get('move_count',0):<8} {has_conflict:<6} {source:<10} {remark_display:<30}"
+            )
 
 
 @cli.command("export-snapshot", help="导出批次快照为 JSON 文件，可用于复核或二次执行")
@@ -662,6 +863,20 @@ def cmd_export_snapshot(config_path: str, snapshot_id: Optional[str], output_pat
     click.echo(f"  未命中规则: {len(snapshot.unmatched_files)} 个")
     click.echo(f"  新建目录: {len(snapshot.new_target_dirs)} 个")
 
+    if not snapshot.remark.is_empty():
+        click.echo()
+        click.echo(click.style("[备注信息]", fg="cyan"))
+        if snapshot.remark.remark:
+            click.echo(f"  备注: {snapshot.remark.remark}")
+        if snapshot.remark.tags:
+            click.echo(f"  标签: {', '.join(snapshot.remark.tags)}")
+        if snapshot.remark.handler:
+            click.echo(f"  交接人: {snapshot.remark.handler}")
+        if snapshot.remark.notes:
+            click.echo(f"  注意事项: {snapshot.remark.notes}")
+        if snapshot.remark.updated_at:
+            click.echo(f"  更新时间: {snapshot.remark.updated_at} by {snapshot.remark.updated_by}")
+
     if verbose and snapshot.unmatched_files:
         click.echo("\n[未命中规则文件]")
         for uf in snapshot.unmatched_files:
@@ -679,10 +894,20 @@ def cmd_export_snapshot(config_path: str, snapshot_id: Optional[str], output_pat
               help="配置文件路径 (YAML)")
 @click.option("-i", "--input", "input_path", required=True, type=click.Path(),
               help="快照 JSON 文件路径")
+@click.option("--remark-only", is_flag=True, help="仅导入备注信息，不更新快照其他内容")
+@click.option("--updated-by", default="import", help="备注更新人 (默认: import)")
 @click.option("-y", "--yes", is_flag=True, help="跳过确认提示")
 @click.option("-v", "--verbose", is_flag=True, help="显示详细信息")
-@click.option("--force", is_flag=True, help="即使有警告也强制导入")
-def cmd_import_snapshot(config_path: str, input_path: str, yes: bool, verbose: bool, force: bool):
+@click.option("--force", is_flag=True, help="即使有警告/冲突也强制导入")
+def cmd_import_snapshot(
+    config_path: str,
+    input_path: str,
+    remark_only: bool,
+    updated_by: str,
+    yes: bool,
+    verbose: bool,
+    force: bool,
+):
     try:
         config = load_config(config_path)
     except Exception as e:
@@ -704,8 +929,28 @@ def cmd_import_snapshot(config_path: str, input_path: str, yes: bool, verbose: b
     click.echo(f"  移动计划: {len(snapshot.moves)} 条")
     click.echo(f"  未命中规则: {len(snapshot.unmatched_files)} 个")
 
+    if not snapshot.remark.is_empty():
+        click.echo()
+        click.echo(click.style("[导入备注信息]", fg="cyan"))
+        if snapshot.remark.remark:
+            click.echo(f"  备注: {snapshot.remark.remark}")
+        if snapshot.remark.tags:
+            click.echo(f"  标签: {', '.join(snapshot.remark.tags)}")
+        if snapshot.remark.handler:
+            click.echo(f"  交接人: {snapshot.remark.handler}")
+        if snapshot.remark.notes:
+            click.echo(f"  注意事项: {snapshot.remark.notes}")
+
     validation = validate_import_snapshot(snapshot)
     diff_result = diff_config(config, snapshot.config_snapshot)
+
+    if not snapshot.remark.is_empty():
+        remark_validation = validate_remark(snapshot.remark)
+        if remark_validation.has_errors:
+            click.echo(click.style("\n[错误] 备注信息验证失败：", fg="red", bold=True))
+            for err in remark_validation.errors:
+                click.echo(click.style(f"  - {err}", fg="red"))
+            sys.exit(1)
 
     def _make_log(status: str, forced_flag: bool = False) -> ImportLog:
         return ImportLog(
@@ -722,7 +967,7 @@ def cmd_import_snapshot(config_path: str, input_path: str, yes: bool, verbose: b
             forced=forced_flag,
         )
 
-    if validation.has_errors:
+    if not remark_only and validation.has_errors:
         click.echo(click.style("\n[错误] 快照验证失败，无法导入：", fg="red", bold=True))
         for err in validation.errors:
             click.echo(click.style(f"  - {err}", fg="red"))
@@ -739,7 +984,7 @@ def cmd_import_snapshot(config_path: str, input_path: str, yes: bool, verbose: b
         for warn in validation.warnings:
             click.echo(click.style(f"  - {warn}", fg="yellow"))
 
-    if diff_result.has_diff:
+    if not remark_only and diff_result.has_diff:
         click.echo(click.style("\n[提示] 当前配置与快照配置不一致：", fg="cyan"))
         if diff_result.source_dir_changed:
             click.echo(f"  - 源目录变更: {snapshot.config_snapshot.source_dir} -> {config.source_dir}")
@@ -753,11 +998,60 @@ def cmd_import_snapshot(config_path: str, input_path: str, yes: bool, verbose: b
             click.echo(f"  - 修改规则: {', '.join(diff_result.modified_rules)}")
 
     existing = store.get_snapshot(snapshot.snapshot_id)
+    remark_conflict = False
+    remark_conflict_detail = ""
+
     if existing:
-        click.echo(click.style("\n[提示] 快照 ID 已存在，将更新已有快照。", fg="yellow"))
+        click.echo(click.style("\n[提示] 快照 ID 已存在。", fg="yellow"))
+
+        if not existing.remark.is_empty() and not snapshot.remark.is_empty():
+            conflicts = []
+            if existing.remark.remark and existing.remark.remark != snapshot.remark.remark:
+                conflicts.append(f"备注内容冲突: 旧='{existing.remark.remark[:50]}...' 新='{snapshot.remark.remark[:50]}...'")
+            if existing.remark.handler and existing.remark.handler != snapshot.remark.handler:
+                conflicts.append(f"交接人冲突: 旧='{existing.remark.handler}' 新='{snapshot.remark.handler}'")
+            if existing.remark.notes and existing.remark.notes != snapshot.remark.notes:
+                conflicts.append(f"注意事项冲突: 旧长度={len(existing.remark.notes)} 新长度={len(snapshot.remark.notes)}")
+            old_tags_set = set(existing.remark.tags)
+            new_tags_set = set(snapshot.remark.tags)
+            if old_tags_set and old_tags_set != new_tags_set:
+                added = new_tags_set - old_tags_set
+                removed = old_tags_set - new_tags_set
+                if added or removed:
+                    conflicts.append(f"标签冲突: 新增={sorted(added)} 删除={sorted(removed)}")
+
+            if conflicts:
+                remark_conflict = True
+                remark_conflict_detail = "; ".join(conflicts)
+                click.echo(click.style("\n[警告] 检测到备注冲突：", fg="yellow", bold=True))
+                for c in conflicts:
+                    click.echo(click.style(f"  - {c}", fg="yellow"))
+
+                if not force:
+                    new_remark = snapshot.remark
+                    new_remark.updated_at = now_iso()
+                    new_remark.updated_by = updated_by
+                    store.update_snapshot_remark(
+                        snapshot_id=snapshot.snapshot_id,
+                        new_remark=new_remark,
+                        changed_by=updated_by,
+                        change_source="import",
+                        allow_overwrite=False,
+                    )
+
+                    click.echo()
+                    click.echo(click.style("[提示] 备注内容不同，不会自动覆盖。", fg="yellow"))
+                    click.echo(click.style("  使用 --force 可强制覆盖现有备注。", fg="yellow"))
+                    click.echo(click.style("  使用 --remark-only 可仅更新备注而不修改快照其他内容。", fg="yellow"))
+                    store.add_import_log(_make_log("failed"))
+                    sys.exit(1)
 
     if not yes:
-        if not click.confirm("\n确认导入该批次快照？", default=False):
+        if remark_only:
+            confirm_msg = "\n确认仅导入备注信息？"
+        else:
+            confirm_msg = "\n确认导入该批次快照？"
+        if not click.confirm(confirm_msg, default=False):
             store.add_import_log(_make_log("cancelled"))
             click.echo("已取消。")
             sys.exit(0)
@@ -765,14 +1059,52 @@ def cmd_import_snapshot(config_path: str, input_path: str, yes: bool, verbose: b
     snapshot.imported = True
     snapshot.import_source = os.path.abspath(input_path)
 
-    store.save_snapshot(snapshot)
+    if remark_only and existing:
+        new_remark = snapshot.remark
+        new_remark.updated_at = now_iso()
+        new_remark.updated_by = updated_by
 
-    if validation.has_errors and force:
+        success, history, errors = store.update_snapshot_remark(
+            snapshot_id=snapshot.snapshot_id,
+            new_remark=new_remark,
+            changed_by=updated_by,
+            change_source="import",
+            allow_overwrite=force,
+        )
+
+        if not success:
+            click.echo()
+            click.echo(click.style("[错误] 备注导入失败：", fg="red", bold=True))
+            for err in errors:
+                click.echo(click.style(f"  - {err}", fg="red"))
+            store.add_import_log(_make_log("failed"))
+            sys.exit(1)
+
+        click.echo(click.style(f"\n[导入成功] 备注已更新: {snapshot.snapshot_id}", fg="green"))
+        if remark_conflict and force:
+            click.echo(click.style(f"[注意] 已强制覆盖备注冲突：{remark_conflict_detail}", fg="yellow"))
+    else:
+        if remark_conflict and force:
+            snapshot.remark.updated_at = now_iso()
+            snapshot.remark.updated_by = updated_by
+
+        store.save_snapshot(snapshot)
+
+        if remark_conflict and force:
+            history = store.get_remark_history(snapshot.snapshot_id)
+            if history:
+                click.echo(click.style(f"\n[导入成功] 快照已保存（强制覆盖备注冲突）: {snapshot.snapshot_id}", fg="green"))
+                click.echo(click.style(f"[注意] 冲突内容: {remark_conflict_detail}", fg="yellow"))
+            else:
+                click.echo(click.style(f"\n[导入成功] 快照已保存: {snapshot.snapshot_id}", fg="green"))
+        else:
+            click.echo(click.style(f"\n[导入成功] 快照已保存: {snapshot.snapshot_id}", fg="green"))
+
+    if validation.has_errors and force and not remark_only:
         store.add_import_log(_make_log("forced", forced_flag=True))
     else:
         store.add_import_log(_make_log("success"))
 
-    click.echo(click.style(f"\n[导入成功] 快照已保存: {snapshot.snapshot_id}", fg="green"))
     click.echo(f"  可使用 apply -s {snapshot.snapshot_id} 执行，或 export-snapshot 导出复核。")
 
 

@@ -1,0 +1,35 @@
+source_dir: D:\workSpace\AI__SPACE\lfc-00019\examples\remark_test_workspace\source
+dest_dir: D:\workSpace\AI__SPACE\lfc-00019\examples\remark_test_workspace\dest
+state_file: D:\workSpace\AI__SPACE\lfc-00019\examples\remark_test_workspace\.state\invoice_state.json
+recursive: true
+
+rules:
+  - name: 增值税专用发票
+    pattern: "*增值税专用发票*.pdf"
+    target: vat_special
+    description: 增值税专用发票归档
+
+  - name: 增值税普通发票
+    pattern: "*增值税普通发票*.pdf"
+    target: vat/normal
+    description: 增值税普通发票归档
+
+  - name: 电子发票PDF
+    pattern: "*电子发票*.pdf"
+    target: electronic
+    description: 电子发票PDF归档
+
+  - name: 图片发票
+    pattern: "*发票*.{png,jpg}"
+    target: images
+    description: 图片格式发票归档
+
+  - name: 报销单据
+    pattern: "*报销*.xlsx"
+    target: reimbursement
+    description: 报销单据归档
+
+  - name: 合同文档
+    pattern: "*合同*.docx"
+    target: contracts
+    description: 合同文档归档

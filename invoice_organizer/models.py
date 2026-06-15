@@ -201,6 +201,92 @@ class NewDirInfo:
 
 
 @dataclass
+class SnapshotRemark:
+    """快照备注信息
+
+    用于记录批次备注、标签、交接人和注意事项。
+    支持多次修改，保留修改历史用于冲突检测。
+    """
+    remark: str = ""
+    tags: List[str] = field(default_factory=list)
+    handler: str = ""
+    notes: str = ""
+    updated_at: str = ""
+    updated_by: str = ""
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: Optional[Dict[str, Any]]) -> "SnapshotRemark":
+        if not data:
+            return cls()
+        return cls(
+            remark=data.get("remark", ""),
+            tags=list(data.get("tags", [])),
+            handler=data.get("handler", ""),
+            notes=data.get("notes", ""),
+            updated_at=data.get("updated_at", ""),
+            updated_by=data.get("updated_by", ""),
+        )
+
+    def is_empty(self) -> bool:
+        return not self.remark and not self.tags and not self.handler and not self.notes
+
+
+@dataclass
+class RemarkHistory:
+    """备注修改历史记录
+
+    用于冲突检测和审计追踪。
+    """
+    history_id: str
+    snapshot_id: str
+    old_remark: SnapshotRemark
+    new_remark: SnapshotRemark
+    changed_at: str
+    changed_by: str
+    change_source: str  # "cli" | "import" | "api"
+    conflict_detected: bool = False
+    conflict_detail: str = ""
+
+    def to_dict(self) -> Dict[str, Any]:
+        result = asdict(self)
+        result["old_remark"] = self.old_remark.to_dict()
+        result["new_remark"] = self.new_remark.to_dict()
+        return result
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "RemarkHistory":
+        return cls(
+            history_id=data["history_id"],
+            snapshot_id=data["snapshot_id"],
+            old_remark=SnapshotRemark.from_dict(data.get("old_remark")),
+            new_remark=SnapshotRemark.from_dict(data.get("new_remark")),
+            changed_at=data["changed_at"],
+            changed_by=data.get("changed_by", ""),
+            change_source=data.get("change_source", "cli"),
+            conflict_detected=data.get("conflict_detected", False),
+            conflict_detail=data.get("conflict_detail", ""),
+        )
+
+
+@dataclass
+class RemarkValidationResult:
+    """备注验证结果"""
+    valid: bool
+    errors: List[str] = field(default_factory=list)
+    warnings: List[str] = field(default_factory=list)
+
+    @property
+    def has_errors(self) -> bool:
+        return len(self.errors) > 0
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass
 class BatchSnapshot:
     """批次快照 - plan 产出的完整固化记录
 
@@ -219,12 +305,14 @@ class BatchSnapshot:
     summary: Dict[str, Any]
     imported: bool = False
     import_source: Optional[str] = None
+    remark: SnapshotRemark = field(default_factory=SnapshotRemark)
 
     def to_dict(self) -> Dict[str, Any]:
         result = asdict(self)
         result["config_snapshot"] = self.config_snapshot.to_dict()
         result["unmatched_files"] = [u.to_dict() for u in self.unmatched_files]
         result["new_target_dirs"] = [n.to_dict() for n in self.new_target_dirs]
+        result["remark"] = self.remark.to_dict()
         return result
 
     @classmethod
@@ -242,6 +330,7 @@ class BatchSnapshot:
             summary=data["summary"],
             imported=data.get("imported", False),
             import_source=data.get("import_source"),
+            remark=SnapshotRemark.from_dict(data.get("remark")),
         )
 
 
