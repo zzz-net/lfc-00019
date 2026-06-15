@@ -399,24 +399,50 @@
         "conflict_count": 0,
         "conflict_details": []
       },
-      "imported": false,
-      "import_source": null,
+      "imported": true,
+      "import_source": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\remark_test_workspace\\outputs\\snapshot_modified.json",
       "remark": {
-        "remark": "2024年1月发票批次，已完成初审",
+        "remark": "2024年1月发票批次，审核通过",
         "tags": [
           "2024-01",
           "财务审核",
-          "增值税",
-          "已初审"
+          "已完成"
         ],
-        "handler": "张三",
-        "notes": "已完成初审，发现2张发票需要补充材料，详见附件。",
-        "updated_at": "2026-06-16T07:41:02.046847",
-        "updated_by": "李四"
+        "handler": "王五",
+        "notes": "审核通过，可进行下一步账务处理。",
+        "updated_at": "2026-06-16T07:41:03.462919",
+        "updated_by": "import"
       }
     }
   },
-  "import_logs": [],
+  "import_logs": [
+    {
+      "import_id": "997bdea5ed44",
+      "timestamp": "2026-06-16T07:41:03.232375",
+      "status": "failed",
+      "source_file": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\remark_test_workspace\\outputs\\snapshot_modified.json",
+      "snapshot_id": "7f7a18b5ccdd",
+      "plan_id": "f851278bb428",
+      "move_count": 5,
+      "errors": [],
+      "warnings": [],
+      "config_diff": null,
+      "forced": false
+    },
+    {
+      "import_id": "76cf7639c3e5",
+      "timestamp": "2026-06-16T07:41:03.469350",
+      "status": "forced",
+      "source_file": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\remark_test_workspace\\outputs\\snapshot_modified.json",
+      "snapshot_id": "7f7a18b5ccdd",
+      "plan_id": "f851278bb428",
+      "move_count": 5,
+      "errors": [],
+      "warnings": [],
+      "config_diff": null,
+      "forced": true
+    }
+  ],
   "plan_locks": [],
   "lock_violations": [],
   "plan_diffs": [],
@@ -452,6 +478,73 @@
       "changed_at": "2026-06-16T07:41:02.047865",
       "changed_by": "李四",
       "change_source": "cli",
+      "conflict_detected": false,
+      "conflict_detail": ""
+    },
+    {
+      "history_id": "c1c68015c935",
+      "snapshot_id": "7f7a18b5ccdd",
+      "old_remark": {
+        "remark": "2024年1月发票批次，已完成初审",
+        "tags": [
+          "2024-01",
+          "财务审核",
+          "增值税",
+          "已初审"
+        ],
+        "handler": "张三",
+        "notes": "已完成初审，发现2张发票需要补充材料，详见附件。",
+        "updated_at": "2026-06-16T07:41:02.046847",
+        "updated_by": "李四"
+      },
+      "new_remark": {
+        "remark": "2024年1月发票批次，审核通过",
+        "tags": [
+          "2024-01",
+          "财务审核",
+          "已完成"
+        ],
+        "handler": "王五",
+        "notes": "审核通过，可进行下一步账务处理。",
+        "updated_at": "2026-06-16T07:41:03.230677",
+        "updated_by": "import"
+      },
+      "changed_at": "2026-06-16T07:41:03.230677",
+      "changed_by": "import",
+      "change_source": "import",
+      "conflict_detected": true,
+      "conflict_detail": "备注内容冲突: 旧='2024年1月发票批次，已完成初审...' 新='2024年1月发票批次，审核通过...'; 交接人冲突: 旧='张三' 新='王五'; 注意事项冲突: 旧内容长度=24 新内容长度=16; 标签冲突: 新增=['已完成'] 删除=['增值税', '已初审']"
+    },
+    {
+      "history_id": "1475f58a2344",
+      "snapshot_id": "7f7a18b5ccdd",
+      "old_remark": {
+        "remark": "2024年1月发票批次，审核通过",
+        "tags": [
+          "2024-01",
+          "财务审核",
+          "已完成"
+        ],
+        "handler": "王五",
+        "notes": "审核通过，可进行下一步账务处理。",
+        "updated_at": "2026-06-16T07:41:03.462919",
+        "updated_by": "import"
+      },
+      "new_remark": {
+        "remark": "2024年1月发票批次，审核通过",
+        "tags": [
+          "2024-01",
+          "财务审核",
+          "已完成"
+        ],
+        "handler": "王五",
+        "notes": "审核通过，可进行下一步账务处理。",
+        "updated_at": "2026-06-16T07:41:03.462919",
+        "updated_by": "import"
+      },
+      "changed_at": "2026-06-16T07:41:03.466722",
+      "changed_by": "import",
+      "change_source": "import",
       "conflict_detected": false,
       "conflict_detail": ""
     }

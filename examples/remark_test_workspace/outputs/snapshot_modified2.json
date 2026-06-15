@@ -1,7 +1,7 @@
 {
-  "snapshot_id": "55200c715afd",
-  "created_at": "2026-06-16T05:20:54.819855",
-  "plan_id": "c5414c4085d6",
+  "snapshot_id": "7f7a18b5ccdd",
+  "created_at": "2026-06-16T07:41:01.797926",
+  "plan_id": "f851278bb428",
   "config_snapshot": {
     "source_dir": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\remark_test_workspace\\source",
     "dest_dir": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\remark_test_workspace\\dest",
@@ -47,85 +47,85 @@
     "recursive": true,
     "file_extensions": null,
     "config_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\remark_test_workspace\\config.yaml",
-    "config_mtime": 1781558454.613868
+    "config_mtime": 1781566861.5518813
   },
   "scanned_files": [
     {
-      "id": "d66ac8e22fb2",
+      "id": "3c985687e00f",
       "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\remark_test_workspace\\source\\2024年1月增值税专用发票_A001.pdf",
       "filename": "2024年1月增值税专用发票_A001.pdf",
       "size": 21,
-      "mtime": 1781558454.6112764,
+      "mtime": 1781566861.5498216,
       "matched_rule": "增值税专用发票"
     },
     {
-      "id": "26ba950a10fa",
+      "id": "201402087709",
       "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\remark_test_workspace\\source\\2024年2月增值税普通发票_B002.pdf",
       "filename": "2024年2月增值税普通发票_B002.pdf",
       "size": 21,
-      "mtime": 1781558454.612331,
+      "mtime": 1781566861.5498216,
       "matched_rule": "增值税普通发票"
     },
     {
-      "id": "4cda8608f80c",
+      "id": "421ab8f5021f",
       "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\remark_test_workspace\\source\\notes.md",
       "filename": "notes.md",
       "size": 13,
-      "mtime": 1781558454.6136892,
+      "mtime": 1781566861.5508356,
       "matched_rule": null
     },
     {
-      "id": "5736fb399d70",
+      "id": "c462ce1b7920",
       "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\remark_test_workspace\\source\\出差报销单_202401.xlsx",
       "filename": "出差报销单_202401.xlsx",
       "size": 15,
-      "mtime": 1781558454.612331,
+      "mtime": 1781566861.5508356,
       "matched_rule": "报销单据"
     },
     {
-      "id": "34326bdd6d2f",
+      "id": "31f25b5f5843",
       "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\remark_test_workspace\\source\\发票扫描件_出租车发票.png",
       "filename": "发票扫描件_出租车发票.png",
       "size": 21,
-      "mtime": 1781558454.612331,
+      "mtime": 1781566861.5498216,
       "matched_rule": null
     },
     {
-      "id": "e796552c0f9f",
+      "id": "97cb208554c8",
       "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\remark_test_workspace\\source\\发票照片_餐厅发票.jpg",
       "filename": "发票照片_餐厅发票.jpg",
       "size": 17,
-      "mtime": 1781558454.612331,
+      "mtime": 1781566861.5498216,
       "matched_rule": null
     },
     {
-      "id": "227b12ba4b55",
+      "id": "f5b8e7ef44b1",
       "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\remark_test_workspace\\source\\未分类的文档.txt",
       "filename": "未分类的文档.txt",
       "size": 14,
-      "mtime": 1781558454.613868,
+      "mtime": 1781566861.5508356,
       "matched_rule": null
     },
     {
-      "id": "1f26f12914b1",
+      "id": "3488fc692581",
       "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\remark_test_workspace\\source\\电子发票_20240115_001.pdf",
       "filename": "电子发票_20240115_001.pdf",
       "size": 21,
-      "mtime": 1781558454.612331,
+      "mtime": 1781566861.5498216,
       "matched_rule": "电子发票PDF"
     },
     {
-      "id": "c8b02714e8da",
+      "id": "03b399be6571",
       "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\remark_test_workspace\\source\\采购合同_供应商A.docx",
       "filename": "采购合同_供应商A.docx",
       "size": 15,
-      "mtime": 1781558454.6134572,
+      "mtime": 1781566861.5508356,
       "matched_rule": "合同文档"
     }
   ],
   "moves": [
     {
-      "id": "daadaf7f3e2e",
+      "id": "f1270a7f20ab",
       "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\remark_test_workspace\\source\\2024年1月增值税专用发票_A001.pdf",
       "target_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\remark_test_workspace\\dest\\vat_special\\2024年1月增值税专用发票_A001.pdf",
       "filename": "2024年1月增值税专用发票_A001.pdf",
@@ -134,7 +134,7 @@
       "conflict_detail": null
     },
     {
-      "id": "b43744ce203b",
+      "id": "8fced02d61db",
       "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\remark_test_workspace\\source\\2024年2月增值税普通发票_B002.pdf",
       "target_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\remark_test_workspace\\dest\\vat/normal\\2024年2月增值税普通发票_B002.pdf",
       "filename": "2024年2月增值税普通发票_B002.pdf",
@@ -143,7 +143,7 @@
       "conflict_detail": null
     },
     {
-      "id": "4582257c9c60",
+      "id": "83fdee274260",
       "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\remark_test_workspace\\source\\出差报销单_202401.xlsx",
       "target_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\remark_test_workspace\\dest\\reimbursement\\出差报销单_202401.xlsx",
       "filename": "出差报销单_202401.xlsx",
@@ -152,7 +152,7 @@
       "conflict_detail": null
     },
     {
-      "id": "7270c1a6045e",
+      "id": "77fc6ee26d31",
       "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\remark_test_workspace\\source\\电子发票_20240115_001.pdf",
       "target_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\remark_test_workspace\\dest\\electronic\\电子发票_20240115_001.pdf",
       "filename": "电子发票_20240115_001.pdf",
@@ -161,7 +161,7 @@
       "conflict_detail": null
     },
     {
-      "id": "54382704ac92",
+      "id": "7cdffa8fbc0a",
       "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\remark_test_workspace\\source\\采购合同_供应商A.docx",
       "target_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\remark_test_workspace\\dest\\contracts\\采购合同_供应商A.docx",
       "filename": "采购合同_供应商A.docx",
@@ -175,28 +175,28 @@
       "filename": "notes.md",
       "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\remark_test_workspace\\source\\notes.md",
       "size": 13,
-      "mtime": 1781558454.6136892,
+      "mtime": 1781566861.5508356,
       "reason": "no_rule_match"
     },
     {
       "filename": "发票扫描件_出租车发票.png",
       "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\remark_test_workspace\\source\\发票扫描件_出租车发票.png",
       "size": 21,
-      "mtime": 1781558454.612331,
+      "mtime": 1781566861.5498216,
       "reason": "no_rule_match"
     },
     {
       "filename": "发票照片_餐厅发票.jpg",
       "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\remark_test_workspace\\source\\发票照片_餐厅发票.jpg",
       "size": 17,
-      "mtime": 1781558454.612331,
+      "mtime": 1781566861.5498216,
       "reason": "no_rule_match"
     },
     {
       "filename": "未分类的文档.txt",
       "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\remark_test_workspace\\source\\未分类的文档.txt",
       "size": 14,
-      "mtime": 1781558454.613868,
+      "mtime": 1781566861.5508356,
       "reason": "no_rule_match"
     }
   ],
@@ -278,7 +278,7 @@
     ],
     "handler": "赵六",
     "notes": "审核通过，可进行下一步账务处理。",
-    "updated_at": "2026-06-16T05:20:55.036150",
+    "updated_at": "2026-06-16T07:41:02.046847",
     "updated_by": "李四"
   }
 }

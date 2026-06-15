@@ -799,12 +799,15 @@ def cmd_list_snapshots(config_path: str, verbose: bool):
             has_conflict = "是" if s.get("has_conflicts") else "否"
             source = "导入" if s.get("imported") else "本地"
             remark_display = s.get("remark", "")[:28] + "..." if len(s.get("remark", "")) > 30 else s.get("remark", "")
-            tags_display = ", ".join(s.get("tags", []))[:18] + "..." if len(", ".join(s.get("tags", []))) > 20 else ", ".join(s.get("tags", []))
+            tags_full = ", ".join(s.get("tags", []))
+            tags_line1 = tags_full[:18] + "..." if len(tags_full) > 20 else tags_full
             click.echo(
                 f"{s['snapshot_id']:<14} {created:<27} {s.get('plan_id',''):<14} "
                 f"{s.get('move_count',0):<8} {has_conflict:<6} {source:<10} "
-                f"{remark_display:<30} {tags_display:<20} {s.get('handler',''):<15}"
+                f"{remark_display:<30} {tags_line1:<20} {s.get('handler',''):<15}"
             )
+            if len(tags_full) > 20:
+                click.echo(f"  {'':<14} {'':<27} {'':<14} {'':<8} {'':<6} {'':<10} {'':<30} {tags_full}")
             if s.get("notes"):
                 notes_display = s.get("notes", "")[:80] + "..." if len(s.get("notes", "")) > 80 else s.get("notes", "")
                 click.echo(f"  {'':<14} {'':<27} {'':<14} {'':<8} {'':<6} {'':<10} 注意事项: {notes_display}")
@@ -1091,6 +1094,13 @@ def cmd_import_snapshot(
         store.save_snapshot(snapshot)
 
         if remark_conflict and force:
+            store.update_snapshot_remark(
+                snapshot_id=snapshot.snapshot_id,
+                new_remark=snapshot.remark,
+                changed_by=updated_by,
+                change_source="import",
+                allow_overwrite=True,
+            )
             history = store.get_remark_history(snapshot.snapshot_id)
             if history:
                 click.echo(click.style(f"\n[导入成功] 快照已保存（强制覆盖备注冲突）: {snapshot.snapshot_id}", fg="green"))
@@ -1100,7 +1110,12 @@ def cmd_import_snapshot(
         else:
             click.echo(click.style(f"\n[导入成功] 快照已保存: {snapshot.snapshot_id}", fg="green"))
 
-    if validation.has_errors and force and not remark_only:
+    forced_flag = force and (validation.has_errors or remark_conflict) and not remark_only
+    if remark_only and force and remark_conflict:
+        forced_flag = True
+    if forced_flag:
+        store.add_import_log(_make_log("forced", forced_flag=True))
+    elif validation.has_errors and force and not remark_only:
         store.add_import_log(_make_log("forced", forced_flag=True))
     else:
         store.add_import_log(_make_log("success"))

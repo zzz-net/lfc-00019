@@ -276,6 +276,7 @@ def step_4_restart_and_check():
     assert result.returncode == 0, "list-snapshots 命令失败"
     assert "2024年1月发票批次，已完成初审" in result.stdout, "重启后list-snapshots应显示备注"
     assert "张三" in result.stdout, "重启后list-snapshots应显示交接人"
+    assert "已初审" in result.stdout, "list-snapshots -v 应完整展示末尾标签（不截断）"
 
     with open(STATE_FILE, "r", encoding="utf-8") as f:
         state_after = json.load(f)
@@ -329,6 +330,11 @@ def step_5_import_modified_remark(snapshot_json, original_snapshot_id):
     assert len(conflict_history) >= 1, "应记录备注冲突历史"
 
     print("\n[测试 5.2] 使用 --force 强制导入备注冲突")
+    with open(STATE_FILE, "r", encoding="utf-8") as f:
+        state_before_force = json.load(f)
+    n_rh_before = len(state_before_force.get("remark_histories", []))
+    n_il_before = len(state_before_force.get("import_logs", []))
+
     result = run(
         f"python -m invoice_organizer import-snapshot -c {CONFIG_PATH} "
         f"-i {modified_snapshot} --force -y -v"
@@ -342,6 +348,31 @@ def step_5_import_modified_remark(snapshot_json, original_snapshot_id):
     remark = snapshot_data["remark"]
     assert remark["remark"] == "2024年1月发票批次，审核通过", "强制导入后备注应更新"
     assert remark["handler"] == "王五", "强制导入后交接人应更新"
+
+    n_rh_after = len(state.get("remark_histories", []))
+    assert n_rh_after > n_rh_before, f"--force 后 remark_histories 应新增记录 ({n_rh_before} -> {n_rh_after})"
+    forced_logs = [l for l in state.get("import_logs", [])[n_il_before:] if l.get("forced")]
+    assert len(forced_logs) >= 1, "--force 后 import_logs 中应有 forced=true 的记录"
+    last_log = state["import_logs"][-1]
+    assert last_log["forced"] == True, "最后一条 import_log 应标记 forced=true"
+    assert last_log["status"] == "forced", "最后一条 import_log 状态应为 forced"
+
+    print("\n[测试 5.2b] 重启后复查 --force 导入的历史和 import log")
+    result = run(
+        f"python -m invoice_organizer export -c {CONFIG_PATH} "
+        f"-o {os.path.join(OUTPUT_DIR, 'check_after_force.json')} -f json"
+    )
+    assert result.returncode == 0, "导出不应失败"
+    with open(os.path.join(OUTPUT_DIR, "check_after_force.json"), "r", encoding="utf-8") as f:
+        exported = json.load(f)
+    exp_rh = exported.get("remark_histories", [])
+    exp_il = exported.get("import_logs", [])
+    assert len(exp_rh) >= 2, "导出文件应包含 remark_histories (至少冲突+强制两条)"
+    forced_in_exp = [l for l in exp_il if l.get("forced")]
+    assert len(forced_in_exp) >= 1, "导出文件的 import_logs 中应有 forced=true"
+    exp_snap = list(exported.get("snapshots", {}).values())[0]
+    assert exp_snap["remark"]["remark"] == "2024年1月发票批次，审核通过", "导出快照备注应与 --force 导入后一致"
+    assert exp_snap["remark"]["handler"] == "王五", "导出快照交接人应与 --force 导入后一致"
 
     print("\n[测试 5.3] 使用 --remark-only 仅导入备注")
     data["remark"]["remark"] = "2024年1月发票批次，已归档"

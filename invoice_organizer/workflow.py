@@ -630,6 +630,23 @@ def export_logs(
                     rh.get("conflict_detail", ""),
                 ])
 
+            writer.writerow([])
+            writer.writerow(["=== 导入日志 ==="])
+            writer.writerow(["导入ID", "时间", "状态", "快照ID", "预案ID", "移动项数", "源文件", "是否强制", "错误", "警告"])
+            for il in full_state.get("import_logs", []):
+                writer.writerow([
+                    il.get("import_id", ""),
+                    il.get("timestamp", ""),
+                    il.get("status", ""),
+                    il.get("snapshot_id", ""),
+                    il.get("plan_id", ""),
+                    il.get("move_count", ""),
+                    il.get("source_file", ""),
+                    "是" if il.get("forced") else "否",
+                    "; ".join(il.get("errors", [])) if il.get("errors") else "",
+                    "; ".join(il.get("warnings", [])) if il.get("warnings") else "",
+                ])
+
         return 1
 
     else:
