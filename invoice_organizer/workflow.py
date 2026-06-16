@@ -675,6 +675,12 @@ def export_logs(
                     "; ".join(il.get("warnings", [])) if il.get("warnings") else "",
                 ])
 
+            writer.writerow([])
+            writer.writerow(["=== 签收记录 ==="])
+            writer.writerow(["签收ID", "快照ID", "预案ID", "状态", "签收人", "签收时间", "截止时间", "补充说明", "创建时间", "创建人", "是否强制", "是否活动", "被取代ID", "冲突详情"])
+            for sr in full_state.get("signoff_records", []):
+                writer.writerow(export_signoff_to_csv_row(SignoffRecord.from_dict(sr)))
+
         return 1
 
     else:
@@ -1504,10 +1510,303 @@ def build_remark(
     )
 
 
-def export_snapshot_to_file(snapshot: BatchSnapshot, output_path: str) -> None:
+# ============================================================
+# 签收相关功能
+# ============================================================
+
+from .models import (
+    SignoffRecord, SignoffValidationResult, SignoffFieldChange,
+    MAX_SIGNOFF_NOTES_LENGTH, MAX_SIGNOFF_BY_LENGTH,
+)
+
+
+def validate_signoff(signoff: SignoffRecord) -> SignoffValidationResult:
     """
-    导出快照到 JSON 文件（包含备注信息）
+    验证签收信息的合法性
+
+    检查项：
+    - 签收人长度限制
+    - 补充说明长度限制
+    - 状态值合法性
+    - 截止时间格式合法性
     """
-    data = snapshot.to_dict()
-    with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    errors: List[str] = []
+    warnings: List[str] = []
+
+    if len(signoff.signed_by) > MAX_SIGNOFF_BY_LENGTH:
+        errors.append(
+            f"签收人过长: {len(signoff.signed_by)} 字符，最大允许 {MAX_SIGNOFF_BY_LENGTH} 字符"
+        )
+
+    if len(signoff.notes) > MAX_SIGNOFF_NOTES_LENGTH:
+        errors.append(
+            f"补充说明过长: {len(signoff.notes)} 字符，最大允许 {MAX_SIGNOFF_NOTES_LENGTH} 字符"
+        )
+
+    if signoff.status not in ["signed", "rejected", "pending"]:
+        errors.append(f"无效的签收状态: {signoff.status}，必须是 signed/rejected/pending")
+
+    if signoff.deadline:
+        try:
+            from datetime import datetime
+            datetime.fromisoformat(signoff.deadline.replace('Z', '+00:00'))
+        except (ValueError, TypeError):
+            errors.append(f"截止时间格式无效: {signoff.deadline}，请使用 ISO 格式")
+
+    if not signoff.signed_by.strip():
+        errors.append("签收人不能为空")
+
+    valid = len(errors) == 0
+    return SignoffValidationResult(valid=valid, errors=errors, warnings=warnings)
+
+
+def build_signoff(
+    snapshot_id: str,
+    plan_id: str,
+    status: str,
+    signed_by: str,
+    deadline: Optional[str] = None,
+    notes: Optional[str] = None,
+    config_snapshot: Optional[Dict[str, Any]] = None,
+    created_by: str = "cli",
+) -> SignoffRecord:
+    """构建签收记录并设置时间戳"""
+    return SignoffRecord(
+        signoff_id=generate_id(),
+        snapshot_id=snapshot_id,
+        plan_id=plan_id,
+        status=status,
+        signed_by=signed_by,
+        signed_at=now_iso(),
+        deadline=deadline or "",
+        notes=notes or "",
+        config_snapshot=config_snapshot,
+        created_at=now_iso(),
+        created_by=created_by,
+    )
+
+
+def diff_signoffs(old_signoff: Optional[SignoffRecord], new_signoff: SignoffRecord) -> List[SignoffFieldChange]:
+    """
+    字段级对比两个签收记录，返回各字段变化明细
+    """
+    changes: List[SignoffFieldChange] = []
+
+    old_dict = old_signoff.to_dict() if old_signoff else {}
+
+    new_dict = new_signoff.to_dict()
+
+    compare_fields = ["status", "signed_by", "deadline", "notes"]
+
+    for field in compare_fields:
+        old_val = old_dict.get(field, "")
+        new_val = new_dict.get(field, "")
+        if old_val != new_val:
+            changes.append(SignoffFieldChange(
+                field_name=field,
+                old_value=old_val,
+                new_value=new_val,
+            ))
+
+    return changes
+
+
+def format_signoff_change(fc: SignoffFieldChange) -> str:
+    """将签收单字段变化格式化为可读字符串"""
+    field_names = {
+        "status": "状态",
+        "signed_by": "签收人",
+        "deadline": "截止时间",
+        "notes": "补充说明",
+    }
+    display_name = field_names.get(fc.field_name, fc.field_name)
+    old_val = fc.old_value or "(空)"
+    new_val = fc.new_value or "(空)"
+
+    if fc.field_name == "status":
+        status_map = {"signed": "已签收", "rejected": "已拒绝", "pending": "待处理"}
+        old_val = status_map.get(str(old_val), str(old_val))
+        new_val = status_map.get(str(new_val), str(new_val))
+    elif fc.field_name == "notes":
+        old_len = len(str(old_val)) if old_val else 0
+        new_len = len(str(new_val)) if new_val else 0
+        return f"{display_name}: 长度 {old_len} -> {new_len}"
+
+    return f"{display_name}: '{old_val}' -> '{new_val}'"
+
+
+def check_signoff_expired(signoff: SignoffRecord) -> bool:
+    """检查签收是否已过期"""
+    if not signoff.deadline:
+        return False
+
+    try:
+        from datetime import datetime
+        deadline = datetime.fromisoformat(signoff.deadline.replace('Z', '+00:00'))
+        now = datetime.now()
+        return now > deadline
+    except (ValueError, TypeError):
+        return False
+
+
+def validate_signoff_for_apply(
+    store: StateStore,
+    snapshot: BatchSnapshot,
+    current_config: Optional[Config] = None,
+    require_signed: bool = True,
+) -> SignoffValidationResult:
+    """
+    执行 apply 前的签收状态校验
+
+    检查项：
+    1. 是否有有效的签收记录
+    2. 签收是否已过期
+    3. 当前配置与签收时配置是否一致
+    4. 快照是否已被新版本替代
+    5. 是否存在冲突的签收记录
+
+    返回：校验结果
+    """
+    from .models import Config as ConfigModel
+
+    errors: List[str] = []
+    warnings: List[str] = []
+    is_expired = False
+    config_mismatch = False
+    snapshot_replaced = False
+    conflicting_signoffs: List[str] = []
+
+    active_signoff = store.get_active_signoff(snapshot.snapshot_id)
+
+    if not active_signoff:
+        if require_signed:
+            errors.append(f"快照 {snapshot.snapshot_id} 没有有效的签收记录，请先执行 sign-off 命令签收")
+        return SignoffValidationResult(
+            valid=not require_signed,
+            errors=errors,
+            warnings=warnings,
+            is_expired=False,
+            config_mismatch=False,
+            snapshot_replaced=False,
+            conflicting_signoffs=[],
+            active_signoff=None,
+        )
+
+    if require_signed and active_signoff.status != "signed":
+        status_map = {"rejected": "已拒绝", "pending": "待处理"}
+        errors.append(
+            f"快照 {snapshot.snapshot_id} 签收状态为「{status_map.get(active_signoff.status, active_signoff.status)}」，"
+            f"需要「已签收」状态才能执行"
+        )
+
+    if check_signoff_expired(active_signoff):
+        is_expired = True
+        errors.append(
+            f"签收已过期！截止时间: {active_signoff.deadline}，请重新签收或延长截止时间"
+        )
+
+    if current_config and active_signoff.config_snapshot:
+        from .models import ConfigSnapshot as ConfigSnapshotModel
+        signoff_config = ConfigSnapshotModel.from_dict(active_signoff.config_snapshot)
+        diff_result = diff_config(current_config, signoff_config)
+        if diff_result.has_diff:
+            config_mismatch = True
+            detail_parts = []
+            if diff_result.source_dir_changed:
+                detail_parts.append(f"源目录: {signoff_config.source_dir} -> {current_config.source_dir}")
+            if diff_result.dest_dir_changed:
+                detail_parts.append(f"目标目录: {signoff_config.dest_dir} -> {current_config.dest_dir}")
+            if diff_result.added_rules:
+                detail_parts.append(f"新增规则: {', '.join(diff_result.added_rules)}")
+            if diff_result.removed_rules:
+                detail_parts.append(f"删除规则: {', '.join(diff_result.removed_rules)}")
+            if diff_result.modified_rules:
+                current_rule_map = {r.name: r for r in current_config.rules}
+                snapshot_rule_map = {r["name"]: r for r in signoff_config.rules}
+                modified_details = []
+                for rule_name in diff_result.modified_rules:
+                    curr = current_rule_map.get(rule_name)
+                    snap = snapshot_rule_map.get(rule_name)
+                    if curr and snap:
+                        changes = []
+                        if curr.pattern != snap.get("pattern"):
+                            changes.append(f"pattern: {snap.get('pattern')} -> {curr.pattern}")
+                        if curr.target != snap.get("target"):
+                            changes.append(f"target: {snap.get('target')} -> {curr.target}")
+                        if curr.description != snap.get("description"):
+                            changes.append(f"description: {snap.get('description')} -> {curr.description}")
+                        if changes:
+                            modified_details.append(f"{rule_name}({', '.join(changes)})")
+                        else:
+                            modified_details.append(rule_name)
+                    else:
+                        modified_details.append(rule_name)
+                detail_parts.append(f"修改规则: {', '.join(modified_details)}")
+            errors.append(
+                f"当前配置与签收时不一致！变更: {'; '.join(detail_parts)}"
+            )
+
+    all_snapshots = store.list_snapshots()
+    newer_snapshots = [
+        s for s in all_snapshots
+        if s["created_at"] > snapshot.created_at and s["snapshot_id"] != snapshot.snapshot_id
+    ]
+    if newer_snapshots:
+        snapshot_replaced = True
+        newer_ids = ", ".join(s["snapshot_id"] for s in newer_snapshots)
+        warnings.append(
+            f"该快照已被新版本替代，更新的快照: {newer_ids}"
+        )
+
+    all_signoffs = store.get_signoffs_by_snapshot(snapshot.snapshot_id)
+    other_active = [
+        s for s in all_signoffs
+        if s.is_active and s.signoff_id != active_signoff.signoff_id
+    ]
+    if other_active:
+        for s in other_active:
+            conflicting_signoffs.append(
+                f"ID: {s.signoff_id}, 签收人: {s.signed_by}, 状态: {s.status}"
+            )
+        warnings.append(
+            f"存在 {len(other_active)} 条冲突的签收记录，请确认使用哪一份"
+        )
+
+    valid = len(errors) == 0
+
+    return SignoffValidationResult(
+        valid=valid,
+        errors=errors,
+        warnings=warnings,
+        is_expired=is_expired,
+        config_mismatch=config_mismatch,
+        snapshot_replaced=snapshot_replaced,
+        conflicting_signoffs=conflicting_signoffs,
+        active_signoff=active_signoff,
+    )
+
+
+def config_snapshot_to_dict(config: Config, config_path: Optional[str] = None) -> Dict[str, Any]:
+    """将当前配置转换为字典（用于签收时记录配置快照）"""
+    return create_config_snapshot(config, config_path).to_dict()
+
+
+def export_signoff_to_csv_row(signoff: SignoffRecord) -> List[str]:
+    """将签收记录转换为 CSV 行"""
+    status_map = {"signed": "已签收", "rejected": "已拒绝", "pending": "待处理"}
+    return [
+        signoff.signoff_id,
+        signoff.snapshot_id,
+        signoff.plan_id,
+        status_map.get(signoff.status, signoff.status),
+        signoff.signed_by,
+        signoff.signed_at,
+        signoff.deadline,
+        signoff.notes,
+        signoff.created_at,
+        signoff.created_by,
+        "是" if signoff.forced else "否",
+        "活动" if signoff.is_active else "已失效",
+        signoff.superseded_by or "",
+        signoff.conflict_detail,
+    ]

@@ -1,0 +1,1191 @@
+{
+  "scanned_files": [
+    {
+      "id": "8872a8caf218",
+      "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\2024年1月增值税专用发票_A001.pdf",
+      "filename": "2024年1月增值税专用发票_A001.pdf",
+      "size": 21,
+      "mtime": 1781571557.0885544,
+      "matched_rule": "增值税专用发票"
+    },
+    {
+      "id": "ade7574b09c6",
+      "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\2024年2月增值税普通发票_B002.pdf",
+      "filename": "2024年2月增值税普通发票_B002.pdf",
+      "size": 21,
+      "mtime": 1781571557.0896287,
+      "matched_rule": "增值税普通发票"
+    },
+    {
+      "id": "37b050d1256f",
+      "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\出差报销单_202401.xlsx",
+      "filename": "出差报销单_202401.xlsx",
+      "size": 15,
+      "mtime": 1781571557.090897,
+      "matched_rule": "报销单据"
+    },
+    {
+      "id": "13dee10fbc0e",
+      "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\发票扫描件_出租车发票.png",
+      "filename": "发票扫描件_出租车发票.png",
+      "size": 21,
+      "mtime": 1781571557.0897908,
+      "matched_rule": null
+    },
+    {
+      "id": "3f84849a129e",
+      "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\发票照片_餐厅发票.jpg",
+      "filename": "发票照片_餐厅发票.jpg",
+      "size": 17,
+      "mtime": 1781571557.090897,
+      "matched_rule": null
+    },
+    {
+      "id": "077967fbd7c5",
+      "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\电子发票_20240115_001.pdf",
+      "filename": "电子发票_20240115_001.pdf",
+      "size": 21,
+      "mtime": 1781571557.0897908,
+      "matched_rule": "电子发票PDF"
+    },
+    {
+      "id": "d80f814bce70",
+      "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\采购合同_供应商A.docx",
+      "filename": "采购合同_供应商A.docx",
+      "size": 15,
+      "mtime": 1781571557.092065,
+      "matched_rule": "合同文档"
+    }
+  ],
+  "plans": {
+    "f3a63ac4a476": {
+      "id": "f3a63ac4a476",
+      "created_at": "2026-06-16T08:59:17.429757",
+      "moves": [
+        {
+          "id": "e870bd31ad8b",
+          "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\2024年1月增值税专用发票_A001.pdf",
+          "target_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\vat_special\\2024年1月增值税专用发票_A001.pdf",
+          "filename": "2024年1月增值税专用发票_A001.pdf",
+          "matched_rule": "增值税专用发票",
+          "conflict_type": null,
+          "conflict_detail": null
+        },
+        {
+          "id": "bc40dade85f5",
+          "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\2024年2月增值税普通发票_B002.pdf",
+          "target_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\vat/normal\\2024年2月增值税普通发票_B002.pdf",
+          "filename": "2024年2月增值税普通发票_B002.pdf",
+          "matched_rule": "增值税普通发票",
+          "conflict_type": null,
+          "conflict_detail": null
+        },
+        {
+          "id": "ce4180d3da5f",
+          "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\出差报销单_202401.xlsx",
+          "target_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\reimbursement\\出差报销单_202401.xlsx",
+          "filename": "出差报销单_202401.xlsx",
+          "matched_rule": "报销单据",
+          "conflict_type": null,
+          "conflict_detail": null
+        },
+        {
+          "id": "321393365718",
+          "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\电子发票_20240115_001.pdf",
+          "target_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\electronic\\电子发票_20240115_001.pdf",
+          "filename": "电子发票_20240115_001.pdf",
+          "matched_rule": "电子发票PDF",
+          "conflict_type": null,
+          "conflict_detail": null
+        },
+        {
+          "id": "e348e9f742c4",
+          "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\采购合同_供应商A.docx",
+          "target_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\contracts\\采购合同_供应商A.docx",
+          "filename": "采购合同_供应商A.docx",
+          "matched_rule": "合同文档",
+          "conflict_type": null,
+          "conflict_detail": null
+        }
+      ],
+      "has_conflicts": false
+    }
+  },
+  "runs": {
+    "0ac5d6afbe48": {
+      "id": "0ac5d6afbe48",
+      "plan_id": "f3a63ac4a476",
+      "created_at": "2026-06-16T08:59:23.891724",
+      "dry_run": true,
+      "completed_at": "2026-06-16T08:59:23.910629",
+      "moves": [
+        {
+          "id": "6baa2eba18ae",
+          "run_id": "0ac5d6afbe48",
+          "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\2024年1月增值税专用发票_A001.pdf",
+          "target_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\vat_special\\2024年1月增值税专用发票_A001.pdf",
+          "filename": "2024年1月增值税专用发票_A001.pdf",
+          "matched_rule": "增值税专用发票",
+          "status": "moved",
+          "timestamp": "2026-06-16T08:59:23.894367",
+          "error_message": null
+        },
+        {
+          "id": "d8ca0c5f4830",
+          "run_id": "0ac5d6afbe48",
+          "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\2024年2月增值税普通发票_B002.pdf",
+          "target_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\vat/normal\\2024年2月增值税普通发票_B002.pdf",
+          "filename": "2024年2月增值税普通发票_B002.pdf",
+          "matched_rule": "增值税普通发票",
+          "status": "moved",
+          "timestamp": "2026-06-16T08:59:23.897933",
+          "error_message": null
+        },
+        {
+          "id": "bdb1966ee488",
+          "run_id": "0ac5d6afbe48",
+          "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\出差报销单_202401.xlsx",
+          "target_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\reimbursement\\出差报销单_202401.xlsx",
+          "filename": "出差报销单_202401.xlsx",
+          "matched_rule": "报销单据",
+          "status": "moved",
+          "timestamp": "2026-06-16T08:59:23.901108",
+          "error_message": null
+        },
+        {
+          "id": "2702a350950e",
+          "run_id": "0ac5d6afbe48",
+          "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\电子发票_20240115_001.pdf",
+          "target_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\electronic\\电子发票_20240115_001.pdf",
+          "filename": "电子发票_20240115_001.pdf",
+          "matched_rule": "电子发票PDF",
+          "status": "moved",
+          "timestamp": "2026-06-16T08:59:23.903779",
+          "error_message": null
+        },
+        {
+          "id": "a0dd4cdccf59",
+          "run_id": "0ac5d6afbe48",
+          "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\采购合同_供应商A.docx",
+          "target_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\contracts\\采购合同_供应商A.docx",
+          "filename": "采购合同_供应商A.docx",
+          "matched_rule": "合同文档",
+          "status": "moved",
+          "timestamp": "2026-06-16T08:59:23.907480",
+          "error_message": null
+        }
+      ],
+      "is_undone": false,
+      "signoff_id": "c3d607a695bc",
+      "snapshot_id": "3171abb6243c"
+    },
+    "8d8ae79ebe3f": {
+      "id": "8d8ae79ebe3f",
+      "plan_id": "f3a63ac4a476",
+      "created_at": "2026-06-16T08:59:25.173988",
+      "dry_run": true,
+      "completed_at": "2026-06-16T08:59:25.204511",
+      "moves": [
+        {
+          "id": "24013ca9b07e",
+          "run_id": "8d8ae79ebe3f",
+          "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\2024年1月增值税专用发票_A001.pdf",
+          "target_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\vat_special\\2024年1月增值税专用发票_A001.pdf",
+          "filename": "2024年1月增值税专用发票_A001.pdf",
+          "matched_rule": "增值税专用发票",
+          "status": "moved",
+          "timestamp": "2026-06-16T08:59:25.182250",
+          "error_message": null
+        },
+        {
+          "id": "c1f40d73b16f",
+          "run_id": "8d8ae79ebe3f",
+          "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\2024年2月增值税普通发票_B002.pdf",
+          "target_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\vat/normal\\2024年2月增值税普通发票_B002.pdf",
+          "filename": "2024年2月增值税普通发票_B002.pdf",
+          "matched_rule": "增值税普通发票",
+          "status": "moved",
+          "timestamp": "2026-06-16T08:59:25.187038",
+          "error_message": null
+        },
+        {
+          "id": "bbba227b51b3",
+          "run_id": "8d8ae79ebe3f",
+          "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\出差报销单_202401.xlsx",
+          "target_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\reimbursement\\出差报销单_202401.xlsx",
+          "filename": "出差报销单_202401.xlsx",
+          "matched_rule": "报销单据",
+          "status": "moved",
+          "timestamp": "2026-06-16T08:59:25.191440",
+          "error_message": null
+        },
+        {
+          "id": "29e8196de0a5",
+          "run_id": "8d8ae79ebe3f",
+          "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\电子发票_20240115_001.pdf",
+          "target_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\electronic\\电子发票_20240115_001.pdf",
+          "filename": "电子发票_20240115_001.pdf",
+          "matched_rule": "电子发票PDF",
+          "status": "moved",
+          "timestamp": "2026-06-16T08:59:25.195352",
+          "error_message": null
+        },
+        {
+          "id": "869f311c9248",
+          "run_id": "8d8ae79ebe3f",
+          "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\采购合同_供应商A.docx",
+          "target_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\contracts\\采购合同_供应商A.docx",
+          "filename": "采购合同_供应商A.docx",
+          "matched_rule": "合同文档",
+          "status": "moved",
+          "timestamp": "2026-06-16T08:59:25.200305",
+          "error_message": null
+        }
+      ],
+      "is_undone": false,
+      "signoff_id": "c3d607a695bc",
+      "snapshot_id": "3171abb6243c"
+    },
+    "ae5988d06f40": {
+      "id": "ae5988d06f40",
+      "plan_id": "f3a63ac4a476",
+      "created_at": "2026-06-16T08:59:26.166621",
+      "dry_run": true,
+      "completed_at": "2026-06-16T08:59:26.189744",
+      "moves": [
+        {
+          "id": "17161317a9c0",
+          "run_id": "ae5988d06f40",
+          "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\2024年1月增值税专用发票_A001.pdf",
+          "target_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\vat_special\\2024年1月增值税专用发票_A001.pdf",
+          "filename": "2024年1月增值税专用发票_A001.pdf",
+          "matched_rule": "增值税专用发票",
+          "status": "moved",
+          "timestamp": "2026-06-16T08:59:26.170110",
+          "error_message": null
+        },
+        {
+          "id": "1e7d7c820a4d",
+          "run_id": "ae5988d06f40",
+          "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\2024年2月增值税普通发票_B002.pdf",
+          "target_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\vat/normal\\2024年2月增值税普通发票_B002.pdf",
+          "filename": "2024年2月增值税普通发票_B002.pdf",
+          "matched_rule": "增值税普通发票",
+          "status": "moved",
+          "timestamp": "2026-06-16T08:59:26.174220",
+          "error_message": null
+        },
+        {
+          "id": "d788d766eb63",
+          "run_id": "ae5988d06f40",
+          "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\出差报销单_202401.xlsx",
+          "target_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\reimbursement\\出差报销单_202401.xlsx",
+          "filename": "出差报销单_202401.xlsx",
+          "matched_rule": "报销单据",
+          "status": "moved",
+          "timestamp": "2026-06-16T08:59:26.177867",
+          "error_message": null
+        },
+        {
+          "id": "23ca6e340791",
+          "run_id": "ae5988d06f40",
+          "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\电子发票_20240115_001.pdf",
+          "target_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\electronic\\电子发票_20240115_001.pdf",
+          "filename": "电子发票_20240115_001.pdf",
+          "matched_rule": "电子发票PDF",
+          "status": "moved",
+          "timestamp": "2026-06-16T08:59:26.182362",
+          "error_message": null
+        },
+        {
+          "id": "729dc4d57959",
+          "run_id": "ae5988d06f40",
+          "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\采购合同_供应商A.docx",
+          "target_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\contracts\\采购合同_供应商A.docx",
+          "filename": "采购合同_供应商A.docx",
+          "matched_rule": "合同文档",
+          "status": "moved",
+          "timestamp": "2026-06-16T08:59:26.185577",
+          "error_message": null
+        }
+      ],
+      "is_undone": false,
+      "signoff_id": "c3d607a695bc",
+      "snapshot_id": "3171abb6243c"
+    },
+    "f0874d564d3c": {
+      "id": "f0874d564d3c",
+      "plan_id": "f3a63ac4a476",
+      "created_at": "2026-06-16T08:59:27.948286",
+      "dry_run": true,
+      "completed_at": "2026-06-16T08:59:27.973904",
+      "moves": [
+        {
+          "id": "98fb0b628b8a",
+          "run_id": "f0874d564d3c",
+          "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\2024年1月增值税专用发票_A001.pdf",
+          "target_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\vat_special\\2024年1月增值税专用发票_A001.pdf",
+          "filename": "2024年1月增值税专用发票_A001.pdf",
+          "matched_rule": "增值税专用发票",
+          "status": "moved",
+          "timestamp": "2026-06-16T08:59:27.952064",
+          "error_message": null
+        },
+        {
+          "id": "838e518ff017",
+          "run_id": "f0874d564d3c",
+          "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\2024年2月增值税普通发票_B002.pdf",
+          "target_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\vat/normal\\2024年2月增值税普通发票_B002.pdf",
+          "filename": "2024年2月增值税普通发票_B002.pdf",
+          "matched_rule": "增值税普通发票",
+          "status": "moved",
+          "timestamp": "2026-06-16T08:59:27.956233",
+          "error_message": null
+        },
+        {
+          "id": "c990a83fb203",
+          "run_id": "f0874d564d3c",
+          "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\出差报销单_202401.xlsx",
+          "target_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\reimbursement\\出差报销单_202401.xlsx",
+          "filename": "出差报销单_202401.xlsx",
+          "matched_rule": "报销单据",
+          "status": "moved",
+          "timestamp": "2026-06-16T08:59:27.961061",
+          "error_message": null
+        },
+        {
+          "id": "cc559f4aa6af",
+          "run_id": "f0874d564d3c",
+          "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\电子发票_20240115_001.pdf",
+          "target_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\electronic\\电子发票_20240115_001.pdf",
+          "filename": "电子发票_20240115_001.pdf",
+          "matched_rule": "电子发票PDF",
+          "status": "moved",
+          "timestamp": "2026-06-16T08:59:27.966010",
+          "error_message": null
+        },
+        {
+          "id": "8a0820956011",
+          "run_id": "f0874d564d3c",
+          "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\采购合同_供应商A.docx",
+          "target_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\contracts\\采购合同_供应商A.docx",
+          "filename": "采购合同_供应商A.docx",
+          "matched_rule": "合同文档",
+          "status": "moved",
+          "timestamp": "2026-06-16T08:59:27.970168",
+          "error_message": null
+        }
+      ],
+      "is_undone": false,
+      "signoff_id": "383f429b61c7",
+      "snapshot_id": "3171abb6243c"
+    },
+    "2ce7bb69cc43": {
+      "id": "2ce7bb69cc43",
+      "plan_id": "f3a63ac4a476",
+      "created_at": "2026-06-16T08:59:28.961211",
+      "dry_run": false,
+      "completed_at": "2026-06-16T08:59:28.993099",
+      "moves": [
+        {
+          "id": "4f980014df96",
+          "run_id": "2ce7bb69cc43",
+          "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\2024年1月增值税专用发票_A001.pdf",
+          "target_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\vat_special\\2024年1月增值税专用发票_A001.pdf",
+          "filename": "2024年1月增值税专用发票_A001.pdf",
+          "matched_rule": "增值税专用发票",
+          "status": "moved",
+          "timestamp": "2026-06-16T08:59:28.968078",
+          "error_message": null
+        },
+        {
+          "id": "c367699697ec",
+          "run_id": "2ce7bb69cc43",
+          "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\2024年2月增值税普通发票_B002.pdf",
+          "target_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\vat/normal\\2024年2月增值税普通发票_B002.pdf",
+          "filename": "2024年2月增值税普通发票_B002.pdf",
+          "matched_rule": "增值税普通发票",
+          "status": "moved",
+          "timestamp": "2026-06-16T08:59:28.973224",
+          "error_message": null
+        },
+        {
+          "id": "6d435ed97e95",
+          "run_id": "2ce7bb69cc43",
+          "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\出差报销单_202401.xlsx",
+          "target_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\reimbursement\\出差报销单_202401.xlsx",
+          "filename": "出差报销单_202401.xlsx",
+          "matched_rule": "报销单据",
+          "status": "moved",
+          "timestamp": "2026-06-16T08:59:28.979107",
+          "error_message": null
+        },
+        {
+          "id": "052517aa7d2c",
+          "run_id": "2ce7bb69cc43",
+          "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\电子发票_20240115_001.pdf",
+          "target_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\electronic\\电子发票_20240115_001.pdf",
+          "filename": "电子发票_20240115_001.pdf",
+          "matched_rule": "电子发票PDF",
+          "status": "moved",
+          "timestamp": "2026-06-16T08:59:28.983242",
+          "error_message": null
+        },
+        {
+          "id": "f76607e2cd2c",
+          "run_id": "2ce7bb69cc43",
+          "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\采购合同_供应商A.docx",
+          "target_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\contracts\\采购合同_供应商A.docx",
+          "filename": "采购合同_供应商A.docx",
+          "matched_rule": "合同文档",
+          "status": "moved",
+          "timestamp": "2026-06-16T08:59:28.989430",
+          "error_message": null
+        }
+      ],
+      "is_undone": true,
+      "signoff_id": "17e6d6e10841",
+      "snapshot_id": "3171abb6243c"
+    }
+  },
+  "undo_records": [
+    {
+      "run_id": "2ce7bb69cc43",
+      "undo_timestamp": "2026-06-16T08:59:29.455912",
+      "moves_restored": 5,
+      "status": "completed"
+    }
+  ],
+  "snapshots": {
+    "3171abb6243c": {
+      "snapshot_id": "3171abb6243c",
+      "created_at": "2026-06-16T08:59:17.430778",
+      "plan_id": "f3a63ac4a476",
+      "config_snapshot": {
+        "source_dir": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source",
+        "dest_dir": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest",
+        "rules": [
+          {
+            "name": "增值税专用发票",
+            "pattern": "*增值税专用发票*.pdf",
+            "target": "vat_special",
+            "description": "增值税专用发票归档"
+          },
+          {
+            "name": "增值税普通发票",
+            "pattern": "*增值税普通发票*.pdf",
+            "target": "vat/normal",
+            "description": "增值税普通发票归档"
+          },
+          {
+            "name": "电子发票PDF",
+            "pattern": "*电子发票*.pdf",
+            "target": "electronic",
+            "description": "电子发票PDF归档"
+          },
+          {
+            "name": "图片发票",
+            "pattern": "*发票*.{png,jpg}",
+            "target": "images",
+            "description": "图片格式发票归档"
+          },
+          {
+            "name": "报销单据",
+            "pattern": "*报销*.xlsx",
+            "target": "reimbursement",
+            "description": "报销单据归档"
+          },
+          {
+            "name": "合同文档",
+            "pattern": "*合同*.docx",
+            "target": "contracts",
+            "description": "合同文档归档"
+          }
+        ],
+        "state_file": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\.state\\invoice_state.json",
+        "recursive": true,
+        "file_extensions": null,
+        "config_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\config.yaml",
+        "config_mtime": 1781571557.092065
+      },
+      "scanned_files": [
+        {
+          "id": "8872a8caf218",
+          "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\2024年1月增值税专用发票_A001.pdf",
+          "filename": "2024年1月增值税专用发票_A001.pdf",
+          "size": 21,
+          "mtime": 1781571557.0885544,
+          "matched_rule": "增值税专用发票"
+        },
+        {
+          "id": "ade7574b09c6",
+          "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\2024年2月增值税普通发票_B002.pdf",
+          "filename": "2024年2月增值税普通发票_B002.pdf",
+          "size": 21,
+          "mtime": 1781571557.0896287,
+          "matched_rule": "增值税普通发票"
+        },
+        {
+          "id": "37b050d1256f",
+          "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\出差报销单_202401.xlsx",
+          "filename": "出差报销单_202401.xlsx",
+          "size": 15,
+          "mtime": 1781571557.090897,
+          "matched_rule": "报销单据"
+        },
+        {
+          "id": "13dee10fbc0e",
+          "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\发票扫描件_出租车发票.png",
+          "filename": "发票扫描件_出租车发票.png",
+          "size": 21,
+          "mtime": 1781571557.0897908,
+          "matched_rule": null
+        },
+        {
+          "id": "3f84849a129e",
+          "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\发票照片_餐厅发票.jpg",
+          "filename": "发票照片_餐厅发票.jpg",
+          "size": 17,
+          "mtime": 1781571557.090897,
+          "matched_rule": null
+        },
+        {
+          "id": "077967fbd7c5",
+          "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\电子发票_20240115_001.pdf",
+          "filename": "电子发票_20240115_001.pdf",
+          "size": 21,
+          "mtime": 1781571557.0897908,
+          "matched_rule": "电子发票PDF"
+        },
+        {
+          "id": "d80f814bce70",
+          "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\采购合同_供应商A.docx",
+          "filename": "采购合同_供应商A.docx",
+          "size": 15,
+          "mtime": 1781571557.092065,
+          "matched_rule": "合同文档"
+        }
+      ],
+      "moves": [
+        {
+          "id": "e870bd31ad8b",
+          "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\2024年1月增值税专用发票_A001.pdf",
+          "target_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\vat_special\\2024年1月增值税专用发票_A001.pdf",
+          "filename": "2024年1月增值税专用发票_A001.pdf",
+          "matched_rule": "增值税专用发票",
+          "conflict_type": null,
+          "conflict_detail": null
+        },
+        {
+          "id": "bc40dade85f5",
+          "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\2024年2月增值税普通发票_B002.pdf",
+          "target_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\vat/normal\\2024年2月增值税普通发票_B002.pdf",
+          "filename": "2024年2月增值税普通发票_B002.pdf",
+          "matched_rule": "增值税普通发票",
+          "conflict_type": null,
+          "conflict_detail": null
+        },
+        {
+          "id": "ce4180d3da5f",
+          "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\出差报销单_202401.xlsx",
+          "target_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\reimbursement\\出差报销单_202401.xlsx",
+          "filename": "出差报销单_202401.xlsx",
+          "matched_rule": "报销单据",
+          "conflict_type": null,
+          "conflict_detail": null
+        },
+        {
+          "id": "321393365718",
+          "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\电子发票_20240115_001.pdf",
+          "target_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\electronic\\电子发票_20240115_001.pdf",
+          "filename": "电子发票_20240115_001.pdf",
+          "matched_rule": "电子发票PDF",
+          "conflict_type": null,
+          "conflict_detail": null
+        },
+        {
+          "id": "e348e9f742c4",
+          "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\采购合同_供应商A.docx",
+          "target_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\contracts\\采购合同_供应商A.docx",
+          "filename": "采购合同_供应商A.docx",
+          "matched_rule": "合同文档",
+          "conflict_type": null,
+          "conflict_detail": null
+        }
+      ],
+      "unmatched_files": [
+        {
+          "filename": "发票扫描件_出租车发票.png",
+          "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\发票扫描件_出租车发票.png",
+          "size": 21,
+          "mtime": 1781571557.0897908,
+          "reason": "no_rule_match"
+        },
+        {
+          "filename": "发票照片_餐厅发票.jpg",
+          "source_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source\\发票照片_餐厅发票.jpg",
+          "size": 17,
+          "mtime": 1781571557.090897,
+          "reason": "no_rule_match"
+        }
+      ],
+      "new_target_dirs": [
+        {
+          "path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\contracts",
+          "rule_names": [
+            "合同文档"
+          ],
+          "file_count": 1
+        },
+        {
+          "path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\electronic",
+          "rule_names": [
+            "电子发票PDF"
+          ],
+          "file_count": 1
+        },
+        {
+          "path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\reimbursement",
+          "rule_names": [
+            "报销单据"
+          ],
+          "file_count": 1
+        },
+        {
+          "path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\vat/normal",
+          "rule_names": [
+            "增值税普通发票"
+          ],
+          "file_count": 1
+        },
+        {
+          "path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\vat_special",
+          "rule_names": [
+            "增值税专用发票"
+          ],
+          "file_count": 1
+        }
+      ],
+      "has_conflicts": false,
+      "summary": {
+        "total_files": 7,
+        "matched_files": 5,
+        "unmatched_files": 2,
+        "new_target_dirs": [
+          "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\contracts",
+          "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\electronic",
+          "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\reimbursement",
+          "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\vat/normal",
+          "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\vat_special"
+        ],
+        "rules_with_same_target": {},
+        "files_per_rule": {
+          "增值税专用发票": 1,
+          "增值税普通发票": 1,
+          "报销单据": 1,
+          "电子发票PDF": 1,
+          "合同文档": 1
+        },
+        "files_per_target_dir": {
+          "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\vat_special": 1,
+          "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\vat/normal": 1,
+          "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\reimbursement": 1,
+          "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\electronic": 1,
+          "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest\\contracts": 1
+        },
+        "conflict_count": 0,
+        "conflict_details": []
+      },
+      "imported": true,
+      "import_source": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\outputs\\snapshot_conflict_signoff.json",
+      "remark": {
+        "remark": "",
+        "tags": [],
+        "handler": "",
+        "notes": "",
+        "updated_at": "",
+        "updated_by": ""
+      },
+      "signoffs": [
+        {
+          "signoff_id": "conflict_signoff_001",
+          "snapshot_id": "3171abb6243c",
+          "plan_id": "f3a63ac4a476",
+          "status": "rejected",
+          "signed_by": "财务经理-王总",
+          "signed_at": "2026-06-16T08:59:17.831819",
+          "deadline": "2026-06-23T08:59:17.454521",
+          "notes": "拒绝，发现3张发票有疑问，需要重新核实。",
+          "config_snapshot": {
+            "source_dir": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source",
+            "dest_dir": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest",
+            "rules": [
+              {
+                "name": "增值税专用发票",
+                "pattern": "*增值税专用发票*.pdf",
+                "target": "vat_special",
+                "description": "增值税专用发票归档"
+              },
+              {
+                "name": "增值税普通发票",
+                "pattern": "*增值税普通发票*.pdf",
+                "target": "vat/normal",
+                "description": "增值税普通发票归档"
+              },
+              {
+                "name": "电子发票PDF",
+                "pattern": "*电子发票*.pdf",
+                "target": "electronic",
+                "description": "电子发票PDF归档"
+              },
+              {
+                "name": "图片发票",
+                "pattern": "*发票*.{png,jpg}",
+                "target": "images",
+                "description": "图片格式发票归档"
+              },
+              {
+                "name": "报销单据",
+                "pattern": "*报销*.xlsx",
+                "target": "reimbursement",
+                "description": "报销单据归档"
+              },
+              {
+                "name": "合同文档",
+                "pattern": "*合同*.docx",
+                "target": "contracts",
+                "description": "合同文档归档"
+              }
+            ],
+            "state_file": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\.state\\invoice_state.json",
+            "recursive": true,
+            "file_extensions": null,
+            "config_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\config.yaml",
+            "config_mtime": 1781571557.092065
+          },
+          "created_at": "2026-06-16T08:59:17.831819",
+          "created_by": "cli",
+          "import_source": null,
+          "conflict_detail": "",
+          "forced": false,
+          "is_active": true,
+          "superseded_by": null,
+          "superseded_at": null
+        }
+      ]
+    }
+  },
+  "import_logs": [
+    {
+      "import_id": "072e47fb8584",
+      "timestamp": "2026-06-16T08:59:21.495522",
+      "status": "failed",
+      "source_file": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\outputs\\snapshot_conflict_signoff.json",
+      "snapshot_id": "3171abb6243c",
+      "plan_id": "f3a63ac4a476",
+      "move_count": 5,
+      "errors": [],
+      "warnings": [],
+      "config_diff": null,
+      "forced": false,
+      "remark_conflict_detail": ""
+    },
+    {
+      "import_id": "985180a84584",
+      "timestamp": "2026-06-16T08:59:21.965945",
+      "status": "forced",
+      "source_file": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\outputs\\snapshot_conflict_signoff.json",
+      "snapshot_id": "3171abb6243c",
+      "plan_id": "f3a63ac4a476",
+      "move_count": 5,
+      "errors": [],
+      "warnings": [],
+      "config_diff": null,
+      "forced": true,
+      "remark_conflict_detail": ""
+    }
+  ],
+  "plan_locks": [],
+  "lock_violations": [],
+  "plan_diffs": [],
+  "remark_histories": [],
+  "signoff_records": [
+    {
+      "signoff_id": "1fcc265c3b31",
+      "snapshot_id": "3171abb6243c",
+      "plan_id": "f3a63ac4a476",
+      "status": "signed",
+      "signed_by": "财务主管-李总",
+      "signed_at": "2026-06-16T08:59:17.831819",
+      "deadline": "2026-06-23T08:59:17.454521",
+      "notes": "审核通过，发票真实有效，可执行归档。",
+      "config_snapshot": {
+        "source_dir": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source",
+        "dest_dir": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest",
+        "rules": [
+          {
+            "name": "增值税专用发票",
+            "pattern": "*增值税专用发票*.pdf",
+            "target": "vat_special",
+            "description": "增值税专用发票归档"
+          },
+          {
+            "name": "增值税普通发票",
+            "pattern": "*增值税普通发票*.pdf",
+            "target": "vat/normal",
+            "description": "增值税普通发票归档"
+          },
+          {
+            "name": "电子发票PDF",
+            "pattern": "*电子发票*.pdf",
+            "target": "electronic",
+            "description": "电子发票PDF归档"
+          },
+          {
+            "name": "图片发票",
+            "pattern": "*发票*.{png,jpg}",
+            "target": "images",
+            "description": "图片格式发票归档"
+          },
+          {
+            "name": "报销单据",
+            "pattern": "*报销*.xlsx",
+            "target": "reimbursement",
+            "description": "报销单据归档"
+          },
+          {
+            "name": "合同文档",
+            "pattern": "*合同*.docx",
+            "target": "contracts",
+            "description": "合同文档归档"
+          }
+        ],
+        "state_file": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\.state\\invoice_state.json",
+        "recursive": true,
+        "file_extensions": null,
+        "config_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\config.yaml",
+        "config_mtime": 1781571557.092065
+      },
+      "created_at": "2026-06-16T08:59:17.831819",
+      "created_by": "cli",
+      "import_source": null,
+      "conflict_detail": "",
+      "forced": false,
+      "is_active": false,
+      "superseded_by": "conflict_signoff_001",
+      "superseded_at": "2026-06-16T08:59:21.943627"
+    },
+    {
+      "signoff_id": "conflict_signoff_001",
+      "snapshot_id": "3171abb6243c",
+      "plan_id": "f3a63ac4a476",
+      "status": "rejected",
+      "signed_by": "财务经理-王总",
+      "signed_at": "2026-06-16T08:59:17.831819",
+      "deadline": "2026-06-23T08:59:17.454521",
+      "notes": "拒绝，发现3张发票有疑问，需要重新核实。",
+      "config_snapshot": {
+        "source_dir": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source",
+        "dest_dir": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest",
+        "rules": [
+          {
+            "name": "增值税专用发票",
+            "pattern": "*增值税专用发票*.pdf",
+            "target": "vat_special",
+            "description": "增值税专用发票归档"
+          },
+          {
+            "name": "增值税普通发票",
+            "pattern": "*增值税普通发票*.pdf",
+            "target": "vat/normal",
+            "description": "增值税普通发票归档"
+          },
+          {
+            "name": "电子发票PDF",
+            "pattern": "*电子发票*.pdf",
+            "target": "electronic",
+            "description": "电子发票PDF归档"
+          },
+          {
+            "name": "图片发票",
+            "pattern": "*发票*.{png,jpg}",
+            "target": "images",
+            "description": "图片格式发票归档"
+          },
+          {
+            "name": "报销单据",
+            "pattern": "*报销*.xlsx",
+            "target": "reimbursement",
+            "description": "报销单据归档"
+          },
+          {
+            "name": "合同文档",
+            "pattern": "*合同*.docx",
+            "target": "contracts",
+            "description": "合同文档归档"
+          }
+        ],
+        "state_file": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\.state\\invoice_state.json",
+        "recursive": true,
+        "file_extensions": null,
+        "config_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\config.yaml",
+        "config_mtime": 1781571557.092065
+      },
+      "created_at": "2026-06-16T08:59:17.831819",
+      "created_by": "cli",
+      "import_source": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\outputs\\snapshot_conflict_signoff.json",
+      "conflict_detail": "status 冲突: 旧='signed...' 新='rejected...'; signed_by 冲突: 旧='财务主管-李总...' 新='财务经理-王总...'; notes 冲突: 旧='审核通过，发票真实有效，可执行归档。...' 新='拒绝，发现3张发票有疑问，需要重新核实。...'",
+      "forced": true,
+      "is_active": false,
+      "superseded_by": "c3d607a695bc",
+      "superseded_at": "2026-06-16T08:59:23.442860"
+    },
+    {
+      "signoff_id": "c3d607a695bc",
+      "snapshot_id": "3171abb6243c",
+      "plan_id": "f3a63ac4a476",
+      "status": "signed",
+      "signed_by": "财务总监-赵总",
+      "signed_at": "2026-06-16T08:59:23.442860",
+      "deadline": "",
+      "notes": "二次审核通过，可执行。",
+      "config_snapshot": {
+        "source_dir": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source",
+        "dest_dir": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest",
+        "rules": [
+          {
+            "name": "增值税专用发票",
+            "pattern": "*增值税专用发票*.pdf",
+            "target": "vat_special",
+            "description": "增值税专用发票归档"
+          },
+          {
+            "name": "增值税普通发票",
+            "pattern": "*增值税普通发票*.pdf",
+            "target": "vat/normal",
+            "description": "增值税普通发票归档"
+          },
+          {
+            "name": "电子发票PDF",
+            "pattern": "*电子发票*.pdf",
+            "target": "electronic",
+            "description": "电子发票PDF归档"
+          },
+          {
+            "name": "图片发票",
+            "pattern": "*发票*.{png,jpg}",
+            "target": "images",
+            "description": "图片格式发票归档"
+          },
+          {
+            "name": "报销单据",
+            "pattern": "*报销*.xlsx",
+            "target": "reimbursement",
+            "description": "报销单据归档"
+          },
+          {
+            "name": "合同文档",
+            "pattern": "*合同*.docx",
+            "target": "contracts",
+            "description": "合同文档归档"
+          }
+        ],
+        "state_file": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\.state\\invoice_state.json",
+        "recursive": true,
+        "file_extensions": null,
+        "config_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\config.yaml",
+        "config_mtime": 1781571557.092065
+      },
+      "created_at": "2026-06-16T08:59:23.442860",
+      "created_by": "cli",
+      "import_source": null,
+      "conflict_detail": "强制覆盖已有签收记录",
+      "forced": true,
+      "is_active": false,
+      "superseded_by": "383f429b61c7",
+      "superseded_at": "2026-06-16T08:59:26.859886"
+    },
+    {
+      "signoff_id": "383f429b61c7",
+      "snapshot_id": "3171abb6243c",
+      "plan_id": "f3a63ac4a476",
+      "status": "signed",
+      "signed_by": "过期测试员",
+      "signed_at": "2026-06-16T08:59:26.859886",
+      "deadline": "2026-06-15T08:59:26.233220",
+      "notes": "测试过期签收",
+      "config_snapshot": {
+        "source_dir": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source",
+        "dest_dir": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest",
+        "rules": [
+          {
+            "name": "增值税专用发票",
+            "pattern": "*增值税专用发票*.pdf",
+            "target": "vat_special",
+            "description": "增值税专用发票归档"
+          },
+          {
+            "name": "增值税普通发票",
+            "pattern": "*增值税普通发票*.pdf",
+            "target": "vat/normal",
+            "description": "增值税普通发票归档"
+          },
+          {
+            "name": "电子发票PDF",
+            "pattern": "*电子发票*.pdf",
+            "target": "electronic",
+            "description": "电子发票PDF归档"
+          },
+          {
+            "name": "图片发票",
+            "pattern": "*发票*.{png,jpg}",
+            "target": "images",
+            "description": "图片格式发票归档"
+          },
+          {
+            "name": "报销单据",
+            "pattern": "*报销*.xlsx",
+            "target": "reimbursement",
+            "description": "报销单据归档"
+          },
+          {
+            "name": "合同文档",
+            "pattern": "*合同*.docx",
+            "target": "contracts",
+            "description": "合同文档归档"
+          }
+        ],
+        "state_file": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\.state\\invoice_state.json",
+        "recursive": true,
+        "file_extensions": null,
+        "config_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\config.yaml",
+        "config_mtime": 1781571565.4577065
+      },
+      "created_at": "2026-06-16T08:59:26.859886",
+      "created_by": "cli",
+      "import_source": null,
+      "conflict_detail": "强制覆盖已有签收记录",
+      "forced": true,
+      "is_active": false,
+      "superseded_by": "17e6d6e10841",
+      "superseded_at": "2026-06-16T08:59:28.456473"
+    },
+    {
+      "signoff_id": "17e6d6e10841",
+      "snapshot_id": "3171abb6243c",
+      "plan_id": "f3a63ac4a476",
+      "status": "signed",
+      "signed_by": "财务总监-赵总",
+      "signed_at": "2026-06-16T08:59:28.456473",
+      "deadline": "",
+      "notes": "最终审核通过",
+      "config_snapshot": {
+        "source_dir": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source",
+        "dest_dir": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest",
+        "rules": [
+          {
+            "name": "增值税专用发票",
+            "pattern": "*增值税专用发票*.pdf",
+            "target": "vat_special",
+            "description": "增值税专用发票归档"
+          },
+          {
+            "name": "增值税普通发票",
+            "pattern": "*增值税普通发票*.pdf",
+            "target": "vat/normal",
+            "description": "增值税普通发票归档"
+          },
+          {
+            "name": "电子发票PDF",
+            "pattern": "*电子发票*.pdf",
+            "target": "electronic",
+            "description": "电子发票PDF归档"
+          },
+          {
+            "name": "图片发票",
+            "pattern": "*发票*.{png,jpg}",
+            "target": "images",
+            "description": "图片格式发票归档"
+          },
+          {
+            "name": "报销单据",
+            "pattern": "*报销*.xlsx",
+            "target": "reimbursement",
+            "description": "报销单据归档"
+          },
+          {
+            "name": "合同文档",
+            "pattern": "*合同*.docx",
+            "target": "contracts",
+            "description": "合同文档归档"
+          }
+        ],
+        "state_file": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\.state\\invoice_state.json",
+        "recursive": true,
+        "file_extensions": null,
+        "config_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\config.yaml",
+        "config_mtime": 1781571565.4577065
+      },
+      "created_at": "2026-06-16T08:59:28.456473",
+      "created_by": "cli",
+      "import_source": null,
+      "conflict_detail": "强制覆盖已有签收记录",
+      "forced": true,
+      "is_active": true,
+      "superseded_by": null,
+      "superseded_at": null
+    }
+  ],
+  "last_scan": "2026-06-16T08:59:17.428122",
+  "last_plan": "f3a63ac4a476",
+  "last_snapshot": "3171abb6243c",
+  "active_lock_id": null,
+  "created_at": "2026-06-16T08:59:17.425068",
+  "scan_config": {
+    "source_dir": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\source",
+    "dest_dir": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\dest",
+    "rules": [
+      {
+        "name": "增值税专用发票",
+        "pattern": "*增值税专用发票*.pdf",
+        "target": "vat_special",
+        "description": "增值税专用发票归档"
+      },
+      {
+        "name": "增值税普通发票",
+        "pattern": "*增值税普通发票*.pdf",
+        "target": "vat/normal",
+        "description": "增值税普通发票归档"
+      },
+      {
+        "name": "电子发票PDF",
+        "pattern": "*电子发票*.pdf",
+        "target": "electronic",
+        "description": "电子发票PDF归档"
+      },
+      {
+        "name": "图片发票",
+        "pattern": "*发票*.{png,jpg}",
+        "target": "images",
+        "description": "图片格式发票归档"
+      },
+      {
+        "name": "报销单据",
+        "pattern": "*报销*.xlsx",
+        "target": "reimbursement",
+        "description": "报销单据归档"
+      },
+      {
+        "name": "合同文档",
+        "pattern": "*合同*.docx",
+        "target": "contracts",
+        "description": "合同文档归档"
+      }
+    ],
+    "state_file": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\.state\\invoice_state.json",
+    "recursive": true,
+    "file_extensions": null,
+    "config_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\examples\\signoff_test_workspace\\config.yaml",
+    "config_mtime": 1781571557.092065
+  }
+}

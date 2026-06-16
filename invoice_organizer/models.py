@@ -332,6 +332,7 @@ class BatchSnapshot:
     imported: bool = False
     import_source: Optional[str] = None
     remark: SnapshotRemark = field(default_factory=SnapshotRemark)
+    signoffs: List["SignoffRecord"] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
         result = asdict(self)
@@ -339,10 +340,13 @@ class BatchSnapshot:
         result["unmatched_files"] = [u.to_dict() for u in self.unmatched_files]
         result["new_target_dirs"] = [n.to_dict() for n in self.new_target_dirs]
         result["remark"] = self.remark.to_dict()
+        result["signoffs"] = [s.to_dict() for s in self.signoffs]
         return result
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "BatchSnapshot":
+        signoffs_data = data.get("signoffs", [])
+        signoffs = [SignoffRecord.from_dict(s) for s in signoffs_data] if signoffs_data else []
         return cls(
             snapshot_id=data["snapshot_id"],
             created_at=data["created_at"],
@@ -357,6 +361,7 @@ class BatchSnapshot:
             imported=data.get("imported", False),
             import_source=data.get("import_source"),
             remark=SnapshotRemark.from_dict(data.get("remark")),
+            signoffs=signoffs,
         )
 
 
@@ -653,6 +658,106 @@ class LockViolation:
             violation_type=data["violation_type"],
             violation_detail=data["violation_detail"],
             blocked=data.get("blocked", True),
+        )
+
+
+MAX_SIGNOFF_NOTES_LENGTH: int = 500
+MAX_SIGNOFF_BY_LENGTH: int = 50
+
+
+@dataclass
+class SignoffRecord:
+    """签收记录
+
+    用于记录预案/快照的签收状态、签收人、时间、截止时间和补充说明。
+    支持多次签收，保留签收历史用于冲突检测和审计。
+    """
+    signoff_id: str
+    snapshot_id: str
+    plan_id: str
+    status: str  # "signed" | "rejected" | "pending"
+    signed_by: str
+    signed_at: str
+    deadline: str = ""
+    notes: str = ""
+    config_snapshot: Optional[Dict[str, Any]] = None
+    created_at: str = ""
+    created_by: str = "cli"
+    import_source: Optional[str] = None
+    conflict_detail: str = ""
+    forced: bool = False
+    is_active: bool = True
+    superseded_by: Optional[str] = None
+    superseded_at: Optional[str] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "SignoffRecord":
+        return cls(
+            signoff_id=data["signoff_id"],
+            snapshot_id=data["snapshot_id"],
+            plan_id=data["plan_id"],
+            status=data["status"],
+            signed_by=data["signed_by"],
+            signed_at=data["signed_at"],
+            deadline=data.get("deadline", ""),
+            notes=data.get("notes", ""),
+            config_snapshot=data.get("config_snapshot"),
+            created_at=data.get("created_at", ""),
+            created_by=data.get("created_by", "cli"),
+            import_source=data.get("import_source"),
+            conflict_detail=data.get("conflict_detail", ""),
+            forced=data.get("forced", False),
+            is_active=data.get("is_active", True),
+            superseded_by=data.get("superseded_by"),
+            superseded_at=data.get("superseded_at"),
+        )
+
+
+@dataclass
+class SignoffValidationResult:
+    """签收校验结果
+
+    用于 apply 执行前的签收状态校验。
+    """
+    valid: bool
+    errors: List[str] = field(default_factory=list)
+    warnings: List[str] = field(default_factory=list)
+    is_expired: bool = False
+    config_mismatch: bool = False
+    snapshot_replaced: bool = False
+    conflicting_signoffs: List[str] = field(default_factory=list)
+    active_signoff: Optional[SignoffRecord] = None
+
+    @property
+    def has_errors(self) -> bool:
+        return len(self.errors) > 0
+
+    def to_dict(self) -> Dict[str, Any]:
+        result = asdict(self)
+        if self.active_signoff:
+            result["active_signoff"] = self.active_signoff.to_dict()
+        return result
+
+
+@dataclass
+class SignoffFieldChange:
+    """签收单个字段的变化记录"""
+    field_name: str
+    old_value: Any
+    new_value: Any
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "SignoffFieldChange":
+        return cls(
+            field_name=data["field_name"],
+            old_value=data.get("old_value"),
+            new_value=data.get("new_value"),
         )
 
 

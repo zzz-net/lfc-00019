@@ -10,6 +10,7 @@ from .models import (
     ScannedFile, PlannedMove, ExecutedMove, UndoRecord,
     BatchSnapshot, ImportLog, PlanLock, LockViolation, ConfigSnapshot,
     SnapshotRemark, RemarkHistory, RemarkFieldChange,
+    SignoffRecord,
     generate_id, now_iso,
 )
 
@@ -40,6 +41,7 @@ class StateStore:
             "lock_violations": [],
             "plan_diffs": [],
             "remark_histories": [],
+            "signoff_records": [],
             "last_scan": None,
             "last_plan": None,
             "last_snapshot": None,
@@ -525,3 +527,132 @@ class StateStore:
     def get_full_state(self) -> Dict[str, Any]:
         """获取完整状态数据（用于 export）"""
         return dict(self._data)
+
+    # ---- 签收记录 ----
+
+    def add_signoff(self, signoff: SignoffRecord) -> None:
+        """添加一条签收记录
+
+        同时会将同一快照的其他签收记录标记为非活动（被新签收取代）
+        """
+        if "signoff_records" not in self._data:
+            self._data["signoff_records"] = []
+
+        for existing in self._data["signoff_records"]:
+            if (existing.get("snapshot_id") == signoff.snapshot_id and
+                existing.get("is_active", True) and
+                existing.get("signoff_id") != signoff.signoff_id):
+                existing["is_active"] = False
+                existing["superseded_by"] = signoff.signoff_id
+                existing["superseded_at"] = now_iso()
+
+        self._data["signoff_records"].append(signoff.to_dict())
+        self.save()
+
+    def get_signoff(self, signoff_id: str) -> Optional[SignoffRecord]:
+        """根据 ID 获取签收记录"""
+        for s in self._data.get("signoff_records", []):
+            if s.get("signoff_id") == signoff_id:
+                return SignoffRecord.from_dict(s)
+        return None
+
+    def get_active_signoff(self, snapshot_id: str) -> Optional[SignoffRecord]:
+        """获取指定快照当前活动的签收记录"""
+        active_signoffs = []
+        for s in self._data.get("signoff_records", []):
+            if s.get("snapshot_id") == snapshot_id and s.get("is_active", True):
+                active_signoffs.append(SignoffRecord.from_dict(s))
+
+        if not active_signoffs:
+            return None
+
+        active_signoffs.sort(key=lambda x: x.signed_at, reverse=True)
+        return active_signoffs[0]
+
+    def get_signoffs_by_snapshot(self, snapshot_id: str) -> List[SignoffRecord]:
+        """获取指定快照的所有签收记录（按时间倒序）"""
+        result = []
+        for s in self._data.get("signoff_records", []):
+            if s.get("snapshot_id") == snapshot_id:
+                result.append(SignoffRecord.from_dict(s))
+        result.sort(key=lambda x: x.signed_at, reverse=True)
+        return result
+
+    def get_all_signoffs(self) -> List[SignoffRecord]:
+        """获取所有签收记录（按时间倒序）"""
+        result = []
+        for s in self._data.get("signoff_records", []):
+            result.append(SignoffRecord.from_dict(s))
+        result.sort(key=lambda x: x.signed_at, reverse=True)
+        return result
+
+    def get_signoff_by_run(self, run_id: str) -> Optional[SignoffRecord]:
+        """根据执行记录查找当时使用的签收记录"""
+        run = self.get_run(run_id)
+        if not run:
+            return None
+
+        signoff_id = run.get("signoff_id")
+        if signoff_id:
+            return self.get_signoff(signoff_id)
+
+        snapshot_id = run.get("snapshot_id")
+        if snapshot_id:
+            return self.get_active_signoff(snapshot_id)
+
+        return None
+
+    def update_run_signoff(self, run_id: str, signoff_id: str, snapshot_id: Optional[str] = None) -> bool:
+        """更新执行记录关联的签收记录 ID"""
+        if run_id in self._data.get("runs", {}):
+            self._data["runs"][run_id]["signoff_id"] = signoff_id
+            if snapshot_id is not None:
+                self._data["runs"][run_id]["snapshot_id"] = snapshot_id
+            self.save()
+            return True
+        return False
+
+    def list_snapshots_with_signoff(self) -> List[Dict[str, Any]]:
+        """列出所有快照（含签收信息）"""
+        snapshots = self.list_snapshots_with_remark()
+
+        for s in snapshots:
+            signoff = self.get_active_signoff(s["snapshot_id"])
+            if signoff:
+                status_map = {"signed": "已签收", "rejected": "已拒绝", "pending": "待处理"}
+                s["signoff_status"] = status_map.get(signoff.status, signoff.status)
+                s["signoff_status_raw"] = signoff.status
+                s["signed_by"] = signoff.signed_by
+                s["signed_at"] = signoff.signed_at
+                s["signoff_deadline"] = signoff.deadline
+                s["signoff_notes"] = signoff.notes
+                s["signoff_id"] = signoff.signoff_id
+                s["signoff_forced"] = signoff.forced
+            else:
+                s["signoff_status"] = "未签收"
+                s["signoff_status_raw"] = "unsigned"
+                s["signed_by"] = ""
+                s["signed_at"] = ""
+                s["signoff_deadline"] = ""
+                s["signoff_notes"] = ""
+                s["signoff_id"] = ""
+                s["signoff_forced"] = False
+
+        return snapshots
+
+    def deactivate_all_signoffs(self, snapshot_id: str, reason: str = "") -> int:
+        """将指定快照的所有签收标记为非活动
+
+        返回被标记的记录数
+        """
+        count = 0
+        for s in self._data.get("signoff_records", []):
+            if s.get("snapshot_id") == snapshot_id and s.get("is_active", True):
+                s["is_active"] = False
+                s["superseded_at"] = now_iso()
+                if reason:
+                    s["conflict_detail"] = reason + "; " + s.get("conflict_detail", "")
+                count += 1
+        if count > 0:
+            self.save()
+        return count

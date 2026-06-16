@@ -7,7 +7,11 @@ from typing import Optional, Tuple
 
 import click
 
-from .models import load_config, generate_id, ImportLog, now_iso, LockViolation, ConfigSnapshot, SnapshotRemark, RemarkFieldChange
+from .models import (
+    load_config, generate_id, ImportLog, now_iso, LockViolation, ConfigSnapshot,
+    SnapshotRemark, RemarkFieldChange, SignoffRecord, MAX_SIGNOFF_NOTES_LENGTH,
+    MAX_SIGNOFF_BY_LENGTH,
+)
 from .storage import StateStore
 from .workflow import (
     scan_directory, build_plan, build_plan_summary, apply_plan,
@@ -18,6 +22,9 @@ from .workflow import (
     diff_plans, export_plan_diff,
     validate_remark, build_remark, diff_remarks, format_remark_change,
     MAX_REMARK_LENGTH, MAX_HANDLER_LENGTH, MAX_NOTES_LENGTH, MAX_TAG_LENGTH, MAX_TAGS_COUNT,
+    validate_signoff, build_signoff, diff_signoffs, format_signoff_change,
+    validate_signoff_for_apply, config_snapshot_to_dict, export_signoff_to_csv_row,
+    check_signoff_expired,
 )
 
 
@@ -281,6 +288,12 @@ def cmd_plan(
               help="按文件类型筛选，可多次指定 (如: --type pdf --type jpg)")
 @click.option("--target", "filter_targets", multiple=True,
               help="按目标目录筛选，可多次指定 (如: --target vat_special)")
+@click.option("--require-signoff", is_flag=True, default=True,
+              help="要求必须有有效的签收记录才能执行 (默认开启)")
+@click.option("--no-require-signoff", is_flag=True,
+              help="跳过签收校验，即使没有签收也可以执行")
+@click.option("--force-expired-signoff", is_flag=True,
+              help="即使签收已过期也强制执行")
 def cmd_apply(
     config_path: str,
     plan_id: Optional[str],
@@ -292,6 +305,9 @@ def cmd_apply(
     filter_rules: tuple,
     filter_types: tuple,
     filter_targets: tuple,
+    require_signoff: bool,
+    no_require_signoff: bool,
+    force_expired_signoff: bool,
 ):
     try:
         config = load_config(config_path)
@@ -320,6 +336,100 @@ def cmd_apply(
 
     snapshot_id = snapshot.snapshot_id
     plan_id = snapshot.plan_id
+
+    require_signoff = require_signoff and not no_require_signoff
+
+    if no_require_signoff:
+        click.echo(click.style("[注意] 已使用 --no-require-signoff 跳过签收校验", fg="yellow"))
+
+    signoff_validation = validate_signoff_for_apply(
+        store=store,
+        snapshot=snapshot,
+        current_config=config,
+        require_signed=require_signoff,
+    )
+
+    active_signoff = signoff_validation.active_signoff
+
+    if signoff_validation.is_expired and not force_expired_signoff:
+        click.echo(click.style("[错误] 执行被签收过期拦截！", fg="red", bold=True))
+        click.echo(click.style(f"  签收截止时间: {active_signoff.deadline if active_signoff else 'N/A'}", fg="red"))
+        click.echo(click.style(f"  签收时间: {active_signoff.signed_at if active_signoff else 'N/A'}", fg="red"))
+        click.echo()
+        click.echo("  你可以：")
+        click.echo("    1. 使用 --force-expired-signoff 强制执行已过期的签收")
+        click.echo(f"       python -m invoice_organizer apply -c {config_path} -s {snapshot_id} --force-expired-signoff")
+        click.echo("    2. 重新执行 sign-off 更新截止时间")
+        click.echo(f"       python -m invoice_organizer sign-off -c {config_path} -s {snapshot_id} --signed-by <签收人> --deadline <新截止时间>")
+        sys.exit(1)
+
+    if signoff_validation.config_mismatch and not force_snapshot:
+        click.echo(click.style("[错误] 执行被配置变化拦截！当前配置与签收时不一致", fg="red", bold=True))
+        click.echo(click.style(f"  快照创建时间: {snapshot.created_at}", fg="red"))
+        click.echo(click.style(f"  签收时间: {active_signoff.signed_at if active_signoff else 'N/A'}", fg="red"))
+        for err in signoff_validation.errors:
+            if "配置与签收时不一致" in err:
+                click.echo(click.style(f"  - {err}", fg="red"))
+        click.echo()
+        click.echo("  你可以：")
+        click.echo("    1. 使用 --force-snapshot 强制按旧快照执行")
+        click.echo(f"       python -m invoice_organizer apply -c {config_path} -s {snapshot_id} --force-snapshot")
+        click.echo("    2. 重新 plan 生成新快照并签收")
+        click.echo(f"       python -m invoice_organizer plan -c {config_path}")
+        sys.exit(1)
+
+    if signoff_validation.snapshot_replaced:
+        for warn in signoff_validation.warnings:
+            if "快照已被新版本替代" in warn:
+                click.echo(click.style(f"[警告] {warn}", fg="yellow", bold=True))
+
+    if signoff_validation.conflicting_signoffs:
+        for warn in signoff_validation.warnings:
+            if "冲突的签收记录" in warn:
+                click.echo(click.style(f"[警告] {warn}", fg="yellow", bold=True))
+        for cs in signoff_validation.conflicting_signoffs:
+            click.echo(click.style(f"  - {cs}", fg="yellow"))
+
+    if signoff_validation.has_errors and not force_snapshot:
+        only_expired_error = (
+            signoff_validation.is_expired and
+            len(signoff_validation.errors) == 1 and
+            "签收已过期" in signoff_validation.errors[0]
+        )
+        if not (only_expired_error and force_expired_signoff):
+            click.echo(click.style("[错误] 执行被签收校验拦截！", fg="red", bold=True))
+            for err in signoff_validation.errors:
+                click.echo(click.style(f"  - {err}", fg="red"))
+            if active_signoff:
+                click.echo()
+                click.echo(click.style("[当前签收信息]", fg="yellow"))
+                click.echo(f"  签收 ID: {active_signoff.signoff_id}")
+                status_map = {"signed": "已签收", "rejected": "已拒绝", "pending": "待处理"}
+                click.echo(f"  状态: {status_map.get(active_signoff.status, active_signoff.status)}")
+                click.echo(f"  签收人: {active_signoff.signed_by}")
+                click.echo(f"  签收时间: {active_signoff.signed_at}")
+                if active_signoff.deadline:
+                    click.echo(f"  截止时间: {active_signoff.deadline}")
+            click.echo()
+            click.echo("  你可以：")
+            click.echo(f"    1. 先执行 sign-off 签收该快照")
+            click.echo(f"       python -m invoice_organizer sign-off -c {config_path} -s {snapshot_id} --signed-by <签收人>")
+            click.echo("    2. 使用 --no-require-signoff 跳过签收校验")
+            click.echo(f"       python -m invoice_organizer apply -c {config_path} -s {snapshot_id} --no-require-signoff")
+            sys.exit(1)
+
+    if active_signoff:
+        click.echo(click.style(f"[签收信息] 已验证签收: {active_signoff.signoff_id}", fg="green"))
+        status_map = {"signed": "已签收", "rejected": "已拒绝", "pending": "待处理"}
+        click.echo(f"  状态: {status_map.get(active_signoff.status, active_signoff.status)}")
+        click.echo(f"  签收人: {active_signoff.signed_by}")
+        click.echo(f"  签收时间: {active_signoff.signed_at}")
+        if active_signoff.deadline:
+            click.echo(f"  截止时间: {active_signoff.deadline}")
+        if signoff_validation.is_expired and force_expired_signoff:
+            click.echo(click.style("  [注意] 已强制执行过期签收", fg="yellow"))
+        if signoff_validation.config_mismatch and force_snapshot:
+            click.echo(click.style("  [注意] 已强制使用签收时配置执行（忽略当前配置变更）", fg="yellow"))
 
     allowed, reject_reason = _check_lock_before_apply(store, snapshot)
     if not allowed:
@@ -415,6 +525,9 @@ def cmd_apply(
         filter_target_dirs=ftargets,
     )
 
+    if active_signoff:
+        store.update_run_signoff(run_id, active_signoff.signoff_id, snapshot_id)
+
     click.echo(click.style(f"\n[执行完成] Run ID: {run_id}", fg="green"))
     click.echo(f"  成功移动: {success}")
     if skipped_conflict > 0:
@@ -477,6 +590,22 @@ def cmd_undo(config_path: str, run_id: Optional[str], yes: bool, verbose: bool):
 
     total_moved = sum(1 for m in target_run.get("moves", []) if m["status"] == "moved")
     click.echo(f"[撤销] 涉及移动记录: {total_moved} 条")
+
+    signoff = store.get_signoff_by_run(run_id)
+    if signoff:
+        status_map = {"signed": "已签收", "rejected": "已拒绝", "pending": "待处理"}
+        click.echo(f"[撤销] 执行时签收: {status_map.get(signoff.status, signoff.status)}")
+        click.echo(f"[撤销] 签收ID: {signoff.signoff_id}")
+        click.echo(f"[撤销] 签收人: {signoff.signed_by}")
+        click.echo(f"[撤销] 签收时间: {signoff.signed_at}")
+        if signoff.deadline:
+            click.echo(f"[撤销] 截止时间: {signoff.deadline}")
+        if signoff.notes:
+            click.echo(f"[撤销] 签收说明: {signoff.notes}")
+        if signoff.forced:
+            click.echo(click.style(f"[撤销] 该执行为强制签收执行", fg="yellow"))
+    else:
+        click.echo(f"[撤销] 执行时未使用签收记录")
 
     if not yes:
         if not click.confirm("\n确认执行撤销操作？", default=False):
@@ -553,6 +682,34 @@ def cmd_export_plan(config_path: str, plan_id: Optional[str], output_path: str, 
     click.echo(f"  格式: {format.upper()}")
     click.echo(f"  预案ID: {plan_id}")
     click.echo(f"  摘要: {summary.total_files} 总文件, {summary.matched_files} 匹配, {summary.unmatched_files} 未命中, {summary.conflict_count} 冲突")
+
+    snapshots = store.list_snapshots_with_signoff()
+    plan_snapshots = [s for s in snapshots if s.get("plan_id") == plan_id]
+    if plan_snapshots:
+        status_map = {"signed": "已签收", "rejected": "已拒绝", "pending": "待处理"}
+        click.echo()
+        click.echo(click.style("[关联快照及签收]", fg="cyan"))
+        for s in plan_snapshots:
+            signoff_status = s.get("signoff_status", "未签收")
+            if s.get("signoff_forced"):
+                signoff_status += "*"
+            if s.get("signoff_status_raw") == "signed":
+                status_color = "green"
+            elif s.get("signoff_status_raw") == "rejected":
+                status_color = "red"
+            elif s.get("signoff_status_raw") == "pending":
+                status_color = "yellow"
+            else:
+                status_color = None
+            status_display = click.style(signoff_status, fg=status_color) if status_color else signoff_status
+            click.echo(f"  快照 {s['snapshot_id']}: {status_display}")
+            if s.get("signed_by"):
+                click.echo(f"    签收人: {s.get('signed_by')} at {s.get('signed_at', '')}")
+            if s.get("signoff_deadline"):
+                click.echo(f"    截止时间: {s.get('signoff_deadline')}")
+            if s.get("signoff_notes"):
+                notes_preview = s.get("signoff_notes", "")[:60] + "..." if len(s.get("signoff_notes", "")) > 60 else s.get("signoff_notes", "")
+                click.echo(f"    说明: {notes_preview}")
 
     if verbose:
         click.echo(f"\n[摘要详情]")
@@ -793,7 +950,7 @@ def cmd_update_snapshot(
 @cli.command("list-snapshots", help="列出所有批次快照")
 @click.option("-c", "--config", "config_path", required=True, type=click.Path(),
               help="配置文件路径 (YAML)")
-@click.option("-v", "--verbose", is_flag=True, help="显示备注详情")
+@click.option("-v", "--verbose", is_flag=True, help="显示备注和签收详情")
 def cmd_list_snapshots(config_path: str, verbose: bool):
     try:
         config = load_config(config_path)
@@ -802,44 +959,77 @@ def cmd_list_snapshots(config_path: str, verbose: bool):
         sys.exit(1)
 
     store = _get_store(config)
-    snapshots = store.list_snapshots_with_remark()
+    snapshots = store.list_snapshots_with_signoff()
 
     if not snapshots:
         click.echo("暂无批次快照。")
         return
 
     if verbose:
-        click.echo(f"{'快照ID':<14} {'创建时间':<27} {'预案ID':<14} {'移动项':<8} {'冲突':<6} {'来源':<10} {'备注':<30} {'交接人':<15}")
-        click.echo("-" * 120)
+        click.echo(f"{'快照ID':<14} {'创建时间':<27} {'预案ID':<14} {'移动项':<8} {'冲突':<6} {'来源':<10} {'签收状态':<10} {'签收人':<12} {'备注':<25}")
+        click.echo("-" * 140)
         for s in snapshots:
             created = s.get("created_at", "")[:26]
             has_conflict = "是" if s.get("has_conflicts") else "否"
             source = "导入" if s.get("imported") else "本地"
-            remark_display = s.get("remark", "")[:28] + "..." if len(s.get("remark", "")) > 30 else s.get("remark", "")
+            remark_display = s.get("remark", "")[:23] + "..." if len(s.get("remark", "")) > 25 else s.get("remark", "")
             tags_full = ", ".join(s.get("tags", []))
+            signoff_status = s.get("signoff_status", "未签收")
+            if s.get("signoff_forced"):
+                signoff_status += "*"
+            signed_by = s.get("signed_by", "")[:10] + "..." if len(s.get("signed_by", "")) > 10 else s.get("signed_by", "")
+            if s.get("signoff_status_raw") == "signed":
+                status_color = "green"
+            elif s.get("signoff_status_raw") == "rejected":
+                status_color = "red"
+            elif s.get("signoff_status_raw") == "pending":
+                status_color = "yellow"
+            else:
+                status_color = None
+            status_display = click.style(signoff_status, fg=status_color) if status_color else signoff_status
             click.echo(
                 f"{s['snapshot_id']:<14} {created:<27} {s.get('plan_id',''):<14} "
                 f"{s.get('move_count',0):<8} {has_conflict:<6} {source:<10} "
-                f"{remark_display:<30} {s.get('handler',''):<15}"
+                f"{status_display:<10} {signed_by:<12} {remark_display:<25}"
             )
             if tags_full:
-                click.echo(f"  {'':<14} {'':<27} {'':<14} {'':<8} {'':<6} {'':<10} 标签: {tags_full}")
+                click.echo(f"  {'':<14} {'':<27} {'':<14} {'':<8} {'':<6} {'':<10} {'':<10} {'':<12} 标签: {tags_full}")
             if s.get("notes"):
                 notes_display = s.get("notes", "")[:80] + "..." if len(s.get("notes", "")) > 80 else s.get("notes", "")
-                click.echo(f"  {'':<14} {'':<27} {'':<14} {'':<8} {'':<6} {'':<10} 注意事项: {notes_display}")
+                click.echo(f"  {'':<14} {'':<27} {'':<14} {'':<8} {'':<6} {'':<10} {'':<10} {'':<12} 注意事项: {notes_display}")
+            if s.get("signed_at"):
+                click.echo(f"  {'':<14} {'':<27} {'':<14} {'':<8} {'':<6} {'':<10} {'':<10} {'':<12} 签收时间: {s.get('signed_at', '')}")
+            if s.get("signoff_deadline"):
+                click.echo(f"  {'':<14} {'':<27} {'':<14} {'':<8} {'':<6} {'':<10} {'':<10} {'':<12} 截止时间: {s.get('signoff_deadline', '')}")
+            if s.get("signoff_notes"):
+                signoff_notes = s.get("signoff_notes", "")[:80] + "..." if len(s.get("signoff_notes", "")) > 80 else s.get("signoff_notes", "")
+                click.echo(f"  {'':<14} {'':<27} {'':<14} {'':<8} {'':<6} {'':<10} {'':<10} {'':<12} 签收说明: {signoff_notes}")
             if s.get("remark_updated_at"):
-                click.echo(f"  {'':<14} {'':<27} {'':<14} {'':<8} {'':<6} {'':<10} 更新时间: {s.get('remark_updated_at', '')} by {s.get('remark_updated_by', '')}")
+                click.echo(f"  {'':<14} {'':<27} {'':<14} {'':<8} {'':<6} {'':<10} {'':<10} {'':<12} 备注更新: {s.get('remark_updated_at', '')} by {s.get('remark_updated_by', '')}")
     else:
-        click.echo(f"{'快照ID':<14} {'创建时间':<27} {'预案ID':<14} {'移动项':<8} {'冲突':<6} {'来源':<10} {'备注':<30}")
-        click.echo("-" * 110)
+        click.echo(f"{'快照ID':<14} {'创建时间':<27} {'预案ID':<14} {'移动项':<8} {'冲突':<6} {'来源':<10} {'签收状态':<10} {'备注':<25}")
+        click.echo("-" * 130)
         for s in snapshots:
             created = s.get("created_at", "")[:26]
             has_conflict = "是" if s.get("has_conflicts") else "否"
             source = "导入" if s.get("imported") else "本地"
-            remark_display = s.get("remark", "")[:28] + "..." if len(s.get("remark", "")) > 30 else s.get("remark", "")
+            remark_display = s.get("remark", "")[:23] + "..." if len(s.get("remark", "")) > 25 else s.get("remark", "")
+            signoff_status = s.get("signoff_status", "未签收")
+            if s.get("signoff_forced"):
+                signoff_status += "*"
+            if s.get("signoff_status_raw") == "signed":
+                status_color = "green"
+            elif s.get("signoff_status_raw") == "rejected":
+                status_color = "red"
+            elif s.get("signoff_status_raw") == "pending":
+                status_color = "yellow"
+            else:
+                status_color = None
+            status_display = click.style(signoff_status, fg=status_color) if status_color else signoff_status
             click.echo(
                 f"{s['snapshot_id']:<14} {created:<27} {s.get('plan_id',''):<14} "
-                f"{s.get('move_count',0):<8} {has_conflict:<6} {source:<10} {remark_display:<30}"
+                f"{s.get('move_count',0):<8} {has_conflict:<6} {source:<10} "
+                f"{status_display:<10} {remark_display:<25}"
             )
 
 
@@ -868,6 +1058,9 @@ def cmd_export_snapshot(config_path: str, snapshot_id: Optional[str], output_pat
         click.echo("[错误] 未找到批次快照，请先执行 plan 命令。", err=True)
         sys.exit(1)
 
+    all_signoffs = store.get_signoffs_by_snapshot(snapshot.snapshot_id)
+    snapshot.signoffs = all_signoffs
+
     try:
         export_snapshot_to_file(snapshot, output_path)
     except Exception as e:
@@ -895,6 +1088,22 @@ def cmd_export_snapshot(config_path: str, snapshot_id: Optional[str], output_pat
             click.echo(f"  注意事项: {snapshot.remark.notes}")
         if snapshot.remark.updated_at:
             click.echo(f"  更新时间: {snapshot.remark.updated_at} by {snapshot.remark.updated_by}")
+
+    signoff = store.get_active_signoff(snapshot.snapshot_id)
+    if signoff:
+        status_map = {"signed": "已签收", "rejected": "已拒绝", "pending": "待处理"}
+        click.echo()
+        click.echo(click.style("[签收信息]", fg="cyan"))
+        click.echo(f"  签收ID: {signoff.signoff_id}")
+        click.echo(f"  状态: {status_map.get(signoff.status, signoff.status)}")
+        click.echo(f"  签收人: {signoff.signed_by}")
+        click.echo(f"  签收时间: {signoff.signed_at}")
+        if signoff.deadline:
+            click.echo(f"  截止时间: {signoff.deadline}")
+        if signoff.notes:
+            click.echo(f"  补充说明: {signoff.notes}")
+        if signoff.forced:
+            click.echo(click.style(f"  [强制] 该签收为强制覆盖", fg="yellow"))
 
     if verbose and snapshot.unmatched_files:
         click.echo("\n[未命中规则文件]")
@@ -960,6 +1169,21 @@ def cmd_import_snapshot(
         if snapshot.remark.notes:
             click.echo(f"  注意事项: {snapshot.remark.notes}")
 
+    imported_signoffs = []
+    if hasattr(snapshot, 'signoffs') and snapshot.signoffs:
+        imported_signoffs = snapshot.signoffs
+        status_map = {"signed": "已签收", "rejected": "已拒绝", "pending": "待处理"}
+        click.echo()
+        click.echo(click.style("[导入签收信息]", fg="cyan"))
+        click.echo(f"  签收记录数: {len(imported_signoffs)}")
+        for sig in imported_signoffs:
+            click.echo(f"    - {status_map.get(sig.status, sig.status)} by {sig.signed_by} at {sig.signed_at}")
+            if sig.deadline:
+                click.echo(f"      截止时间: {sig.deadline}")
+            if sig.notes:
+                notes_preview = sig.notes[:50] + "..." if len(sig.notes) > 50 else sig.notes
+                click.echo(f"      说明: {notes_preview}")
+
     validation = validate_import_snapshot(snapshot)
     diff_result = diff_config(config, snapshot.config_snapshot)
 
@@ -1021,6 +1245,43 @@ def cmd_import_snapshot(
     remark_conflict = False
     remark_conflict_detail = ""
     remark_field_changes = []
+    signoff_conflict = False
+    signoff_conflict_detail = ""
+    signoff_field_changes = []
+
+    if imported_signoffs:
+        existing_signoffs = store.get_signoffs_by_snapshot(snapshot.snapshot_id)
+        if existing_signoffs:
+            active_existing = [s for s in existing_signoffs if s.is_active]
+            if active_existing:
+                for imported_sig in imported_signoffs:
+                    if imported_sig.is_active:
+                        for active_sig in active_existing:
+                            if imported_sig.signoff_id != active_sig.signoff_id:
+                                signoff_field_changes = diff_signoffs(active_sig, imported_sig)
+                                if signoff_field_changes:
+                                    signoff_conflict = True
+                                    conflicts = []
+                                    for fc in signoff_field_changes:
+                                        conflicts.append(
+                                            f"{fc.field_name} 冲突: 旧='{str(fc.old_value)[:30]}...' 新='{str(fc.new_value)[:30]}...'"
+                                        )
+                                    signoff_conflict_detail = "; ".join(conflicts)
+
+            if signoff_conflict:
+                click.echo(click.style("\n[警告] 检测到签收冲突：", fg="yellow", bold=True))
+                click.echo(click.style(f"  - {signoff_conflict_detail}", fg="yellow"))
+                click.echo()
+                click.echo(click.style("[签收变更对比]", fg="cyan"))
+                for fc in signoff_field_changes:
+                    click.echo(f"  {format_signoff_change(fc)}")
+
+                if not force:
+                    click.echo()
+                    click.echo(click.style("[提示] 签收内容不同，不会自动覆盖。", fg="yellow"))
+                    click.echo(click.style("  使用 --force 可强制覆盖现有签收。", fg="yellow"))
+                    store.add_import_log(_make_log("failed"))
+                    sys.exit(1)
 
     if existing:
         click.echo(click.style("\n[提示] 快照 ID 已存在。", fg="yellow"))
@@ -1141,8 +1402,22 @@ def cmd_import_snapshot(
         else:
             click.echo(click.style(f"\n[导入成功] 快照已保存: {snapshot.snapshot_id}", fg="green"))
 
-    forced_flag = force and (validation.has_errors or remark_conflict) and not remark_only
+    if imported_signoffs:
+        for sig in imported_signoffs:
+            sig.import_source = os.path.abspath(input_path)
+            sig.forced = signoff_conflict and force
+            if signoff_conflict and force:
+                sig.conflict_detail = signoff_conflict_detail
+            store.add_signoff(sig)
+        if signoff_conflict and force:
+            click.echo(click.style(f"[导入成功] 已强制导入 {len(imported_signoffs)} 条签收记录（覆盖冲突）", fg="green"))
+        else:
+            click.echo(click.style(f"[导入成功] 已导入 {len(imported_signoffs)} 条签收记录", fg="green"))
+
+    forced_flag = force and (validation.has_errors or remark_conflict or signoff_conflict) and not remark_only
     if remark_only and force and remark_conflict:
+        forced_flag = True
+    if force and signoff_conflict:
         forced_flag = True
     if forced_flag:
         store.add_import_log(_make_log("forced", forced_flag=True))
@@ -1531,6 +1806,246 @@ def cmd_remark_history(
             click.echo(f"    变更字段: {', '.join(field_names)}")
 
         click.echo()
+
+
+@cli.command("sign-off", help="签收预案/快照，记录签收状态、签收人、时间和补充说明")
+@click.option("-c", "--config", "config_path", required=True, type=click.Path(),
+              help="配置文件路径 (YAML)")
+@click.option("-s", "--snapshot-id", "snapshot_id", help="指定快照 ID (默认使用最近的)")
+@click.option("-p", "--plan-id", "plan_id", help="指定预案 ID (优先级低于 snapshot-id)")
+@click.option("--status", type=click.Choice(["signed", "rejected", "pending"]),
+              default="signed", show_default=True, help="签收状态")
+@click.option("--signed-by", required=True, help=f"签收人 (最多 {MAX_SIGNOFF_BY_LENGTH} 字符)")
+@click.option("--deadline", help="截止时间 (ISO 格式, 如: 2024-12-31T23:59:59)")
+@click.option("--notes", help=f"补充说明 (最多 {MAX_SIGNOFF_NOTES_LENGTH} 字符)")
+@click.option("--created-by", default="cli", help="创建人 (默认: cli)")
+@click.option("--force", is_flag=True, help="即使有冲突也强制签收")
+@click.option("-y", "--yes", is_flag=True, help="跳过确认提示")
+@click.option("-v", "--verbose", is_flag=True, help="显示详细信息")
+def cmd_sign_off(
+    config_path: str,
+    snapshot_id: Optional[str],
+    plan_id: Optional[str],
+    status: str,
+    signed_by: str,
+    deadline: Optional[str],
+    notes: Optional[str],
+    created_by: str,
+    force: bool,
+    yes: bool,
+    verbose: bool,
+):
+    try:
+        config = load_config(config_path)
+    except Exception as e:
+        click.echo(f"[错误] 加载配置失败: {e}", err=True)
+        sys.exit(1)
+
+    store = _get_store(config)
+
+    if snapshot_id:
+        snapshot = store.get_snapshot(snapshot_id)
+        if not snapshot:
+            click.echo(f"[错误] 未找到快照: {snapshot_id}", err=True)
+            sys.exit(1)
+    elif plan_id:
+        snapshot = store.get_snapshot_by_plan_id(plan_id)
+        if not snapshot:
+            click.echo(f"[错误] 预案 {plan_id} 没有对应的快照", err=True)
+            sys.exit(1)
+    else:
+        snapshot = store.get_last_snapshot()
+        if not snapshot:
+            click.echo("[错误] 未找到快照，请先执行 plan 命令。", err=True)
+            sys.exit(1)
+
+    snapshot_id = snapshot.snapshot_id
+    plan_id = snapshot.plan_id
+
+    existing_signoff = store.get_active_signoff(snapshot_id)
+
+    config_snapshot_dict = config_snapshot_to_dict(config, config_path)
+
+    signoff = build_signoff(
+        snapshot_id=snapshot_id,
+        plan_id=plan_id,
+        status=status,
+        signed_by=signed_by,
+        deadline=deadline,
+        notes=notes,
+        config_snapshot=config_snapshot_dict,
+        created_by=created_by,
+    )
+
+    validation = validate_signoff(signoff)
+    if validation.has_errors:
+        click.echo(click.style("[错误] 签收信息验证失败：", fg="red", bold=True))
+        for err in validation.errors:
+            click.echo(click.style(f"  - {err}", fg="red"))
+        sys.exit(1)
+    if validation.warnings:
+        for warn in validation.warnings:
+            click.echo(click.style(f"[警告] {warn}", fg="yellow"))
+
+    status_map = {"signed": "已签收", "rejected": "已拒绝", "pending": "待处理"}
+    click.echo(click.style("[签收信息]", fg="cyan", bold=True))
+    click.echo(f"  快照 ID: {snapshot_id}")
+    click.echo(f"  预案 ID: {plan_id}")
+    click.echo(f"  状态: {status_map.get(status, status)}")
+    click.echo(f"  签收人: {signed_by}")
+    if deadline:
+        click.echo(f"  截止时间: {deadline}")
+        if check_signoff_expired(signoff):
+            click.echo(click.style("  [警告] 截止时间已过期", fg="yellow"))
+    if notes:
+        notes_display = notes[:80] + "..." if len(notes) > 80 else notes
+        click.echo(f"  补充说明: {notes_display}")
+
+    click.echo(f"  签收时间: {signoff.signed_at}")
+    click.echo(f"  创建人: {created_by}")
+
+    if existing_signoff:
+        field_changes = diff_signoffs(existing_signoff, signoff)
+        if field_changes:
+            click.echo()
+            click.echo(click.style("[与现有签收对比]", fg="yellow"))
+            for fc in field_changes:
+                click.echo(f"  {format_signoff_change(fc)}")
+            if not force:
+                click.echo()
+                click.echo(click.style("[提示] 该快照已有签收记录，使用 --force 可强制覆盖。", fg="yellow"))
+                sys.exit(1)
+            else:
+                signoff.forced = True
+                signoff.conflict_detail = "强制覆盖已有签收记录"
+
+    if not yes:
+        if not click.confirm("\n确认签收该预案/快照？", default=False):
+            click.echo("已取消。")
+            sys.exit(0)
+
+    store.add_signoff(signoff)
+
+    click.echo()
+    click.echo(click.style(f"[签收成功] 签收 ID: {signoff.signoff_id}", fg="green"))
+    if signoff.forced:
+        click.echo(click.style(f"[注意] 已强制覆盖原有签收记录。", fg="yellow"))
+
+    if verbose:
+        click.echo(f"  快照创建时间: {snapshot.created_at}")
+        click.echo(f"  移动计划数: {len(snapshot.moves)}")
+        click.echo(f"  有冲突: {'是' if snapshot.has_conflicts else '否'}")
+
+
+@cli.command("check-signoff", help="检查快照的签收状态，确认是否可以执行")
+@click.option("-c", "--config", "config_path", required=True, type=click.Path(),
+              help="配置文件路径 (YAML)")
+@click.option("-s", "--snapshot-id", "snapshot_id", help="指定快照 ID (默认使用最近的)")
+@click.option("-p", "--plan-id", "plan_id", help="指定预案 ID (优先级低于 snapshot-id)")
+@click.option("--require-signed", is_flag=True, default=True, help="要求必须是已签收状态")
+@click.option("--no-require-signed", is_flag=True, help="不要求必须是已签收状态")
+@click.option("-v", "--verbose", is_flag=True, help="显示详细信息")
+def cmd_check_signoff(
+    config_path: str,
+    snapshot_id: Optional[str],
+    plan_id: Optional[str],
+    require_signed: bool,
+    no_require_signed: bool,
+    verbose: bool,
+):
+    try:
+        config = load_config(config_path)
+    except Exception as e:
+        click.echo(f"[错误] 加载配置失败: {e}", err=True)
+        sys.exit(1)
+
+    store = _get_store(config)
+
+    if snapshot_id:
+        snapshot = store.get_snapshot(snapshot_id)
+        if not snapshot:
+            click.echo(f"[错误] 未找到快照: {snapshot_id}", err=True)
+            sys.exit(1)
+    elif plan_id:
+        snapshot = store.get_snapshot_by_plan_id(plan_id)
+        if not snapshot:
+            click.echo(f"[错误] 预案 {plan_id} 没有对应的快照", err=True)
+            sys.exit(1)
+    else:
+        snapshot = store.get_last_snapshot()
+        if not snapshot:
+            click.echo("[错误] 未找到快照，请先执行 plan 命令。", err=True)
+            sys.exit(1)
+
+    snapshot_id = snapshot.snapshot_id
+
+    require_signed = require_signed and not no_require_signed
+
+    result = validate_signoff_for_apply(
+        store=store,
+        snapshot=snapshot,
+        current_config=config,
+        require_signed=require_signed,
+    )
+
+    click.echo(click.style("[签收状态检查]", fg="cyan", bold=True))
+    click.echo(f"  快照 ID: {snapshot_id}")
+    click.echo(f"  预案 ID: {snapshot.plan_id}")
+
+    if result.active_signoff:
+        s = result.active_signoff
+        status_map = {"signed": "已签收", "rejected": "已拒绝", "pending": "待处理"}
+        click.echo(f"  签收 ID: {s.signoff_id}")
+        click.echo(f"  签收状态: {status_map.get(s.status, s.status)}")
+        click.echo(f"  签收人: {s.signed_by}")
+        click.echo(f"  签收时间: {s.signed_at}")
+        if s.deadline:
+            click.echo(f"  截止时间: {s.deadline}")
+            if result.is_expired:
+                click.echo(click.style("  [过期] 签收已过期", fg="red"))
+        if s.notes:
+            click.echo(f"  补充说明: {s.notes}")
+        if s.forced:
+            click.echo(click.style("  [强制] 该签收为强制覆盖", fg="yellow"))
+        if result.config_mismatch:
+            click.echo(click.style("  [配置不一致] 当前配置与签收时不一致", fg="yellow"))
+        if result.snapshot_replaced:
+            click.echo(click.style("  [快照已更新] 该快照已被新版本替代", fg="yellow"))
+        if result.conflicting_signoffs:
+            click.echo(click.style(f"  [冲突签收] 存在冲突的签收记录:", fg="yellow"))
+            for cs in result.conflicting_signoffs:
+                click.echo(f"    - {cs}")
+    else:
+        click.echo(click.style("  签收状态: 未签收", fg="yellow"))
+
+    if result.has_errors:
+        click.echo()
+        click.echo(click.style("[错误] 签收校验失败：", fg="red", bold=True))
+        for err in result.errors:
+            click.echo(click.style(f"  - {err}", fg="red"))
+        sys.exit(1)
+
+    if result.warnings:
+        click.echo()
+        click.echo(click.style("[警告]", fg="yellow", bold=True))
+        for warn in result.warnings:
+            click.echo(click.style(f"  - {warn}", fg="yellow"))
+
+    if not result.has_errors:
+        click.echo()
+        click.echo(click.style("[OK] 签收校验通过，可以执行 apply。", fg="green"))
+
+    if verbose:
+        all_signoffs = store.get_signoffs_by_snapshot(snapshot_id)
+        if len(all_signoffs) > 1:
+            click.echo()
+            click.echo(click.style(f"[历史签收记录]", fg="cyan"))
+            for s in all_signoffs:
+                status_map = {"signed": "已签收", "rejected": "已拒绝", "pending": "待处理"}
+                status_tag = status_map.get(s.status, s.status)
+                active_tag = "" if s.is_active else " (已失效)"
+                forced_tag = " (强制)" if s.forced else ""
+                click.echo(f"  {s.signed_at[:26]}  ID: {s.signoff_id}  状态: {status_tag}{active_tag}{forced_tag}  签收人: {s.signed_by}")
 
 
 def _check_lock_before_apply(store: StateStore, snapshot) -> Tuple[bool, Optional[str]]:
