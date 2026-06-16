@@ -1878,6 +1878,259 @@ def cmd_unlock_plan(
                 click.echo(f"  - {v.violation_timestamp}: {v.violation_type} [{status}]")
                 click.echo(f"    {v.violation_detail}")
 
+    snapshot = store.get_snapshot(lock.snapshot_id)
+    if snapshot:
+        store.invalidate_validation_for_snapshot(snapshot.snapshot_id)
+
+        result = validate_signoff_for_apply(
+            store=store,
+            snapshot=snapshot,
+            current_config=config,
+            require_signed=True,
+        )
+
+        save_validation_history(
+            store=store,
+            snapshot=snapshot,
+            signoff_validation=result,
+            triggered_by="unlock-plan",
+            lock_allowed=True,
+        )
+
+        latest_validation = store.get_latest_validation(snapshot.snapshot_id)
+        if latest_validation:
+            store.update_validation_resolution(
+                validation_id=latest_validation.validation_id,
+                resolved_by="cli",
+                resolution_note=f"释放锁定 {lock.lock_id}",
+                resolution_command="unlock-plan",
+            )
+
+        click.echo()
+        if result.valid:
+            click.echo(click.style("[OK] 解锁后校验已通过，可以执行 apply。", fg="green"))
+        else:
+            click.echo(click.style("[提示] 解锁完成，但仍存在其他校验问题：", fg="yellow", bold=True))
+            for err in result.errors:
+                click.echo(click.style(f"  - {err}", fg="yellow"))
+
+
+@cli.command("check-validation", help="查看最近的签收校验结果和当前阻塞状态")
+@click.option("-c", "--config", "config_path", required=True, type=click.Path(),
+              help="配置文件路径 (YAML)")
+@click.option("-s", "--snapshot-id", "snapshot_id", help="指定快照 ID (默认使用最近的)")
+@click.option("-p", "--plan-id", "plan_id", help="指定预案 ID (优先级低于 snapshot-id)")
+@click.option("-n", "--limit", "limit", type=int, default=10, help="显示最近 N 条记录 (默认 10)")
+@click.option("--all", "show_all", is_flag=True, help="显示所有快照的校验历史 (默认仅显示最近快照)")
+@click.option("--blocked-only", is_flag=True, help="仅显示阻塞记录")
+@click.option("-v", "--verbose", is_flag=True, help="显示详细错误和警告信息")
+def cmd_check_validation(
+    config_path: str,
+    snapshot_id: Optional[str],
+    plan_id: Optional[str],
+    limit: int,
+    show_all: bool,
+    blocked_only: bool,
+    verbose: bool,
+):
+    try:
+        config = load_config(config_path)
+    except Exception as e:
+        click.echo(f"[错误] 加载配置失败: {e}", err=True)
+        sys.exit(1)
+
+    store = _get_store(config)
+
+    if snapshot_id:
+        snapshot = store.get_snapshot(snapshot_id)
+        if not snapshot:
+            click.echo(f"[错误] 未找到快照: {snapshot_id}", err=True)
+            sys.exit(1)
+        target_snapshot_id = snapshot.snapshot_id
+    elif plan_id:
+        snapshot = store.get_snapshot_by_plan_id(plan_id)
+        if not snapshot:
+            click.echo(f"[错误] 预案 {plan_id} 没有对应的快照", err=True)
+            sys.exit(1)
+        target_snapshot_id = snapshot.snapshot_id
+    else:
+        snapshot = store.get_last_snapshot()
+        if not snapshot:
+            click.echo("[错误] 未找到快照，请先执行 plan 命令。", err=True)
+            sys.exit(1)
+        target_snapshot_id = snapshot.snapshot_id
+
+    if show_all:
+        filter_snapshot_id = None
+    else:
+        filter_snapshot_id = target_snapshot_id
+
+    all_records = store.get_validation_history(snapshot_id=filter_snapshot_id, limit=limit)
+
+    if blocked_only:
+        all_records = [r for r in all_records if r.status == "blocked" and not r.is_resolved]
+
+    click.echo(click.style("[签收校验历史]", fg="cyan", bold=True))
+    if not show_all:
+        click.echo(f"  快照 ID: {target_snapshot_id}")
+    click.echo(f"  显示最近 {len(all_records)} 条记录")
+    click.echo()
+
+    block_type_cn = {
+        "signoff_expired": "签收过期",
+        "config_mismatch": "配置不一致",
+        "unresolved_signoff_conflict": "未解决签收冲突",
+        "lock_mismatch": "锁定快照不一致",
+        "no_signoff": "未签收",
+        "not_signed": "非已签收状态",
+        "conflicting_signoffs": "冲突的签收记录",
+        "snapshot_replaced": "快照已更新",
+    }
+
+    if not all_records:
+        click.echo("  (暂无校验记录)")
+        click.echo()
+        click.echo(click.style("[提示] 请先执行 check-signoff、apply --dry-run 或 apply 命令生成校验记录。", fg="yellow"))
+        sys.exit(0)
+
+    latest = all_records[0]
+    is_currently_blocked = (
+        latest.status == "blocked" and not latest.is_resolved
+    )
+
+    click.echo(click.style("[最近一次结论]", fg="cyan", bold=True))
+    if latest.status == "passed":
+        status_color = "green"
+        status_text = "通过"
+    else:
+        status_color = "red" if is_currently_blocked else "yellow"
+        status_text = "阻塞" if is_currently_blocked else "已解决"
+
+    click.echo(f"  结论: {click.style(status_text, fg=status_color, bold=True)}")
+    click.echo(f"  触发命令: {latest.triggered_by}")
+    click.echo(f"  触发时间: {latest.triggered_at}")
+    click.echo(f"  快照 ID: {latest.snapshot_id}")
+    click.echo(f"  预案 ID: {latest.plan_id}")
+
+    if latest.block_types:
+        block_types_cn = "; ".join([block_type_cn.get(bt, bt) for bt in latest.block_types])
+        click.echo(f"  阻塞类型: {block_types_cn}")
+
+    if is_currently_blocked:
+        click.echo()
+        click.echo(click.style("[当前状态: 阻塞中]", fg="red", bold=True))
+        if latest.errors:
+            click.echo(click.style("  阻塞原因:", fg="red"))
+            for err in latest.errors[:5]:
+                click.echo(f"    - {err}")
+            if len(latest.errors) > 5:
+                click.echo(f"    ... 还有 {len(latest.errors) - 5} 条错误，使用 -v 查看全部")
+
+    elif latest.is_resolved:
+        click.echo()
+        click.echo(click.style("[当前状态: 已解除阻塞]", fg="green", bold=True))
+        click.echo(f"  解决时间: {latest.resolved_at}")
+        click.echo(f"  解决人: {latest.resolved_by or 'system'}")
+        if latest.resolution_note:
+            click.echo(f"  解决说明: {latest.resolution_note}")
+        if latest.resolution_command:
+            click.echo(f"  解决命令: {latest.resolution_command}")
+
+    else:
+        click.echo()
+        click.echo(click.style("[当前状态: 可执行]", fg="green", bold=True))
+
+    click.echo()
+    click.echo(click.style("[历史记录]", fg="cyan", bold=True))
+
+    triggered_by_cn = {
+        "check-signoff": "check-signoff",
+        "apply-dry-run": "apply --dry-run",
+        "apply": "apply",
+        "sign-off": "sign-off",
+        "import-snapshot": "import-snapshot",
+        "resolve-signoff-conflict": "resolve-signoff-conflict",
+        "undo": "undo",
+        "unlock-plan": "unlock-plan",
+    }
+
+    click.echo(
+        f"{'时间':<26} {'命令':<26} {'快照ID':<14} {'状态':<10} {'阻塞类型':<20}"
+    )
+    click.echo("-" * 100)
+
+    for r in all_records:
+        time_str = r.triggered_at[:26] if len(r.triggered_at) > 26 else r.triggered_at
+        cmd_cn = triggered_by_cn.get(r.triggered_by, r.triggered_by)
+
+        if r.status == "passed":
+            status_display = click.style("通过", fg="green")
+        elif r.is_resolved:
+            status_display = click.style("已解决", fg="yellow")
+        else:
+            status_display = click.style("阻塞", fg="red", bold=True)
+
+        if r.block_types:
+            block_types_cn = "; ".join([block_type_cn.get(bt, bt) for bt in r.block_types])
+            if len(block_types_cn) > 18:
+                block_types_cn = block_types_cn[:16] + "..."
+        else:
+            block_types_cn = "-"
+
+        click.echo(
+            f"{time_str:<26} {cmd_cn:<26} {r.snapshot_id:<14} {status_display:<10} {block_types_cn:<20}"
+        )
+
+        if verbose:
+            if r.errors:
+                for err in r.errors:
+                    click.echo(f"  {click.style('错误:', fg='red')} {err}")
+            if r.warnings:
+                for warn in r.warnings:
+                    click.echo(f"  {click.style('警告:', fg='yellow')} {warn}")
+            if r.is_resolved:
+                res_info = []
+                if r.resolved_at:
+                    res_info.append(f"解决于 {r.resolved_at[:26]}")
+                if r.resolved_by:
+                    res_info.append(f"by {r.resolved_by}")
+                if r.resolution_command:
+                    res_info.append(f"via {r.resolution_command}")
+                if r.resolution_note:
+                    res_info.append(f"- {r.resolution_note}")
+                if res_info:
+                    click.echo(f"  {click.style('解决:', fg='green')} {' '.join(res_info)}")
+
+    if is_currently_blocked:
+        click.echo()
+        click.echo(click.style("[解除阻塞建议]", fg="yellow", bold=True))
+        if "signoff_expired" in latest.block_types:
+            click.echo("  签收已过期，请重新签收延长有效期：")
+            click.echo(f"    python -m invoice_organizer sign-off -c {config_path} -s {target_snapshot_id} --signed-by <签收人>")
+        if "config_mismatch" in latest.block_types:
+            click.echo("  配置与签收时不一致，请使用 --force-snapshot 或重新 plan：")
+            click.echo(f"    python -m invoice_organizer apply -c {config_path} -s {target_snapshot_id} --force-snapshot")
+            click.echo(f"    python -m invoice_organizer plan -c {config_path}")
+        if "unresolved_signoff_conflict" in latest.block_types:
+            click.echo("  存在未解决的签收冲突，请使用 resolve-signoff-conflict 处理：")
+            click.echo(f"    python -m invoice_organizer resolve-signoff-conflict -c {config_path} --snapshot-id {target_snapshot_id} --resolution <keep-local|keep-imported|new-signoff>")
+        if "lock_mismatch" in latest.block_types:
+            click.echo("  快照与锁定版本不一致，请使用锁定的快照或释放锁定：")
+            click.echo(f"    python -m invoice_organizer unlock-plan -c {config_path}")
+        if "no_signoff" in latest.block_types:
+            click.echo("  未签收，请先签收：")
+            click.echo(f"    python -m invoice_organizer sign-off -c {config_path} -s {target_snapshot_id} --signed-by <签收人>")
+
+    if verbose:
+        click.echo()
+        click.echo(click.style("[统计信息]", fg="cyan", bold=True))
+        total_count = len(store.get_validation_history(snapshot_id=filter_snapshot_id, limit=1000))
+        blocked_count = len([r for r in store.get_validation_history(snapshot_id=filter_snapshot_id, limit=1000) if r.status == "blocked"])
+        resolved_count = len([r for r in store.get_validation_history(snapshot_id=filter_snapshot_id, limit=1000) if r.is_resolved])
+        click.echo(f"  总校验次数: {total_count}")
+        click.echo(f"  阻塞次数: {blocked_count}")
+        click.echo(f"  已解决次数: {resolved_count}")
+
 
 @cli.command("list-locks", help="列出所有预案锁定记录")
 @click.option("-c", "--config", "config_path", required=True, type=click.Path(),

@@ -329,6 +329,16 @@ def step_3_signoff_blocks_persistence(snapshot1_id):
         assert record.get("validation_id"), "每条记录应有校验 ID"
         assert record.get("plan_id"), "每条记录应有预案 ID"
 
+    result = run(
+        f'python -m invoice_organizer check-validation -c {CONFIG_FILE} -s {snapshot1_id} -n 5',
+        check=True
+    )
+    assert "[最近一次结论]" in result.stdout, "check-validation 应显示最近结论"
+    assert "[当前状态: 阻塞中]" in result.stdout, "check-validation 应显示阻塞中状态"
+    assert "signoff_expired" in result.stdout or "签收过期" in result.stdout, "check-validation 应显示签收过期阻塞"
+    assert "unresolved_signoff_conflict" in result.stdout or "未解决签收冲突" in result.stdout, "check-validation 应显示冲突阻塞"
+    print(f"  [OK] check-validation 命令正确显示阻塞状态")
+
     print("  [OK] 签收过期 + 冲突阻塞全部持久化验证通过")
     return conflict_id, validation_history
 
@@ -458,6 +468,16 @@ def step_6_resolve_blockages(snapshot1_id, conflict_id, snapshot2_id):
     assert latest_signoff.get("is_expired") == False
     assert latest_signoff.get("has_unresolved_conflict") == False
     assert latest_signoff.get("has_lock_mismatch") == False
+
+    result = run(
+        f'python -m invoice_organizer check-validation -c {CONFIG_FILE} -s {snapshot1_id} -n 5',
+        check=True
+    )
+    assert "[最近一次结论]" in result.stdout, "check-validation 应显示最近结论"
+    assert "[当前状态: 可执行]" in result.stdout or "[当前状态: 已解除阻塞]" in result.stdout, \
+        "check-validation 应显示可执行或已解除阻塞状态"
+    assert "结论: 通过" in result.stdout, "check-validation 应显示通过结论"
+    print(f"  [OK] check-validation 命令正确显示解除阻塞状态")
 
     print("  [OK] 所有阻塞已处理，校验状态已刷新")
 
