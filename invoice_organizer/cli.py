@@ -9,8 +9,8 @@ import click
 
 from .models import (
     load_config, generate_id, ImportLog, now_iso, LockViolation, ConfigSnapshot,
-    SnapshotRemark, RemarkFieldChange, SignoffRecord, MAX_SIGNOFF_NOTES_LENGTH,
-    MAX_SIGNOFF_BY_LENGTH,
+    SnapshotRemark, RemarkFieldChange, SignoffRecord, SignoffConflictState,
+    MAX_SIGNOFF_NOTES_LENGTH, MAX_SIGNOFF_BY_LENGTH,
 )
 from .storage import StateStore
 from .workflow import (
@@ -25,6 +25,8 @@ from .workflow import (
     validate_signoff, build_signoff, diff_signoffs, format_signoff_change,
     validate_signoff_for_apply, config_snapshot_to_dict, export_signoff_to_csv_row,
     check_signoff_expired,
+    detect_and_create_signoff_conflict, format_signoff_conflict_summary,
+    has_unresolved_signoff_conflict,
 )
 
 
@@ -1077,6 +1079,9 @@ def cmd_export_snapshot(config_path: str, snapshot_id: Optional[str], output_pat
     all_signoffs = store.get_signoffs_by_snapshot(snapshot.snapshot_id)
     snapshot.signoffs = all_signoffs
 
+    all_signoff_conflicts = store.list_signoff_conflicts(snapshot_id=snapshot.snapshot_id)
+    snapshot.signoff_conflicts = all_signoff_conflicts
+
     try:
         export_snapshot_to_file(snapshot, output_path)
     except Exception as e:
@@ -1120,6 +1125,21 @@ def cmd_export_snapshot(config_path: str, snapshot_id: Optional[str], output_pat
             click.echo(f"  补充说明: {signoff.notes}")
         if signoff.forced:
             click.echo(click.style(f"  [强制] 该签收为强制覆盖", fg="yellow"))
+
+    if all_signoff_conflicts:
+        pending_count = len([c for c in all_signoff_conflicts if c.status == "pending"])
+        resolved_count = len(all_signoff_conflicts) - pending_count
+        click.echo()
+        click.echo(click.style("[签收冲突]", fg="cyan"))
+        click.echo(f"  冲突记录总数: {len(all_signoff_conflicts)}")
+        if pending_count:
+            click.echo(click.style(f"  未解决: {pending_count}", fg="yellow"))
+        if resolved_count:
+            click.echo(click.style(f"  已处理: {resolved_count}", fg="green"))
+        if verbose:
+            for sc in all_signoff_conflicts:
+                click.echo()
+                click.echo(format_signoff_conflict_summary(sc))
 
     if verbose and snapshot.unmatched_files:
         click.echo("\n[未命中规则文件]")
@@ -1264,12 +1284,14 @@ def cmd_import_snapshot(
     signoff_conflict = False
     signoff_conflict_detail = ""
     signoff_field_changes = []
+    created_signoff_conflict_obj: Optional[SignoffConflictState] = None
 
     if imported_signoffs:
         existing_signoffs = store.get_signoffs_by_snapshot(snapshot.snapshot_id)
         if existing_signoffs:
             active_existing = [s for s in existing_signoffs if s.is_active]
             if active_existing:
+                import_src = os.path.abspath(input_path)
                 for imported_sig in imported_signoffs:
                     if imported_sig.is_active:
                         for active_sig in active_existing:
@@ -1277,27 +1299,55 @@ def cmd_import_snapshot(
                                 signoff_field_changes = diff_signoffs(active_sig, imported_sig)
                                 if signoff_field_changes:
                                     signoff_conflict = True
+                                    created_signoff_conflict_obj = detect_and_create_signoff_conflict(
+                                        store=store,
+                                        snapshot_id=snapshot.snapshot_id,
+                                        plan_id=snapshot.plan_id,
+                                        local_signoff=active_sig,
+                                        imported_signoff=imported_sig,
+                                        import_source=import_src,
+                                    )
                                     conflicts = []
                                     for fc in signoff_field_changes:
                                         conflicts.append(
                                             f"{fc.field_name} 冲突: 旧='{str(fc.old_value)[:30]}...' 新='{str(fc.new_value)[:30]}...'"
                                         )
                                     signoff_conflict_detail = "; ".join(conflicts)
+                                    break
+                        if signoff_conflict:
+                            break
 
-            if signoff_conflict:
-                click.echo(click.style("\n[警告] 检测到签收冲突：", fg="yellow", bold=True))
-                click.echo(click.style(f"  - {signoff_conflict_detail}", fg="yellow"))
+            if signoff_conflict and created_signoff_conflict_obj:
+                click.echo(click.style("\n[警告] 检测到签收冲突，已创建冲突状态记录：", fg="yellow", bold=True))
+                click.echo(format_signoff_conflict_summary(created_signoff_conflict_obj))
                 click.echo()
                 click.echo(click.style("[签收变更对比]", fg="cyan"))
                 for fc in signoff_field_changes:
                     click.echo(f"  {format_signoff_change(fc)}")
 
+                click.echo()
+                click.echo(click.style("[处理方式]", fg="yellow", bold=True))
+                resolution_cmd_example = (
+                    f"  python -m invoice_organizer resolve-signoff-conflict "
+                    f"-c {config_path} --snapshot-id {snapshot.snapshot_id} "
+                    f"--resolution <keep-local|keep-imported|new-signoff> "
+                    f"--by <处理人> --note \"<处理说明>\""
+                )
+                click.echo(resolution_cmd_example)
+                click.echo()
+                click.echo(click.style("  - keep-local:    保留本地原有签收，丢弃导入签收", fg="cyan"))
+                click.echo(click.style("  - keep-imported: 保留导入签收，丢弃本地签收", fg="cyan"))
+                click.echo(click.style("  - new-signoff:   由本地用户重新签收（覆盖前两者）", fg="cyan"))
+
                 if not force:
-                    click.echo()
-                    click.echo(click.style("[提示] 签收内容不同，不会自动覆盖。", fg="yellow"))
-                    click.echo(click.style("  使用 --force 可强制覆盖现有签收。", fg="yellow"))
                     store.add_import_log(_make_log("failed"))
+                    click.echo()
+                    click.echo(click.style("[提示] 未使用 --force，签收冲突状态已保存，但应用被阻止。", fg="yellow"))
+                    click.echo(click.style("  使用 resolve-signoff-conflict 处理后，或使用 --force 可继续导入快照。", fg="yellow"))
                     sys.exit(1)
+                else:
+                    click.echo(click.style("[警告] 使用 --force：快照数据将继续导入，但签收冲突仍标记为待处理，", fg="yellow"))
+                    click.echo(click.style("         check-signoff、apply --dry-run 和正式 apply 在处理前都会被拦截。", fg="yellow"))
 
     if existing:
         click.echo(click.style("\n[提示] 快照 ID 已存在。", fg="yellow"))
@@ -1429,6 +1479,25 @@ def cmd_import_snapshot(
             click.echo(click.style(f"[导入成功] 已强制导入 {len(imported_signoffs)} 条签收记录（覆盖冲突）", fg="green"))
         else:
             click.echo(click.style(f"[导入成功] 已导入 {len(imported_signoffs)} 条签收记录", fg="green"))
+
+    snapshot_signoff_conflicts = getattr(snapshot, 'signoff_conflicts', None)
+    if snapshot_signoff_conflicts:
+        restored_count = 0
+        skipped_pending_count = 0
+        for sc in snapshot_signoff_conflicts:
+            existing = store.get_signoff_conflict(sc.conflict_id)
+            if existing:
+                continue
+            if (sc.status == "pending" and
+                    store.get_pending_conflict_by_snapshot(sc.snapshot_id)):
+                skipped_pending_count += 1
+                continue
+            store.save_signoff_conflict(sc)
+            restored_count += 1
+        if restored_count:
+            click.echo(click.style(f"[导入成功] 已恢复 {restored_count} 条签收冲突历史记录", fg="green"))
+        if skipped_pending_count:
+            click.echo(click.style(f"[提示] 跳过 {skipped_pending_count} 条待处理冲突（本地已存在）", fg="yellow"))
 
     forced_flag = force and (validation.has_errors or remark_conflict or signoff_conflict) and not remark_only
     if remark_only and force and remark_conflict:
@@ -2077,6 +2146,187 @@ def cmd_check_signoff(
                 active_tag = "" if s.is_active else " (已失效)"
                 forced_tag = " (强制)" if s.forced else ""
                 click.echo(f"  {s.signed_at[:26]}  ID: {s.signoff_id}  状态: {status_tag}{active_tag}{forced_tag}  签收人: {s.signed_by}")
+
+
+@cli.command("resolve-signoff-conflict", help="处理签收冲突，选择保留本地/导入或重新签收")
+@click.option("-c", "--config", "config_path", required=True, type=click.Path(),
+              help="配置文件路径 (YAML)")
+@click.option("--snapshot-id", "snapshot_id", required=True,
+              help="要处理冲突的快照 ID")
+@click.option("--conflict-id", "conflict_id",
+              help="冲突 ID（不指定时自动选择该快照 pending 状态的冲突）")
+@click.option("--resolution", "resolution", required=True,
+              type=click.Choice(["keep-local", "keep-imported", "new-signoff"]),
+              help="处理方式：keep-local 保留本地签收 / keep-imported 保留导入签收 / new-signoff 重新签收")
+@click.option("--by", "resolved_by", default="cli-user", help="处理人（默认: cli-user）")
+@click.option("--note", "resolution_note", default="", help="处理说明（可选）")
+@click.option("--signer", "signer", help="new-signoff 方式时的签收人姓名")
+@click.option("--deadline", "deadline", help="new-signoff 方式时的签收截止时间（ISO 时间，不填默认 30 天）")
+@click.option("--signoff-notes", "signoff_notes", help="new-signoff 方式时的签收补充说明（不填使用 resolution-note）")
+@click.option("-y", "--yes", is_flag=True, help="跳过确认提示")
+@click.option("-v", "--verbose", is_flag=True, help="显示详细信息")
+def cmd_resolve_signoff_conflict(
+    config_path: str,
+    snapshot_id: str,
+    conflict_id: Optional[str],
+    resolution: str,
+    resolved_by: str,
+    resolution_note: str,
+    signer: Optional[str],
+    deadline: Optional[str],
+    signoff_notes: Optional[str],
+    yes: bool,
+    verbose: bool,
+):
+    try:
+        config = load_config(config_path)
+    except Exception as e:
+        click.echo(f"[错误] 加载配置失败: {e}", err=True)
+        sys.exit(1)
+
+    store = _get_store(config)
+
+    snapshot = store.get_snapshot(snapshot_id)
+    if not snapshot:
+        click.echo(f"[错误] 未找到快照: {snapshot_id}", err=True)
+        sys.exit(1)
+
+    if conflict_id:
+        conflict = store.get_signoff_conflict(conflict_id)
+        if not conflict:
+            click.echo(f"[错误] 未找到冲突记录: {conflict_id}", err=True)
+            sys.exit(1)
+        if conflict.snapshot_id != snapshot_id:
+            click.echo(f"[错误] 冲突 {conflict_id} 不属于快照 {snapshot_id}", err=True)
+            sys.exit(1)
+    else:
+        conflict = store.get_pending_conflict_by_snapshot(snapshot_id)
+        if not conflict:
+            click.echo(f"[错误] 快照 {snapshot_id} 没有 pending 状态的签收冲突", err=True)
+            pending_count = len([
+                c for c in store.list_signoff_conflicts(snapshot_id=snapshot_id)
+                if c.status != "pending"
+            ])
+            if pending_count:
+                click.echo(f"[提示] 该快照已有 {pending_count} 个已处理的冲突。", err=True)
+            sys.exit(1)
+        conflict_id = conflict.conflict_id
+
+    if verbose or not yes:
+        click.echo(click.style("[签收冲突详情]", fg="cyan", bold=True))
+        click.echo(format_signoff_conflict_summary(conflict))
+        click.echo()
+
+    resolution_map = {
+        "keep-local": "resolved_keep_local",
+        "keep-imported": "resolved_keep_imported",
+        "new-signoff": "resolved_new",
+    }
+    resolution_status = resolution_map[resolution]
+    new_signoff_id: Optional[str] = None
+
+    if resolution == "new-signoff":
+        if not signer:
+            if not yes:
+                signer = click.prompt("请输入签收人姓名", type=str).strip()
+            else:
+                click.echo("[错误] new-signoff 方式需要 --signer 参数", err=True)
+                sys.exit(1)
+        if not resolution_note and not signoff_notes:
+            click.echo("[提示] new-signoff 建议通过 --signoff-notes 提供签收说明，当前留空")
+
+        notes_to_use = signoff_notes if signoff_notes else resolution_note
+        if not deadline:
+            from datetime import timedelta
+            from dateutil import parser as dateparser
+            try:
+                base_time = dateparser.isoparse(now_iso())
+            except Exception:
+                base_time = datetime.utcnow()
+            deadline_iso = (base_time + timedelta(days=30)).isoformat()
+        else:
+            deadline_iso = deadline
+
+        new_signoff_record = build_signoff(
+            store=store,
+            snapshot_id=snapshot_id,
+            plan_id=snapshot.plan_id,
+            signed_by=signer,
+            signer=signer,
+            status="signed",
+            deadline=deadline_iso,
+            notes=notes_to_use,
+            created_by=resolved_by,
+            current_config=config,
+            config_path=config_path,
+        )
+        new_signoff_record.conflict_id = conflict_id
+        store.add_signoff(new_signoff_record)
+        new_signoff_id = new_signoff_record.signoff_id
+
+        click.echo(click.style(f"[新建签收] ID: {new_signoff_id}", fg="green"))
+        click.echo(f"  签收人: {signer}")
+        click.echo(f"  签收时间: {new_signoff_record.signed_at}")
+        click.echo(f"  截止时间: {new_signoff_record.deadline}")
+        if notes_to_use:
+            click.echo(f"  说明: {notes_to_use}")
+        click.echo()
+
+    if not yes:
+        mode_cn = {
+            "keep-local": "保留本地签收，丢弃导入签收",
+            "keep-imported": "保留导入签收，丢弃本地签收",
+            "new-signoff": f"使用新建签收(ID:{new_signoff_id})替代前两者",
+        }
+        confirm_msg = (
+            f"\n确认使用处理方式「{mode_cn.get(resolution, resolution)}」"
+            f"解决冲突 {conflict_id}？"
+        )
+        if not click.confirm(confirm_msg, default=False):
+            if resolution == "new-signoff" and new_signoff_id:
+                click.echo(f"已取消。新建签收记录 {new_signoff_id} 保留在状态中，可手动处理。")
+            else:
+                click.echo("已取消。")
+            sys.exit(0)
+
+    success, updated_conflict, errors = store.resolve_signoff_conflict(
+        conflict_id=conflict_id,
+        resolution=resolution_status,
+        resolved_by=resolved_by,
+        resolution_note=resolution_note,
+        new_signoff_id=new_signoff_id,
+    )
+
+    if not success:
+        if not updated_conflict and errors:
+            click.echo(click.style("[错误] 处理失败：", fg="red", bold=True))
+            for err in errors:
+                click.echo(click.style(f"  - {err}", fg="red"))
+        else:
+            click.echo(click.style("[警告] 处理未执行：", fg="yellow", bold=True))
+            for err in errors:
+                click.echo(click.style(f"  - {err}", fg="yellow"))
+        sys.exit(1)
+
+    click.echo()
+    click.echo(click.style("[冲突处理成功]", fg="green", bold=True))
+    click.echo(format_signoff_conflict_summary(updated_conflict))
+    click.echo()
+
+    result = validate_signoff_for_apply(
+        store=store,
+        snapshot=snapshot,
+        current_config=config,
+        require_signed=True,
+    )
+
+    if result.valid:
+        click.echo(click.style("[OK] 签收校验已通过，可以执行 apply。", fg="green"))
+    else:
+        click.echo(click.style("[警告] 冲突已解决，但仍存在其他校验问题：", fg="yellow", bold=True))
+        for err in result.errors:
+            click.echo(click.style(f"  - {err}", fg="yellow"))
+        click.echo(click.style("  请根据上述提示调整后再执行 apply。", fg="yellow"))
 
 
 def _check_lock_before_apply(store: StateStore, snapshot) -> Tuple[bool, Optional[str]]:

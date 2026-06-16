@@ -333,6 +333,7 @@ class BatchSnapshot:
     import_source: Optional[str] = None
     remark: SnapshotRemark = field(default_factory=SnapshotRemark)
     signoffs: List["SignoffRecord"] = field(default_factory=list)
+    signoff_conflicts: List["SignoffConflictState"] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
         result = asdict(self)
@@ -341,12 +342,15 @@ class BatchSnapshot:
         result["new_target_dirs"] = [n.to_dict() for n in self.new_target_dirs]
         result["remark"] = self.remark.to_dict()
         result["signoffs"] = [s.to_dict() for s in self.signoffs]
+        result["signoff_conflicts"] = [sc.to_dict() for sc in self.signoff_conflicts]
         return result
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "BatchSnapshot":
         signoffs_data = data.get("signoffs", [])
         signoffs = [SignoffRecord.from_dict(s) for s in signoffs_data] if signoffs_data else []
+        conflicts_data = data.get("signoff_conflicts", [])
+        signoff_conflicts = [SignoffConflictState.from_dict(sc) for sc in conflicts_data] if conflicts_data else []
         return cls(
             snapshot_id=data["snapshot_id"],
             created_at=data["created_at"],
@@ -362,6 +366,7 @@ class BatchSnapshot:
             import_source=data.get("import_source"),
             remark=SnapshotRemark.from_dict(data.get("remark")),
             signoffs=signoffs,
+            signoff_conflicts=signoff_conflicts,
         )
 
 
@@ -689,6 +694,7 @@ class SignoffRecord:
     is_active: bool = True
     superseded_by: Optional[str] = None
     superseded_at: Optional[str] = None
+    conflict_id: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -713,6 +719,7 @@ class SignoffRecord:
             is_active=data.get("is_active", True),
             superseded_by=data.get("superseded_by"),
             superseded_at=data.get("superseded_at"),
+            conflict_id=data.get("conflict_id"),
         )
 
 
@@ -730,6 +737,7 @@ class SignoffValidationResult:
     snapshot_replaced: bool = False
     conflicting_signoffs: List[str] = field(default_factory=list)
     active_signoff: Optional[SignoffRecord] = None
+    unresolved_conflict: Optional[SignoffConflictState] = None
 
     @property
     def has_errors(self) -> bool:
@@ -739,6 +747,8 @@ class SignoffValidationResult:
         result = asdict(self)
         if self.active_signoff:
             result["active_signoff"] = self.active_signoff.to_dict()
+        if self.unresolved_conflict:
+            result["unresolved_conflict"] = self.unresolved_conflict.to_dict()
         return result
 
 
@@ -759,6 +769,75 @@ class SignoffFieldChange:
             old_value=data.get("old_value"),
             new_value=data.get("new_value"),
         )
+
+
+@dataclass
+class SignoffConflictState:
+    """签收冲突状态
+
+    当导入快照的签收记录与本地活跃签收不一致时，
+    创建此冲突状态记录，用于持久化冲突信息、跟踪处理进度。
+
+    冲突处理流程：
+    1. detected (pending) -> 2. 用户选择处理方式 -> 3. resolved_*
+    """
+    conflict_id: str
+    snapshot_id: str
+    plan_id: str
+    status: str  # "pending" | "resolved_keep_local" | "resolved_keep_imported" | "resolved_new"
+    local_signoff_id: str
+    imported_signoff_id: str
+    detected_at: str
+    import_source: str = ""
+    diff_fields: List[str] = field(default_factory=list)
+    conflict_summary: str = ""
+    resolved_at: Optional[str] = None
+    resolved_by: str = ""
+    resolution_note: str = ""
+    new_signoff_id: Optional[str] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "SignoffConflictState":
+        return cls(
+            conflict_id=data["conflict_id"],
+            snapshot_id=data["snapshot_id"],
+            plan_id=data["plan_id"],
+            status=data["status"],
+            local_signoff_id=data["local_signoff_id"],
+            imported_signoff_id=data["imported_signoff_id"],
+            detected_at=data["detected_at"],
+            import_source=data.get("import_source", ""),
+            diff_fields=list(data.get("diff_fields", [])),
+            conflict_summary=data.get("conflict_summary", ""),
+            resolved_at=data.get("resolved_at"),
+            resolved_by=data.get("resolved_by", ""),
+            resolution_note=data.get("resolution_note", ""),
+            new_signoff_id=data.get("new_signoff_id"),
+        )
+
+    @property
+    def is_resolved(self) -> bool:
+        return self.status != "pending"
+
+
+@dataclass
+class SignoffConflictDiff:
+    """签收冲突的字段级差异详情"""
+    conflict_id: str
+    local_signoff: SignoffRecord
+    imported_signoff: SignoffRecord
+    field_changes: List[SignoffFieldChange]
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "conflict_id": self.conflict_id,
+            "local_signoff": self.local_signoff.to_dict(),
+            "imported_signoff": self.imported_signoff.to_dict(),
+            "field_changes": [fc.to_dict() for fc in self.field_changes],
+        }
 
 
 def load_config(config_path: str) -> Config:

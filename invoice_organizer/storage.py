@@ -10,7 +10,7 @@ from .models import (
     ScannedFile, PlannedMove, ExecutedMove, UndoRecord,
     BatchSnapshot, ImportLog, PlanLock, LockViolation, ConfigSnapshot,
     SnapshotRemark, RemarkHistory, RemarkFieldChange,
-    SignoffRecord,
+    SignoffRecord, SignoffConflictState,
     generate_id, now_iso,
 )
 
@@ -42,6 +42,7 @@ class StateStore:
             "plan_diffs": [],
             "remark_histories": [],
             "signoff_records": [],
+            "signoff_conflicts": [],
             "last_scan": None,
             "last_plan": None,
             "last_snapshot": None,
@@ -656,3 +657,178 @@ class StateStore:
         if count > 0:
             self.save()
         return count
+
+    # ---- 签收冲突状态 ----
+
+    def save_signoff_conflict(self, conflict: SignoffConflictState) -> None:
+        """保存签收冲突状态（新冲突或更新已有冲突）"""
+        if "signoff_conflicts" not in self._data:
+            self._data["signoff_conflicts"] = []
+
+        existing_idx = None
+        for i, c in enumerate(self._data["signoff_conflicts"]):
+            if c.get("conflict_id") == conflict.conflict_id:
+                existing_idx = i
+                break
+
+        if existing_idx is not None:
+            self._data["signoff_conflicts"][existing_idx] = conflict.to_dict()
+        else:
+            self._data["signoff_conflicts"].append(conflict.to_dict())
+
+        self.save()
+
+    def get_signoff_conflict(self, conflict_id: str) -> Optional[SignoffConflictState]:
+        """根据ID获取签收冲突状态"""
+        for c in self._data.get("signoff_conflicts", []):
+            if c.get("conflict_id") == conflict_id:
+                return SignoffConflictState.from_dict(c)
+        return None
+
+    def get_pending_conflict_by_snapshot(self, snapshot_id: str) -> Optional[SignoffConflictState]:
+        """获取指定快照当前未解决（pending）的签收冲突"""
+        for c in self._data.get("signoff_conflicts", []):
+            if (c.get("snapshot_id") == snapshot_id and
+                    c.get("status") == "pending"):
+                return SignoffConflictState.from_dict(c)
+        return None
+
+    def list_signoff_conflicts(self, snapshot_id: Optional[str] = None,
+                               only_pending: bool = False) -> List[SignoffConflictState]:
+        """列出签收冲突状态
+
+        参数:
+            snapshot_id: 按快照ID筛选（可选）
+            only_pending: 只列出未解决的冲突
+        """
+        result = []
+        for c in self._data.get("signoff_conflicts", []):
+            if snapshot_id and c.get("snapshot_id") != snapshot_id:
+                continue
+            if only_pending and c.get("status") != "pending":
+                continue
+            result.append(SignoffConflictState.from_dict(c))
+        return sorted(result, key=lambda x: x.detected_at, reverse=True)
+
+    def resolve_signoff_conflict(
+        self,
+        conflict_id: str,
+        resolution: str,  # "resolved_keep_local" | "resolved_keep_imported" | "resolved_new"
+        resolved_by: str,
+        resolution_note: str = "",
+        new_signoff_id: Optional[str] = None,
+    ) -> Tuple[bool, Optional[SignoffConflictState], List[str]]:
+        """解决签收冲突
+
+        返回: (是否成功, 冲突状态对象, 错误信息列表)
+        """
+        errors: List[str] = []
+
+        if resolution not in ["resolved_keep_local", "resolved_keep_imported", "resolved_new"]:
+            errors.append(f"无效的处理方式: {resolution}")
+            return False, None, errors
+
+        conflict = self.get_signoff_conflict(conflict_id)
+        if not conflict:
+            errors.append(f"签收冲突不存在: {conflict_id}")
+            return False, None, errors
+
+        if conflict.is_resolved:
+            errors.append(f"签收冲突已处理（状态: {conflict.status}），无需重复处理")
+            return False, conflict, errors
+
+        snapshot = self.get_snapshot(conflict.snapshot_id)
+        if not snapshot:
+            errors.append(f"快照不存在: {conflict.snapshot_id}")
+            return False, conflict, errors
+
+        if resolution == "resolved_keep_local":
+            self.deactivate_all_signoffs(conflict.snapshot_id, reason=f"冲突处理: 保留本地签收")
+            local_signoff = self.get_signoff(conflict.local_signoff_id)
+            if local_signoff:
+                local_signoff.is_active = True
+                local_signoff.superseded_by = None
+                local_signoff.superseded_at = None
+                for s in self._data.get("signoff_records", []):
+                    if s.get("signoff_id") == conflict.local_signoff_id:
+                        s["is_active"] = True
+                        s["superseded_by"] = None
+                        s["superseded_at"] = None
+                        s["forced"] = False
+                        s["conflict_detail"] = ""
+                        break
+            else:
+                errors.append(f"本地签收记录不存在: {conflict.local_signoff_id}")
+                return False, conflict, errors
+
+        elif resolution == "resolved_keep_imported":
+            self.deactivate_all_signoffs(conflict.snapshot_id, reason=f"冲突处理: 保留导入签收")
+            imported_signoff = self.get_signoff(conflict.imported_signoff_id)
+            if imported_signoff:
+                imported_signoff.is_active = True
+                imported_signoff.superseded_by = None
+                imported_signoff.superseded_at = None
+                for s in self._data.get("signoff_records", []):
+                    if s.get("signoff_id") == conflict.imported_signoff_id:
+                        s["is_active"] = True
+                        s["superseded_by"] = None
+                        s["superseded_at"] = None
+                        s["forced"] = False
+                        s["conflict_detail"] = ""
+                        break
+            else:
+                errors.append(f"导入签收记录不存在: {conflict.imported_signoff_id}")
+                return False, conflict, errors
+
+        elif resolution == "resolved_new":
+            if not new_signoff_id:
+                errors.append("新建签收方式需要提供 new_signoff_id")
+                return False, conflict, errors
+            new_signoff = self.get_signoff(new_signoff_id)
+            if not new_signoff:
+                errors.append(f"新签收记录不存在: {new_signoff_id}")
+                return False, conflict, errors
+            self.deactivate_all_signoffs(conflict.snapshot_id, reason=f"冲突处理: 新建签收替代")
+            for s in self._data.get("signoff_records", []):
+                if s.get("signoff_id") == new_signoff_id:
+                    s["is_active"] = True
+                    s["superseded_by"] = None
+                    s["superseded_at"] = None
+                    s["forced"] = False
+                    s["conflict_detail"] = ""
+                    break
+
+        conflict.status = resolution
+        conflict.resolved_at = now_iso()
+        conflict.resolved_by = resolved_by
+        conflict.resolution_note = resolution_note
+        conflict.new_signoff_id = new_signoff_id
+
+        for c in self._data.get("signoff_conflicts", []):
+            if c.get("conflict_id") == conflict_id:
+                c["status"] = resolution
+                c["resolved_at"] = conflict.resolved_at
+                c["resolved_by"] = resolved_by
+                c["resolution_note"] = resolution_note
+                c["new_signoff_id"] = new_signoff_id
+                break
+
+        self.save()
+        return True, conflict, errors
+
+    def get_last_import_source(self, snapshot_id: str) -> Optional[str]:
+        """获取指定快照最近一次的导入来源"""
+        import_logs = sorted(
+            [l for l in self.get_import_logs() if l.snapshot_id == snapshot_id],
+            key=lambda x: x.timestamp
+        )
+        if import_logs:
+            return import_logs[-1].source_file
+        snapshot = self.get_snapshot(snapshot_id)
+        if snapshot and snapshot.import_source:
+            return snapshot.import_source
+        signoffs = self.get_signoffs_by_snapshot(snapshot_id)
+        imported = [s for s in signoffs if s.import_source]
+        if imported:
+            return imported[-1].import_source
+        return None

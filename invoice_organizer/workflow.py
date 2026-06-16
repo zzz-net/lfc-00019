@@ -15,6 +15,8 @@ from .models import (
     ConfigDiffResult, ImportValidationResult,
     PlanDiffResult, FileMoveDiff, UnmatchedFileDiff,
     SnapshotRemark, RemarkValidationResult, RemarkFieldChange,
+    SignoffRecord, SignoffValidationResult, SignoffFieldChange,
+    SignoffConflictState,
     generate_id, now_iso,
 )
 from .storage import StateStore
@@ -677,9 +679,15 @@ def export_logs(
 
             writer.writerow([])
             writer.writerow(["=== 签收记录 ==="])
-            writer.writerow(["签收ID", "快照ID", "预案ID", "状态", "签收人", "签收时间", "截止时间", "补充说明", "创建时间", "创建人", "是否强制", "是否活动", "被取代ID", "冲突详情"])
+            writer.writerow(["签收ID", "快照ID", "预案ID", "状态", "签收人", "签收时间", "截止时间", "补充说明", "创建时间", "创建人", "是否强制", "是否活动", "被取代ID", "冲突详情", "冲突ID"])
             for sr in full_state.get("signoff_records", []):
                 writer.writerow(export_signoff_to_csv_row(SignoffRecord.from_dict(sr)))
+
+            writer.writerow([])
+            writer.writerow(["=== 签收冲突记录 ==="])
+            writer.writerow(["冲突ID", "快照ID", "预案ID", "状态", "本地签收ID", "导入签收ID", "检测时间", "导入来源", "差异字段", "差异详情", "解决时间", "解决人", "解决说明", "新签收ID"])
+            for sc in full_state.get("signoff_conflicts", []):
+                writer.writerow(export_signoff_conflict_to_csv_row(SignoffConflictState.from_dict(sc)))
 
         return 1
 
@@ -1675,6 +1683,23 @@ def validate_signoff_for_apply(
     config_mismatch = False
     snapshot_replaced = False
     conflicting_signoffs: List[str] = []
+    unresolved_conflict: Optional[SignoffConflictState] = None
+
+    unresolved_conflict = has_unresolved_signoff_conflict(store, snapshot.snapshot_id)
+
+    if unresolved_conflict:
+        resolution_hint = (
+            f"请使用 resolve-signoff-conflict 命令处理冲突：\n"
+            f"       python -m invoice_organizer resolve-signoff-conflict "
+            f"-c <config> --snapshot-id {snapshot.snapshot_id} "
+            f"--resolution <keep-local|keep-imported|new-signoff>"
+        )
+        errors.append(
+            f"快照 {snapshot.snapshot_id} 存在未解决的签收冲突！"
+            f"冲突ID: {unresolved_conflict.conflict_id}，"
+            f"差异: {unresolved_conflict.conflict_summary}。\n"
+            f"  {resolution_hint}"
+        )
 
     active_signoff = store.get_active_signoff(snapshot.snapshot_id)
 
@@ -1682,7 +1707,7 @@ def validate_signoff_for_apply(
         if require_signed:
             errors.append(f"快照 {snapshot.snapshot_id} 没有有效的签收记录，请先执行 sign-off 命令签收")
         return SignoffValidationResult(
-            valid=not require_signed,
+            valid=not require_signed and not unresolved_conflict,
             errors=errors,
             warnings=warnings,
             is_expired=False,
@@ -1690,6 +1715,7 @@ def validate_signoff_for_apply(
             snapshot_replaced=False,
             conflicting_signoffs=[],
             active_signoff=None,
+            unresolved_conflict=unresolved_conflict,
         )
 
     if require_signed and active_signoff.status != "signed":
@@ -1788,6 +1814,7 @@ def validate_signoff_for_apply(
         snapshot_replaced=snapshot_replaced,
         conflicting_signoffs=conflicting_signoffs,
         active_signoff=active_signoff,
+        unresolved_conflict=unresolved_conflict,
     )
 
 
@@ -1814,4 +1841,153 @@ def export_signoff_to_csv_row(signoff: SignoffRecord) -> List[str]:
         "活动" if signoff.is_active else "已失效",
         signoff.superseded_by or "",
         signoff.conflict_detail,
+        signoff.conflict_id or "",
     ]
+
+
+# ============================================================
+# 签收冲突检测与处理相关功能
+# ============================================================
+
+SIGNOFF_COMPARE_FIELDS = ["signed_by", "status", "notes", "deadline"]
+
+
+def detect_and_create_signoff_conflict(
+    store: StateStore,
+    snapshot_id: str,
+    plan_id: str,
+    local_signoff: SignoffRecord,
+    imported_signoff: SignoffRecord,
+    import_source: str = "",
+) -> SignoffConflictState:
+    """检测签收冲突并创建冲突状态记录
+
+    比对本地活跃签收和导入签收，发现不一致时创建 SignoffConflictState，
+    并将 conflict_id 写入两条签收记录。
+
+    返回创建的冲突状态对象。
+    """
+    field_changes = diff_signoffs(local_signoff, imported_signoff)
+    diff_fields = [fc.field_name for fc in field_changes]
+
+    summary_parts = []
+    for fc in field_changes:
+        old_v = fc.old_value or "(空)"
+        new_v = fc.new_value or "(空)"
+        if fc.field_name == "status":
+            smap = {"signed": "已签收", "rejected": "已拒绝", "pending": "待处理"}
+            old_v = smap.get(str(old_v), str(old_v))
+            new_v = smap.get(str(new_v), str(new_v))
+        if fc.field_name == "notes":
+            old_v = (str(old_v)[:30] + "...") if len(str(old_v)) > 30 else old_v
+            new_v = (str(new_v)[:30] + "...") if len(str(new_v)) > 30 else new_v
+        field_cn = {
+            "signed_by": "签收人", "status": "状态",
+            "notes": "说明", "deadline": "截止时间"
+        }.get(fc.field_name, fc.field_name)
+        summary_parts.append(f"{field_cn}: '{old_v}' -> '{new_v}'")
+
+    conflict_summary = "; ".join(summary_parts) if summary_parts else "未知字段差异"
+
+    conflict = SignoffConflictState(
+        conflict_id=generate_id(),
+        snapshot_id=snapshot_id,
+        plan_id=plan_id,
+        status="pending",
+        local_signoff_id=local_signoff.signoff_id,
+        imported_signoff_id=imported_signoff.signoff_id,
+        detected_at=now_iso(),
+        import_source=import_source,
+        diff_fields=diff_fields,
+        conflict_summary=conflict_summary,
+    )
+
+    store.save_signoff_conflict(conflict)
+
+    local_signoff.conflict_id = conflict.conflict_id
+    imported_signoff.conflict_id = conflict.conflict_id
+
+    for s in store._data.get("signoff_records", []):
+        if s.get("signoff_id") == local_signoff.signoff_id:
+            s["conflict_id"] = conflict.conflict_id
+        if s.get("signoff_id") == imported_signoff.signoff_id:
+            s["conflict_id"] = conflict.conflict_id
+    store.save()
+
+    return conflict
+
+
+def format_signoff_conflict_summary(conflict: SignoffConflictState) -> str:
+    """将冲突状态格式化为 CLI 可读的多行字符串"""
+    status_map = {
+        "pending": "待处理",
+        "resolved_keep_local": "已解决（保留本地）",
+        "resolved_keep_imported": "已解决（保留导入）",
+        "resolved_new": "已解决（新建签收）",
+    }
+    lines = []
+    lines.append(f"冲突 ID: {conflict.conflict_id}")
+    lines.append(f"状态: {status_map.get(conflict.status, conflict.status)}")
+    lines.append(f"快照 ID: {conflict.snapshot_id}")
+    lines.append(f"预案 ID: {conflict.plan_id}")
+    lines.append(f"检测时间: {conflict.detected_at}")
+    if conflict.import_source:
+        lines.append(f"导入来源: {conflict.import_source}")
+    if conflict.diff_fields:
+        field_cn_map = {
+            "signed_by": "签收人", "status": "状态",
+            "notes": "说明", "deadline": "截止时间"
+        }
+        cn_fields = [field_cn_map.get(f, f) for f in conflict.diff_fields]
+        lines.append(f"差异字段: {', '.join(cn_fields)}")
+    if conflict.conflict_summary:
+        lines.append(f"差异详情: {conflict.conflict_summary}")
+    lines.append(f"本地签收 ID: {conflict.local_signoff_id}")
+    lines.append(f"导入签收 ID: {conflict.imported_signoff_id}")
+    if conflict.is_resolved:
+        lines.append(f"解决时间: {conflict.resolved_at}")
+        lines.append(f"解决人: {conflict.resolved_by}")
+        if conflict.resolution_note:
+            lines.append(f"解决说明: {conflict.resolution_note}")
+        if conflict.new_signoff_id:
+            lines.append(f"新签收 ID: {conflict.new_signoff_id}")
+    return "\n".join(lines)
+
+
+def export_signoff_conflict_to_csv_row(conflict: SignoffConflictState) -> List[str]:
+    """将签收冲突状态转换为 CSV 行"""
+    status_map = {
+        "pending": "待处理",
+        "resolved_keep_local": "已解决（保留本地）",
+        "resolved_keep_imported": "已解决（保留导入）",
+        "resolved_new": "已解决（新建签收）",
+    }
+    field_cn_map = {
+        "signed_by": "签收人", "status": "状态",
+        "notes": "说明", "deadline": "截止时间"
+    }
+    cn_fields = [field_cn_map.get(f, f) for f in conflict.diff_fields]
+    return [
+        conflict.conflict_id,
+        conflict.snapshot_id,
+        conflict.plan_id,
+        status_map.get(conflict.status, conflict.status),
+        conflict.local_signoff_id,
+        conflict.imported_signoff_id,
+        conflict.detected_at,
+        conflict.import_source,
+        ", ".join(cn_fields),
+        conflict.conflict_summary,
+        conflict.resolved_at or "",
+        conflict.resolved_by or "",
+        conflict.resolution_note or "",
+        conflict.new_signoff_id or "",
+    ]
+
+
+def has_unresolved_signoff_conflict(store: StateStore, snapshot_id: str) -> Optional[SignoffConflictState]:
+    """检查指定快照是否有未解决的签收冲突
+
+    返回冲突状态对象，如果没有则返回 None
+    """
+    return store.get_pending_conflict_by_snapshot(snapshot_id)
