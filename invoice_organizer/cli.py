@@ -2247,18 +2247,17 @@ def cmd_resolve_signoff_conflict(
         else:
             deadline_iso = deadline
 
+        new_signoff_config_snapshot = config_snapshot_to_dict(config, config_path)
+
         new_signoff_record = build_signoff(
-            store=store,
             snapshot_id=snapshot_id,
             plan_id=snapshot.plan_id,
-            signed_by=signer,
-            signer=signer,
             status="signed",
+            signed_by=signer,
             deadline=deadline_iso,
             notes=notes_to_use,
+            config_snapshot=new_signoff_config_snapshot,
             created_by=resolved_by,
-            current_config=config,
-            config_path=config_path,
         )
         new_signoff_record.conflict_id = conflict_id
         store.add_signoff(new_signoff_record)
