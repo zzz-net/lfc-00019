@@ -6,6 +6,7 @@ import fnmatch
 import shutil
 import csv
 import json
+import hashlib
 from typing import List, Optional, Tuple, Dict, Any
 from collections import defaultdict
 
@@ -21,6 +22,9 @@ from .models import (
     LandingFingerprint, LandingFingerprintDiff, LandingImportValidationResult,
     LandingImportLog, LandingVerifyResult,
     LANDING_FINGERPRINT_VERSION, LANDING_REQUIRED_FIELDS,
+    TargetDirMapping, ConfigFingerprint, HandoverConflictSummary,
+    HandoverPreviewResult, HandoverImportLog, LandingHandoverBundle,
+    HANDOVER_BUNDLE_VERSION, HANDOVER_REQUIRED_FIELDS,
     generate_id, now_iso,
 )
 from .storage import StateStore
@@ -3707,3 +3711,783 @@ def verify_landing_file(
         landing_dest_dir=landing.dest_dir,
         verify_source=verify_source,
     )
+
+
+# ============================================================
+# 落点交接包：生成 / 预检 / 导入 / 复查
+# ============================================================
+
+
+def _compute_dir_digest(path: str) -> str:
+    """计算目录路径的摘要哈希"""
+    normalized = os.path.normpath(path).replace("\\", "/")
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:16]
+
+
+def _extract_target_dir_key(target_dir: str, dest_dir: str) -> str:
+    """从目标目录提取相对 key
+
+    例如 dest_dir=/a/b, target_dir=/a/b/invoices/2024 -> key=invoices/2024
+    """
+    try:
+        rel = os.path.relpath(target_dir, dest_dir)
+        rel = rel.replace("\\", "/")
+        if rel.startswith(".."):
+            return os.path.basename(target_dir)
+        return rel
+    except Exception:
+        return os.path.basename(target_dir)
+
+
+def _compute_rules_digest(config: Config) -> str:
+    """计算规则哈希"""
+    try:
+        rules_data = [r.__dict__ for r in config.rules]
+        return hashlib.sha256(json.dumps(rules_data, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()[:16]
+    except Exception:
+        return ""
+
+
+def create_handover_bundle(
+    landing: LandingFingerprint,
+    config: Optional[Config] = None,
+    last_verify: Optional[LandingVerifyResult] = None,
+    notes: str = "",
+) -> LandingHandoverBundle:
+    """从落点指纹创建交接包
+
+    整合真实落点、配置指纹、目标目录映射、手工改名、冲突摘要、最近 verify 结论。
+    """
+    # 目标目录映射
+    target_dir_mappings: List[TargetDirMapping] = []
+    file_by_dir: Dict[str, List[str]] = defaultdict(list)
+    for fp in landing.file_fingerprints:
+        td = os.path.dirname(fp.target_path)
+        file_by_dir[td].append(os.path.basename(fp.target_path))
+
+    for tdf in landing.target_dirs:
+        key = _extract_target_dir_key(tdf.target_dir, landing.dest_dir)
+        mapping = TargetDirMapping(
+            original_target_dir=tdf.target_dir,
+            target_dir_key=key,
+            file_count=tdf.file_count,
+            file_list=file_by_dir.get(tdf.target_dir, []),
+            dir_path_digest=_compute_dir_digest(tdf.target_dir),
+        )
+        target_dir_mappings.append(mapping)
+
+    # 配置指纹
+    if config:
+        rules_digest = _compute_rules_digest(config)
+        config_fingerprint = ConfigFingerprint(
+            source_dir=config.source_dir,
+            dest_dir=config.dest_dir,
+            state_file=getattr(config, "state_file", ""),
+            file_extensions=list(config.file_extensions or []),
+            rules_digest=rules_digest,
+            rules_count=len(config.rules),
+            config_snapshot_digest=landing.config_snapshot_digest,
+            raw_rules=[r.__dict__ for r in config.rules],
+        )
+    else:
+        config_fingerprint = ConfigFingerprint(
+            source_dir=landing.source_dir,
+            dest_dir=landing.dest_dir,
+            config_snapshot_digest=landing.config_snapshot_digest,
+        )
+
+    # 冲突摘要
+    conflict_summary = HandoverConflictSummary(
+        skipped_conflict_count=landing.total_skipped_conflict_count,
+        skipped_manual_count=landing.total_skipped_manual_count,
+        failed_count=landing.total_failed_count,
+        conflict_reasons=list(getattr(landing, "skipped_conflict_reasons", [])),
+        manual_skip_reasons=list(getattr(landing, "skipped_manual_reasons", [])),
+        error_details=list(getattr(landing, "error_details", [])),
+    )
+
+    handover_id = "hnd_" + generate_id()
+
+    bundle = LandingHandoverBundle(
+        handover_id=handover_id,
+        handover_version=HANDOVER_BUNDLE_VERSION,
+        created_at=now_iso(),
+        run_id=landing.run_id,
+        plan_id=landing.plan_id,
+        snapshot_id=landing.snapshot_id,
+        landing_id=landing.landing_id,
+        source_dir=landing.source_dir,
+        dest_dir=landing.dest_dir,
+        landing_fingerprint=landing,
+        config_fingerprint=config_fingerprint,
+        target_dir_mappings=target_dir_mappings,
+        manual_renames=list(landing.manual_renames),
+        conflict_summary=conflict_summary,
+        last_verify_result=last_verify,
+        change_summary=landing.change_summary,
+        notes=notes,
+    )
+
+    # 计算 checksum
+    data_for_checksum = json.dumps(bundle.to_dict(), sort_keys=True, ensure_ascii=False, default=str)
+    bundle.checksum = hashlib.sha256(data_for_checksum.encode("utf-8")).hexdigest()[:32]
+
+    return bundle
+
+
+def save_handover_bundle_to_store(
+    store: StateStore,
+    bundle: LandingHandoverBundle,
+) -> None:
+    """保存交接包到状态存储（可跨重启）"""
+    store.save_handover(bundle)
+
+
+def export_handover_to_file(
+    bundle: LandingHandoverBundle,
+    output_path: str,
+    store: Optional[StateStore] = None,
+) -> str:
+    """导出交接包到 JSON 文件
+
+    支持 JSON 格式。返回导出文件路径。
+    """
+    os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
+
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(bundle.to_dict(), f, indent=2, ensure_ascii=False)
+
+    file_size = os.path.getsize(output_path)
+    export_note = (
+        f"导出至: {output_path}; 文件大小: {file_size} 字节; "
+        f"目标目录映射: {len(bundle.target_dir_mappings)} 个; "
+        f"落点文件: {len(bundle.landing_fingerprint.file_fingerprints)} 个"
+    )
+    if bundle.notes:
+        bundle.notes = bundle.notes + " | " + export_note
+    else:
+        bundle.notes = export_note
+
+    if store:
+        store.save_handover(bundle)
+
+    return output_path
+
+
+def export_handover_to_csv(
+    bundle: LandingHandoverBundle,
+    output_dir: str,
+) -> List[str]:
+    """导出交接包到 CSV 格式（多个文件）
+
+    生成：
+    - handover_summary.csv  摘要
+    - landing_files.csv     落点文件清单
+    - target_dirs.csv       目标目录映射
+    - manual_renames.csv    手工改名记录
+    - conflict_summary.csv  冲突摘要
+    """
+    os.makedirs(output_dir, exist_ok=True)
+    generated: List[str] = []
+
+    # 摘要
+    summary_path = os.path.join(output_dir, "handover_summary.csv")
+    with open(summary_path, "w", encoding="utf-8-sig", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["字段", "值"])
+        w.writerow(["handover_id", bundle.handover_id])
+        w.writerow(["created_at", bundle.created_at])
+        w.writerow(["run_id", bundle.run_id])
+        w.writerow(["snapshot_id", bundle.snapshot_id])
+        w.writerow(["plan_id", bundle.plan_id])
+        w.writerow(["landing_id", bundle.landing_id])
+        w.writerow(["source_dir", bundle.source_dir])
+        w.writerow(["dest_dir", bundle.dest_dir])
+        w.writerow(["target_dir_count", len(bundle.target_dir_mappings)])
+        w.writerow(["file_count", len(bundle.landing_fingerprint.file_fingerprints)])
+        w.writerow(["manual_rename_count", len(bundle.manual_renames)])
+        w.writerow(["change_summary", bundle.change_summary])
+        w.writerow(["notes", bundle.notes])
+        w.writerow(["checksum", bundle.checksum])
+    generated.append(summary_path)
+
+    # 落点文件清单
+    files_path = os.path.join(output_dir, "landing_files.csv")
+    with open(files_path, "w", encoding="utf-8-sig", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["序号", "源文件", "目标路径", "目标目录", "大小", "内容哈希", "规则名称", "改名前", "改名后"])
+        for i, fp in enumerate(bundle.landing_fingerprint.file_fingerprints, 1):
+            before = ""
+            after = ""
+            fp_target_dir = os.path.dirname(fp.target_path)
+            # 通过路径匹配查找改名记录
+            for mr in bundle.manual_renames:
+                if (mr.original_target_path == fp.target_path
+                        or mr.final_target_path == fp.target_path):
+                    before = os.path.basename(mr.original_target_path)
+                    after = os.path.basename(mr.final_target_path)
+                    break
+            w.writerow([
+                i, fp.source_path, fp.target_path, fp_target_dir,
+                fp.file_size, fp.content_digest, fp.matched_rule, before, after,
+            ])
+    generated.append(files_path)
+
+    # 目标目录映射
+    tdirs_path = os.path.join(output_dir, "target_dirs.csv")
+    with open(tdirs_path, "w", encoding="utf-8-sig", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["目录key", "原绝对路径", "文件数", "路径摘要哈希", "文件列表"])
+        for m in bundle.target_dir_mappings:
+            w.writerow([
+                m.target_dir_key, m.original_target_dir, m.file_count,
+                m.dir_path_digest, "; ".join(m.file_list),
+            ])
+    generated.append(tdirs_path)
+
+    # 手工改名记录
+    renames_path = os.path.join(output_dir, "manual_renames.csv")
+    with open(renames_path, "w", encoding="utf-8-sig", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["rename_id", "原路径", "改名后路径", "原文件名", "改名后文件名", "原因", "操作者"])
+        for mr in bundle.manual_renames:
+            w.writerow([
+                mr.rename_id,
+                mr.original_target_path, mr.final_target_path,
+                os.path.basename(mr.original_target_path),
+                os.path.basename(mr.final_target_path),
+                mr.rename_reason, mr.renamed_by,
+            ])
+    generated.append(renames_path)
+
+    # 冲突摘要
+    conflict_path = os.path.join(output_dir, "conflict_summary.csv")
+    with open(conflict_path, "w", encoding="utf-8-sig", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["类型", "数量", "详情"])
+        cs = bundle.conflict_summary
+        w.writerow(["冲突跳过", cs.skipped_conflict_count, "; ".join(cs.conflict_reasons)])
+        w.writerow(["手工跳过", cs.skipped_manual_count, "; ".join(cs.manual_skip_reasons)])
+        w.writerow(["失败", cs.failed_count, "; ".join(cs.error_details)])
+    generated.append(conflict_path)
+
+    return generated
+
+
+def load_handover_from_file(file_path: str) -> LandingHandoverBundle:
+    """从 JSON 文件加载交接包（含缺字段校验）"""
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"交接包文件不存在: {file_path}")
+
+    with open(file_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    # 必填字段校验
+    missing = [f for f in HANDOVER_REQUIRED_FIELDS if f not in data]
+    if missing:
+        raise ValueError(
+            f"交接包缺少必填字段: {', '.join(missing)}"
+        )
+
+    # landing 内部字段也校验
+    landing_data = data.get("landing_fingerprint", {})
+    missing_landing = [f for f in LANDING_REQUIRED_FIELDS if f not in landing_data]
+    if missing_landing:
+        raise ValueError(
+            f"交接包内落点清单缺少必填字段: {', '.join(missing_landing)}"
+        )
+
+    return LandingHandoverBundle.from_dict(data)
+
+
+def _check_dir_writable(path: str) -> Tuple[bool, str]:
+    """检查目录是否存在且可写（如不存在则尝试创建再检查）
+
+    返回 (可写, 原因说明)
+    """
+    try:
+        if not os.path.exists(path):
+            os.makedirs(path, exist_ok=True)
+        test_file = os.path.join(path, f".write_test_{generate_id()}.tmp")
+        with open(test_file, "w", encoding="utf-8") as f:
+            f.write("test")
+        os.remove(test_file)
+        return True, "目录可写"
+    except PermissionError as e:
+        return False, f"权限不足: {e}"
+    except Exception as e:
+        return False, f"写入检查失败: {type(e).__name__}: {e}"
+
+
+def preview_handover_bundle(
+    bundle: LandingHandoverBundle,
+    current_config: Optional[Config] = None,
+    custom_dest_dir: Optional[str] = None,
+    custom_rebind_map: Optional[Dict[str, str]] = None,
+) -> HandoverPreviewResult:
+    """预检交接包：目录重绑定、权限检查、冲突预测
+
+    生成 rebind_map（key: target_dir_key -> 新绝对路径），并检查各目录权限。
+    """
+    errors: List[str] = []
+    warnings: List[str] = []
+    rebind_map: Dict[str, str] = {}
+    permission_checks: List[Dict[str, Any]] = []
+
+    # 确定目标 dest_dir
+    if custom_dest_dir:
+        new_dest_dir = custom_dest_dir
+    elif current_config:
+        new_dest_dir = current_config.dest_dir
+    else:
+        new_dest_dir = bundle.dest_dir
+
+    original_dest_dir = bundle.dest_dir
+    dest_changed = os.path.normpath(new_dest_dir) != os.path.normpath(original_dest_dir)
+
+    if dest_changed:
+        warnings.append(f"目标目录已重绑定: {original_dest_dir} -> {new_dest_dir}")
+
+    # 构建默认 rebind_map
+    for m in bundle.target_dir_mappings:
+        if custom_rebind_map and m.target_dir_key in custom_rebind_map:
+            rebind_map[m.target_dir_key] = custom_rebind_map[m.target_dir_key]
+        else:
+            rebind_map[m.target_dir_key] = os.path.normpath(
+                os.path.join(new_dest_dir, m.target_dir_key)
+            )
+
+    # 权限检查：dest_dir + 各 target_dir
+    dest_ok, dest_msg = _check_dir_writable(new_dest_dir)
+    permission_checks.append({
+        "path": new_dest_dir,
+        "role": "dest_dir",
+        "writable": dest_ok,
+        "message": dest_msg,
+    })
+    if not dest_ok:
+        errors.append(f"目标根目录不可写: {new_dest_dir} - {dest_msg}")
+
+    for m in bundle.target_dir_mappings:
+        new_path = rebind_map[m.target_dir_key]
+        ok, msg = _check_dir_writable(new_path)
+        permission_checks.append({
+            "path": new_path,
+            "key": m.target_dir_key,
+            "role": "target_dir",
+            "writable": ok,
+            "original_path": m.original_target_dir,
+            "message": msg,
+        })
+        if not ok:
+            errors.append(f"目标子目录不可写 [{m.target_dir_key}]: {new_path} - {msg}")
+
+    # 检查 rebind 后路径是否冲突（两个 key 映射到同一绝对路径）
+    abs_paths_seen: Dict[str, str] = {}
+    for key, abs_path in rebind_map.items():
+        norm = os.path.normpath(abs_path)
+        if norm in abs_paths_seen:
+            errors.append(
+                f"目录映射冲突: key[{abs_paths_seen[norm]}] 和 key[{key}] 都映射到 {abs_path}"
+            )
+        else:
+            abs_paths_seen[norm] = key
+
+    # 决定整体状态
+    can_import = len(errors) == 0
+    if errors:
+        status = "errors"
+    elif warnings:
+        status = "warnings"
+    else:
+        status = "ok"
+
+    return HandoverPreviewResult(
+        handover_id=bundle.handover_id,
+        status=status,
+        original_dest_dir=original_dest_dir,
+        proposed_dest_dir=new_dest_dir,
+        rebind_map=rebind_map,
+        errors=errors,
+        warnings=warnings,
+        permission_checks=permission_checks,
+        can_import=can_import,
+    )
+
+
+def _rebind_landing_with_map(
+    landing: LandingFingerprint,
+    bundle: LandingHandoverBundle,
+    rebind_map: Dict[str, str],
+    new_dest_dir: str,
+) -> LandingFingerprint:
+    """根据 rebind_map 重绑定 landing 中的所有目标路径
+
+    返回新的 LandingFingerprint（保留原始 landing_id，但路径已替换）。
+    """
+    # 先构建 key -> mapping
+    key_to_mapping = {m.target_dir_key: m for m in bundle.target_dir_mappings}
+
+    # target_dir 新旧映射：old_abs -> new_abs
+    dir_replace: Dict[str, str] = {}
+    for key, new_abs in rebind_map.items():
+        if key in key_to_mapping:
+            old_abs = key_to_mapping[key].original_target_dir
+            dir_replace[os.path.normpath(old_abs)] = os.path.normpath(new_abs)
+
+    # 替换 target_dirs
+    new_target_dirs: List[TargetDirFingerprint] = []
+    for tdf in landing.target_dirs:
+        old_norm = os.path.normpath(tdf.target_dir)
+        new_abs = dir_replace.get(old_norm, tdf.target_dir)
+        new_target_dirs.append(TargetDirFingerprint(
+            target_dir=new_abs,
+            file_count=tdf.file_count,
+            dir_path_digest=_compute_dir_digest(new_abs),
+        ))
+
+    # 替换 file_fingerprints
+    new_file_fps: List[FileFingerprint] = []
+    for fp in landing.file_fingerprints:
+        old_norm = os.path.normpath(os.path.dirname(fp.target_path))
+        new_abs = dir_replace.get(old_norm, os.path.dirname(fp.target_path))
+        current_name = os.path.basename(fp.target_path)
+        new_target_path = os.path.join(new_abs, current_name)
+        new_name = current_name
+        # 应用改名记录（如有）：通过 original_target_path 或 final_target_path 匹配
+        for mr in bundle.manual_renames:
+            orig_base = os.path.basename(mr.original_target_path)
+            final_base = os.path.basename(mr.final_target_path)
+            if (mr.original_target_path == fp.target_path
+                    or mr.final_target_path == fp.target_path
+                    or current_name in (orig_base, final_base)):
+                new_name = final_base
+                new_target_path = os.path.join(new_abs, final_base)
+                break
+        new_fp = FileFingerprint(
+            fingerprint_id=fp.fingerprint_id,
+            source_path=fp.source_path,
+            target_path=new_target_path,
+            filename=new_name,
+            matched_rule=fp.matched_rule,
+            file_size=fp.file_size,
+            mtime=fp.mtime,
+            content_digest=fp.content_digest,
+        )
+        new_file_fps.append(new_fp)
+
+    # 更新 landing 本身
+    landing.dest_dir = new_dest_dir
+    landing.target_dirs = new_target_dirs
+    landing.file_fingerprints = new_file_fps
+    return landing
+
+
+def import_handover_bundle(
+    store: StateStore,
+    bundle: LandingHandoverBundle,
+    current_config: Optional[Config] = None,
+    custom_dest_dir: Optional[str] = None,
+    custom_rebind_map: Optional[Dict[str, str]] = None,
+    check_duplicate: bool = True,
+    force: bool = False,
+    imported_by: str = "cli",
+    source_file: str = "",
+) -> Tuple[LandingHandoverBundle, HandoverImportLog]:
+    """导入交接包到状态存储
+
+    流程：
+    1. 预检（preview）得到 rebind_map
+    2. 若有错误且非 force -> 拦截
+    3. 重绑定 landing 路径
+    4. 检查重复导入 / 映射后冲突
+    5. 保存并写日志
+
+    返回 (已保存的 bundle, 导入日志)
+    """
+    errors: List[str] = []
+    warnings: List[str] = []
+    conflict_details: List[str] = []
+
+    # Step 1: 预检
+    preview = preview_handover_bundle(
+        bundle, current_config, custom_dest_dir, custom_rebind_map
+    )
+    warnings.extend(preview.warnings)
+
+    if not preview.can_import and not force:
+        errors.extend(preview.errors)
+        log = HandoverImportLog(
+            import_log_id="hil_" + generate_id(),
+            handover_id=bundle.handover_id,
+            landing_id=bundle.landing_id,
+            run_id=bundle.run_id,
+            snapshot_id=bundle.snapshot_id,
+            timestamp=now_iso(),
+            status="failed",
+            source_file=source_file,
+            errors=errors,
+            warnings=warnings,
+            conflict_details=conflict_details,
+            rebind_map=preview.rebind_map,
+            forced=False,
+            imported_by=imported_by,
+        )
+        store.add_handover_import_log(log)
+        raise ValueError(
+            f"交接包预检失败，未导入。错误: {'; '.join(errors)}. "
+            f"使用 --force 可强制。"
+        )
+
+    # Step 2: 重复导入检查
+    if check_duplicate:
+        existing = store.get_handover(bundle.handover_id)
+        if existing and not force:
+            msg = (
+                f"该交接包已在此工作区导入过: handover_id={bundle.handover_id}, "
+                f"首次导入时间: {existing.imported_at or existing.created_at}"
+            )
+            conflict_details.append("重复导入: handover_id 已存在")
+            log = HandoverImportLog(
+                import_log_id="hil_" + generate_id(),
+                handover_id=bundle.handover_id,
+                landing_id=bundle.landing_id,
+                run_id=bundle.run_id,
+                snapshot_id=bundle.snapshot_id,
+                timestamp=now_iso(),
+                status="skipped",
+                source_file=source_file,
+                errors=[msg],
+                warnings=warnings,
+                conflict_details=conflict_details,
+                rebind_map=preview.rebind_map,
+                forced=False,
+                imported_by=imported_by,
+            )
+            store.add_handover_import_log(log)
+            raise ValueError(msg + "。使用 --force 可强制重新导入。")
+
+        existing_by_run = store.get_handover_by_run_id(bundle.run_id)
+        if existing_by_run and not force:
+            msg = (
+                f"同一 run_id 已有交接包导入: run_id={bundle.run_id}, "
+                f"已有 handover_id={existing_by_run.handover_id}"
+            )
+            conflict_details.append("重复导入: run_id 已存在")
+            log = HandoverImportLog(
+                import_log_id="hil_" + generate_id(),
+                handover_id=bundle.handover_id,
+                landing_id=bundle.landing_id,
+                run_id=bundle.run_id,
+                snapshot_id=bundle.snapshot_id,
+                timestamp=now_iso(),
+                status="skipped",
+                source_file=source_file,
+                errors=[msg],
+                warnings=warnings,
+                conflict_details=conflict_details,
+                rebind_map=preview.rebind_map,
+                forced=False,
+                imported_by=imported_by,
+            )
+            store.add_handover_import_log(log)
+            raise ValueError(msg + "。使用 --force 可强制重新导入。")
+
+    # Step 3: 映射后仍冲突检查
+    # 检查本工作区是否已有其他 handover 的 landing 占用了同一路径
+    new_dest = preview.proposed_dest_dir
+    existing_handovers = store.list_handovers()
+    for eh in existing_handovers:
+        eh_dest_norm = os.path.normpath(eh.get("dest_dir", ""))
+        new_dest_norm = os.path.normpath(new_dest)
+        if eh_dest_norm == new_dest_norm and eh.get("handover_id") != bundle.handover_id:
+            # 进一步看 target_dir 映射是否重叠
+            eh_obj = store.get_handover(eh["handover_id"])
+            if eh_obj:
+                eh_keys = {m.target_dir_key for m in eh_obj.target_dir_mappings}
+                new_keys = set(preview.rebind_map.keys())
+                overlap = eh_keys & new_keys
+                if overlap and not force:
+                    msg = (
+                        f"重绑定后目标目录映射与现有 handover 冲突: "
+                        f"重叠 key={sorted(overlap)}, "
+                        f"现有 handover_id={eh['handover_id']}"
+                    )
+                    conflict_details.append(f"映射后冲突: 与 {eh['handover_id']} 重叠 {sorted(overlap)}")
+                    errors.append(msg)
+
+    if errors and not force:
+        log = HandoverImportLog(
+            import_log_id="hil_" + generate_id(),
+            handover_id=bundle.handover_id,
+            landing_id=bundle.landing_id,
+            run_id=bundle.run_id,
+            snapshot_id=bundle.snapshot_id,
+            timestamp=now_iso(),
+            status="failed",
+            source_file=source_file,
+            errors=errors,
+            warnings=warnings,
+            conflict_details=conflict_details,
+            rebind_map=preview.rebind_map,
+            forced=False,
+            imported_by=imported_by,
+        )
+        store.add_handover_import_log(log)
+        raise ValueError(
+            f"重绑定后存在冲突: {'; '.join(errors)}. 使用 --force 可强制。"
+        )
+
+    # Step 4: 重绑定 landing
+    rebind_map = preview.rebind_map
+    landing_copy = LandingFingerprint.from_dict(bundle.landing_fingerprint.to_dict())
+    rebound_landing = _rebind_landing_with_map(
+        landing_copy, bundle, rebind_map, new_dest
+    )
+
+    # 更新 bundle
+    bundle.landing_fingerprint = rebound_landing
+    bundle.dest_dir = new_dest
+    bundle.imported = True
+    bundle.import_source = source_file or "cli"
+    bundle.imported_at = now_iso()
+    bundle.import_rebind_map = dict(rebind_map)
+
+    # Step 5: 保存 + 写日志
+    store.save_handover(bundle)
+    # 同时把重绑定后的 landing 也存到 landings 表，供 verify-landing 使用
+    store.save_landing(rebound_landing)
+
+    status = "success" if not force else "forced"
+    log = HandoverImportLog(
+        import_log_id="hil_" + generate_id(),
+        handover_id=bundle.handover_id,
+        landing_id=bundle.landing_id,
+        run_id=bundle.run_id,
+        snapshot_id=bundle.snapshot_id,
+        timestamp=now_iso(),
+        status=status,
+        source_file=source_file,
+        errors=errors,
+        warnings=warnings,
+        conflict_details=conflict_details,
+        rebind_map=rebind_map,
+        forced=force,
+        imported_by=imported_by,
+    )
+    store.add_handover_import_log(log)
+    bundle.last_import_log_id = log.import_log_id
+    store.save_handover(bundle)
+
+    return bundle, log
+
+
+def review_handover_bundle(
+    store: StateStore,
+    handover_id: Optional[str] = None,
+    current_config: Optional[Config] = None,
+) -> Dict[str, Any]:
+    """复查交接包（导入后继续 verify-landing 链路）
+
+    返回包含：交接包信息、重绑定映射、最近导入日志、verify 结论、
+    以及 undo 后仍能回看的"最近一次导入结果"。
+    """
+    if handover_id:
+        bundle = store.get_handover(handover_id)
+    else:
+        bundle = store.get_last_handover()
+
+    if not bundle:
+        raise ValueError(
+            f"未找到交接包: handover_id={handover_id or '(最新)'}. "
+            f"请先 import-handover 或 generate-handover。"
+        )
+
+    # 读取导入日志（跨重启保留）
+    import_logs = store.get_handover_import_logs(bundle.handover_id)
+    last_import_log = import_logs[0] if import_logs else None
+
+    # 调用现有 verify 链路
+    current_cfg = current_config
+    if not current_cfg:
+        current_cfg = Config(
+            source_dir=bundle.config_fingerprint.source_dir,
+            dest_dir=bundle.dest_dir,
+            file_extensions=bundle.config_fingerprint.file_extensions,
+        )
+
+    # 直接用已重绑定的 landing 做 verify
+    validation = validate_landing_for_import(
+        store,
+        bundle.landing_fingerprint,
+        check_duplicate=False,
+        current_config=current_cfg,
+    )
+
+    if validation.has_errors:
+        # 判断是 invalid 还是 conflict
+        has_conflict_only = True
+        for err in validation.errors:
+            if "缺少必填字段" in err or "格式错误" in err:
+                has_conflict_only = False
+                break
+        verify_status = "conflict" if has_conflict_only else "invalid"
+    else:
+        verify_status = "valid"
+
+    # 构造复查结果
+    result: Dict[str, Any] = {
+        "handover": {
+            "handover_id": bundle.handover_id,
+            "run_id": bundle.run_id,
+            "snapshot_id": bundle.snapshot_id,
+            "landing_id": bundle.landing_id,
+            "original_dest_dir": bundle.landing_fingerprint.dest_dir,
+            "rebound_dest_dir": bundle.dest_dir,
+            "imported": bundle.imported,
+            "imported_at": bundle.imported_at,
+            "change_summary": bundle.change_summary,
+        },
+        "rebind_map": bundle.import_rebind_map,
+        "last_import_log": last_import_log.to_dict() if last_import_log else None,
+        "all_import_logs_count": len(import_logs),
+        "verify_status": verify_status,
+        "verify_errors": list(validation.errors),
+        "verify_warnings": list(validation.warnings),
+        "verify_conflict_types": list(validation.conflict_types),
+        "notes": bundle.notes,
+        "checksum": bundle.checksum,
+    }
+
+    # undo 回看信息：即使 landing 被 undone，也能从 handover 看到"最近一次导入结果"
+    undo_info = None
+    if last_import_log:
+        undo_info = {
+            "last_import_status": last_import_log.status,
+            "last_import_at": last_import_log.timestamp,
+            "last_import_source": last_import_log.source_file,
+            "import_errors_count": len(last_import_log.errors),
+            "import_conflicts_count": len(last_import_log.conflict_details),
+            "rebind_map_at_import": dict(last_import_log.rebind_map),
+        }
+    result["last_import_result_snapshot"] = undo_info
+
+    # 更新 bundle 的 last_verify_result
+    verify_result = LandingVerifyResult(
+        status=verify_status,
+        landing_id=bundle.landing_id,
+        run_id=bundle.run_id,
+        snapshot_id=bundle.snapshot_id,
+        plan_id=bundle.plan_id,
+        errors=list(validation.errors),
+        warnings=list(validation.warnings),
+        conflict_types=list(validation.conflict_types),
+        diff_result=validation.diff_result,
+        current_config_dest_dir=current_cfg.dest_dir,
+        landing_dest_dir=bundle.dest_dir,
+        verify_source="review_handover",
+    )
+    bundle.last_verify_result = verify_result
+    store.save_handover(bundle)
+
+    return result

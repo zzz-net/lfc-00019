@@ -34,6 +34,10 @@ from .workflow import (
     validate_landing_for_import, import_landing_into_store,
     verify_landing_file,
     diff_landing_fingerprints, compute_file_content_digest,
+    create_handover_bundle, save_handover_bundle_to_store,
+    export_handover_to_file, export_handover_to_csv,
+    load_handover_from_file, preview_handover_bundle,
+    import_handover_bundle, review_handover_bundle,
 )
 
 
@@ -3830,6 +3834,480 @@ def cmd_verify_landing(config_path: str, landing_id: Optional[str], from_file: O
     else:
         click.echo(click.style("✗ 存在冲突，建议使用 list-landings/view-landing 查看状态文件，"
                                "或 export-landing 重新导出后对比。", fg="red"))
+        sys.exit(1)
+
+
+# ============================================================
+# 交接包（Handover Bundle）相关命令
+# ============================================================
+
+
+@cli.command("generate-handover", help="从最新落点指纹生成交接包（可导出/交接）")
+@click.option("-c", "--config", "config_path", required=True, type=click.Path(),
+              help="当前配置文件路径 (YAML)，用于记录配置指纹")
+@click.option("-o", "--output", "output_path", type=click.Path(),
+              help="交接包导出路径 (JSON)。默认不导出，仅保存到状态。")
+@click.option("--csv-dir", type=click.Path(),
+              help="同时导出 CSV 查询文件到该目录")
+@click.option("-r", "--run-id", "run_id",
+              help="指定 run_id 生成交接包（默认取最新）")
+@click.option("--landing-id",
+              help="指定 landing_id 生成交接包（默认取最新）")
+@click.option("--notes", default="",
+              help="备注信息，写入交接包")
+@click.option("--no-verify", is_flag=True,
+              help="生成时不附带 verify 结论")
+@click.option("--json-output", is_flag=True, help="以 JSON 格式输出结果")
+def cmd_generate_handover(config_path, output_path, csv_dir, run_id, landing_id, notes, no_verify, json_output):
+    try:
+        config = load_config(config_path)
+    except Exception as e:
+        click.echo(click.style(f"[错误] 加载配置失败: {e}", fg="red"), err=True)
+        sys.exit(1)
+    store = _get_store(config)
+
+    # 找到 landing
+    landing = None
+    if landing_id:
+        landing = store.get_landing(landing_id)
+    elif run_id:
+        landing = store.get_landing_by_run_id(run_id)
+    else:
+        landing = store.get_last_landing()
+
+    if not landing:
+        click.echo(click.style(
+            "[错误] 未找到落点指纹清单。请先执行 plan + apply 后再生成交接包。",
+            fg="red"), err=True)
+        sys.exit(1)
+
+    # 最近一次 verify 结论
+    last_verify = None
+    if not no_verify:
+        try:
+            verify_res = verify_landing_file(
+                "dummy", store, current_config=config, check_duplicate=False,
+                verify_source="generate_handover_precheck"
+            )
+            # 用 landing 自己跑一次 validate 得到结果
+            from .workflow import validate_landing_for_import as _v
+            vr = _v(store, landing, check_duplicate=False, current_config=config)
+            if vr.has_errors:
+                last_verify_status = "conflict"
+            else:
+                last_verify_status = "valid"
+            from .models import LandingVerifyResult
+            last_verify = LandingVerifyResult(
+                status=last_verify_status,
+                landing_id=landing.landing_id,
+                run_id=landing.run_id,
+                snapshot_id=landing.snapshot_id,
+                plan_id=landing.plan_id,
+                errors=list(vr.errors),
+                warnings=list(vr.warnings),
+                conflict_types=list(vr.conflict_types),
+                diff_result=vr.diff_result,
+                current_config_dest_dir=config.dest_dir,
+                landing_dest_dir=landing.dest_dir,
+                verify_source="generate_handover",
+            )
+        except Exception:
+            pass
+
+    # 生成交接包
+    bundle = create_handover_bundle(landing, config, last_verify, notes)
+    save_handover_bundle_to_store(store, bundle)
+
+    # 导出 JSON
+    exported_path = None
+    if output_path:
+        exported_path = export_handover_to_file(bundle, output_path, store)
+
+    # 导出 CSV
+    csv_paths: list = []
+    if csv_dir:
+        csv_paths = export_handover_to_csv(bundle, csv_dir)
+
+    if json_output:
+        out = {
+            "handover_id": bundle.handover_id,
+            "run_id": bundle.run_id,
+            "snapshot_id": bundle.snapshot_id,
+            "landing_id": bundle.landing_id,
+            "source_dir": bundle.source_dir,
+            "dest_dir": bundle.dest_dir,
+            "target_dir_count": len(bundle.target_dir_mappings),
+            "file_count": len(bundle.landing_fingerprint.file_fingerprints),
+            "manual_rename_count": len(bundle.manual_renames),
+            "change_summary": bundle.change_summary,
+            "notes": bundle.notes,
+            "last_verify_status": bundle.last_verify_result.status if bundle.last_verify_result else "",
+            "exported_json": exported_path,
+            "exported_csv": csv_paths,
+            "checksum": bundle.checksum,
+        }
+        click.echo(json.dumps(out, ensure_ascii=False, indent=2))
+    else:
+        click.echo(click.style("✓ 交接包生成成功", fg="green"))
+        click.echo(f"  交接包ID: {bundle.handover_id}")
+        click.echo(f"  run_id:    {bundle.run_id}")
+        click.echo(f"  landing_id: {bundle.landing_id}")
+        click.echo(f"  源目录:    {bundle.source_dir}")
+        click.echo(f"  目标目录:  {bundle.dest_dir}")
+        click.echo(f"  目标目录映射数: {len(bundle.target_dir_mappings)}")
+        click.echo(f"  落点文件数: {len(bundle.landing_fingerprint.file_fingerprints)}")
+        click.echo(f"  手工改名数: {len(bundle.manual_renames)}")
+        if bundle.change_summary:
+            click.echo(f"  变更摘要:  {bundle.change_summary}")
+        if bundle.last_verify_result:
+            color = {"valid": "green", "conflict": "yellow", "invalid": "red"}.get(
+                bundle.last_verify_result.status, "white"
+            )
+            click.echo(click.style(f"  生成时verify: [{bundle.last_verify_result.status}]", fg=color))
+            if bundle.last_verify_result.errors:
+                for e in bundle.last_verify_result.errors[:3]:
+                    click.echo(f"    - {e}")
+        if exported_path:
+            click.echo(click.style(f"  JSON 已导出: {exported_path}", fg="cyan"))
+        for cp in csv_paths:
+            click.echo(click.style(f"  CSV 已导出:  {cp}", fg="cyan"))
+        if bundle.notes:
+            click.echo(f"  备注:      {bundle.notes}")
+        click.echo(f"  校验和:    {bundle.checksum}")
+
+
+@cli.command("preview-handover", help="预检交接包：目录重绑定、权限检查、冲突预测（不写入状态）")
+@click.option("-f", "--file", "file_path", required=True, type=click.Path(exists=True),
+              help="交接包 JSON 文件路径")
+@click.option("-c", "--config", "config_path", type=click.Path(),
+              help="当前配置文件 (YAML)，用于获取 dest_dir；未指定时取交接包内 dest_dir")
+@click.option("--dest-dir",
+              help="直接指定新目标根目录（优先级高于 config）")
+@click.option("--rebind-json",
+              help="自定义重绑定映射 JSON 文件: {\"target_dir_key\": \"新绝对路径\", ...}")
+@click.option("--json-output", is_flag=True, help="以 JSON 格式输出结果")
+def cmd_preview_handover(file_path, config_path, dest_dir, rebind_json, json_output):
+    try:
+        bundle = load_handover_from_file(file_path)
+    except FileNotFoundError as e:
+        click.echo(click.style(f"[错误] {e}", fg="red"), err=True)
+        sys.exit(1)
+    except json.JSONDecodeError as e:
+        click.echo(click.style(f"[错误] 交接包 JSON 格式错误: {e}", fg="red"), err=True)
+        sys.exit(1)
+    except ValueError as e:
+        click.echo(click.style(f"[错误] 交接包内容无效: {e}", fg="red"), err=True)
+        sys.exit(2)
+    except Exception as e:
+        click.echo(click.style(f"[错误] 读取交接包时发生未知错误: {type(e).__name__}: {e}", fg="red"), err=True)
+        sys.exit(1)
+
+    # 加载 config
+    cfg = None
+    if config_path:
+        try:
+            cfg = load_config(config_path)
+        except Exception as e:
+            click.echo(click.style(f"[警告] 加载配置失败，将忽略: {e}", fg="yellow"))
+
+    # 自定义 rebind
+    custom_rebind = None
+    if rebind_json:
+        if not os.path.exists(rebind_json):
+            click.echo(click.style(f"[错误] rebind 映射文件不存在: {rebind_json}", fg="red"), err=True)
+            sys.exit(1)
+        with open(rebind_json, "r", encoding="utf-8") as f:
+            custom_rebind = json.load(f)
+
+    preview = preview_handover_bundle(
+        bundle, current_config=cfg,
+        custom_dest_dir=dest_dir,
+        custom_rebind_map=custom_rebind,
+    )
+
+    if json_output:
+        click.echo(json.dumps(preview.to_dict(), ensure_ascii=False, indent=2))
+    else:
+        status_cn = {"ok": "可导入", "warnings": "有警告", "errors": "有错误"}.get(preview.status, preview.status)
+        color = {"ok": "green", "warnings": "yellow", "errors": "red"}.get(preview.status, "white")
+        click.echo(click.style(f"[{status_cn}] 交接包预检结论", fg=color))
+        click.echo(f"  交接包ID: {preview.handover_id}")
+        click.echo(f"  原目标目录:   {preview.original_dest_dir}")
+        click.echo(f"  新目标目录:   {preview.proposed_dest_dir}")
+        if preview.status != "ok":
+            click.echo(click.style(f"  可导入: {'是' if preview.can_import else '否'}",
+                                   fg="green" if preview.can_import else "red"))
+        click.echo()
+        click.echo(click.style("[目录重绑定映射]", fg="cyan"))
+        for key, new_path in preview.rebind_map.items():
+            click.echo(f"  {key}")
+            click.echo(f"    -> {new_path}")
+        if preview.permission_checks:
+            click.echo()
+            click.echo(click.style("[权限检查]", fg="cyan"))
+            for pc in preview.permission_checks:
+                tag = click.style("[可写]", fg="green") if pc["writable"] else click.style("[不可写]", fg="red")
+                click.echo(f"  {tag} {pc['path']} ({pc['role']})")
+                if not pc["writable"]:
+                    click.echo(f"    原因: {pc.get('message', '')}")
+        if preview.warnings:
+            click.echo()
+            click.echo(click.style("[警告]", fg="yellow"))
+            for w in preview.warnings:
+                click.echo(f"  - {w}")
+        if preview.errors:
+            click.echo()
+            click.echo(click.style("[错误]", fg="red"))
+            for e in preview.errors:
+                click.echo(f"  - {e}")
+
+    if not preview.can_import:
+        sys.exit(1)
+
+
+@cli.command("import-handover", help="导入交接包到当前工作区（支持目录重绑定），写入状态和操作日志")
+@click.option("-f", "--file", "file_path", required=True, type=click.Path(exists=True),
+              help="交接包 JSON 文件路径")
+@click.option("-c", "--config", "config_path", type=click.Path(),
+              help="当前配置文件 (YAML)，用于 dest_dir 和校验")
+@click.option("--dest-dir",
+              help="直接指定新目标根目录（优先级高于 config）")
+@click.option("--rebind-json",
+              help="自定义重绑定映射 JSON 文件")
+@click.option("--no-dup-check", is_flag=True, help="跳过重复导入检查")
+@click.option("--force", is_flag=True, help="强制导入（忽略预检错误和重复导入）")
+@click.option("--json-output", is_flag=True, help="以 JSON 格式输出结果")
+def cmd_import_handover(file_path, config_path, dest_dir, rebind_json, no_dup_check, force, json_output):
+    try:
+        bundle = load_handover_from_file(file_path)
+    except FileNotFoundError as e:
+        click.echo(click.style(f"[错误] {e}", fg="red"), err=True)
+        sys.exit(1)
+    except json.JSONDecodeError as e:
+        click.echo(click.style(f"[错误] 交接包 JSON 格式错误: {e}", fg="red"), err=True)
+        sys.exit(1)
+    except ValueError as e:
+        click.echo(click.style(f"[错误] 交接包内容无效: {e}", fg="red"), err=True)
+        sys.exit(2)
+    except Exception as e:
+        click.echo(click.style(f"[错误] 读取交接包时发生未知错误: {type(e).__name__}: {e}", fg="red"), err=True)
+        sys.exit(1)
+
+    cfg = None
+    if config_path:
+        try:
+            cfg = load_config(config_path)
+        except Exception as e:
+            click.echo(click.style(f"[警告] 加载配置失败，将忽略: {e}", fg="yellow"))
+
+    # 必须有 state_store：用 config 或临时 state
+    if cfg:
+        store = _get_store(cfg)
+    else:
+        # 用交接包所在目录建一个临时 state 以便有状态
+        temp_dir = os.path.dirname(os.path.abspath(file_path))
+        state_file = os.path.join(temp_dir, ".handover_import_state.json")
+        store = StateStore(state_file)
+
+    custom_rebind = None
+    if rebind_json:
+        if not os.path.exists(rebind_json):
+            click.echo(click.style(f"[错误] rebind 映射文件不存在: {rebind_json}", fg="red"), err=True)
+            sys.exit(1)
+        with open(rebind_json, "r", encoding="utf-8") as f:
+            custom_rebind = json.load(f)
+
+    try:
+        imported_bundle, log = import_handover_bundle(
+            store=store,
+            bundle=bundle,
+            current_config=cfg,
+            custom_dest_dir=dest_dir,
+            custom_rebind_map=custom_rebind,
+            check_duplicate=not no_dup_check,
+            force=force,
+            imported_by="cli",
+            source_file=os.path.abspath(file_path),
+        )
+    except ValueError as e:
+        click.echo(click.style(f"[错误] {e}", fg="red"), err=True)
+        sys.exit(1)
+    except PermissionError as e:
+        click.echo(click.style(f"[错误] 权限不足：{e}", fg="red"), err=True)
+        sys.exit(1)
+
+    if json_output:
+        out = {
+            "handover_id": imported_bundle.handover_id,
+            "run_id": imported_bundle.run_id,
+            "landing_id": imported_bundle.landing_id,
+            "original_dest_dir": bundle.dest_dir,
+            "rebound_dest_dir": imported_bundle.dest_dir,
+            "import_status": log.status,
+            "import_log_id": log.import_log_id,
+            "rebind_map": log.rebind_map,
+            "warnings": log.warnings,
+            "errors": log.errors,
+            "conflict_details": log.conflict_details,
+            "target_dir_count": len(imported_bundle.target_dir_mappings),
+            "file_count": len(imported_bundle.landing_fingerprint.file_fingerprints),
+            "imported_at": imported_bundle.imported_at,
+            "import_source": imported_bundle.import_source,
+            "last_import_log_id": imported_bundle.last_import_log_id,
+        }
+        click.echo(json.dumps(out, ensure_ascii=False, indent=2))
+    else:
+        status_cn = {"success": "成功", "forced": "强制成功", "failed": "失败", "skipped": "跳过"}.get(
+            log.status, log.status
+        )
+        color = {"success": "green", "forced": "yellow", "failed": "red", "skipped": "magenta"}.get(
+            log.status, "white"
+        )
+        click.echo(click.style(f"✓ 交接包导入[{status_cn}]", fg=color))
+        click.echo(f"  交接包ID: {imported_bundle.handover_id}")
+        click.echo(f"  导入日志ID: {log.import_log_id}")
+        click.echo(f"  原目标目录:   {bundle.dest_dir}")
+        click.echo(f"  重绑定后目录: {imported_bundle.dest_dir}")
+        click.echo(f"  落点文件数: {len(imported_bundle.landing_fingerprint.file_fingerprints)}")
+        click.echo(f"  导入时间:   {imported_bundle.imported_at}")
+        click.echo(f"  导入来源:   {imported_bundle.import_source}")
+        if log.rebind_map:
+            click.echo()
+            click.echo(click.style("[重绑定映射]", fg="cyan"))
+            for k, v in log.rebind_map.items():
+                click.echo(f"  {k} -> {v}")
+        if log.warnings:
+            click.echo()
+            click.echo(click.style("[警告]", fg="yellow"))
+            for w in log.warnings:
+                click.echo(f"  - {w}")
+        if log.errors:
+            click.echo()
+            click.echo(click.style("[错误]", fg="red"))
+            for e in log.errors:
+                click.echo(f"  - {e}")
+        if log.conflict_details:
+            click.echo()
+            click.echo(click.style("[冲突详情]", fg="magenta"))
+            for c in log.conflict_details:
+                click.echo(f"  - {c}")
+
+    if log.status in ("failed", "skipped"):
+        sys.exit(1)
+
+
+@cli.command("review-handover", help="复查交接包：继续执行 verify-landing，查看导入结果和重绑定映射")
+@click.option("-c", "--config", "config_path", type=click.Path(),
+              help="当前配置文件 (YAML)，用于 verify 比对")
+@click.option("--handover-id",
+              help="指定 handover_id 复查（默认取最新）")
+@click.option("--json-output", is_flag=True, help="以 JSON 格式输出结果")
+def cmd_review_handover(config_path, handover_id, json_output):
+    cfg = None
+    if config_path:
+        try:
+            cfg = load_config(config_path)
+        except Exception as e:
+            click.echo(click.style(f"[警告] 加载配置失败，将忽略: {e}", fg="yellow"))
+
+    # 决定 state_store
+    if cfg:
+        store = _get_store(cfg)
+    else:
+        # 用最近的工作目录：当前 cwd 下找
+        state_file = os.path.join(os.getcwd(), "organizer_state.json")
+        store = StateStore(state_file)
+
+    try:
+        result = review_handover_bundle(store, handover_id, current_config=cfg)
+    except ValueError as e:
+        click.echo(click.style(f"[错误] {e}", fg="red"), err=True)
+        sys.exit(1)
+
+    if json_output:
+        click.echo(json.dumps(result, ensure_ascii=False, indent=2, default=str))
+    else:
+        h = result["handover"]
+        verify_status_cn = {"valid": "有效", "conflict": "冲突", "invalid": "无效"}.get(
+            result["verify_status"], result["verify_status"]
+        )
+        verify_color = {"valid": "green", "conflict": "yellow", "invalid": "red"}.get(
+            result["verify_status"], "white"
+        )
+        click.echo(click.style(f"[复查结论] {verify_status_cn}", fg=verify_color))
+        click.echo(f"  交接包ID: {h['handover_id']}")
+        click.echo(f"  run_id:   {h['run_id']}")
+        click.echo(f"  landing_id: {h['landing_id']}")
+        click.echo(f"  原目标目录:   {h['original_dest_dir']}")
+        click.echo(f"  重绑定后目录: {h['rebound_dest_dir']}")
+        click.echo(f"  是否已导入: {h['imported']}")
+        if h.get("imported_at"):
+            click.echo(f"  导入时间:   {h['imported_at']}")
+        if h.get("change_summary"):
+            click.echo(f"  变更摘要:   {h['change_summary']}")
+
+        if result["rebind_map"]:
+            click.echo()
+            click.echo(click.style("[重绑定映射]", fg="cyan"))
+            for k, v in result["rebind_map"].items():
+                click.echo(f"  {k} -> {v}")
+
+        if result.get("last_import_log"):
+            click.echo()
+            click.echo(click.style("[最近一次导入日志]", fg="cyan"))
+            lil = result["last_import_log"]
+            status_cn = {"success": "成功", "forced": "强制成功", "failed": "失败", "skipped": "跳过"}.get(
+                lil.get("status", ""), lil.get("status", "")
+            )
+            color = {"success": "green", "forced": "yellow", "failed": "red", "skipped": "magenta"}.get(
+                lil.get("status", ""), "white"
+            )
+            click.echo(f"  {lil.get('timestamp')} {click.style(f'[{status_cn}]', fg=color)}")
+            click.echo(f"    来源: {lil.get('source_file')}")
+            if lil.get("warnings"):
+                click.echo(f"    警告数: {len(lil['warnings'])}")
+            if lil.get("errors"):
+                click.echo(click.style(f"    错误数: {len(lil['errors'])}", fg="red"))
+                for e in lil["errors"][:3]:
+                    click.echo(f"      - {e}")
+            if lil.get("conflict_details"):
+                click.echo(click.style(f"    冲突数: {len(lil['conflict_details'])}", fg="magenta"))
+                for c in lil["conflict_details"][:3]:
+                    click.echo(f"      - {c}")
+
+        if result.get("last_import_result_snapshot"):
+            click.echo()
+            click.echo(click.style("[最近一次导入结果快照（undo 后仍可回看）]", fg="cyan"))
+            snap = result["last_import_result_snapshot"]
+            click.echo(f"  导入状态: {snap.get('last_import_status')}")
+            click.echo(f"  导入时间: {snap.get('last_import_at')}")
+            click.echo(f"  来源文件: {snap.get('last_import_source')}")
+            if snap.get("import_errors_count"):
+                click.echo(f"  错误数:   {snap['import_errors_count']}")
+            if snap.get("import_conflicts_count"):
+                click.echo(f"  冲突数:   {snap['import_conflicts_count']}")
+
+        click.echo()
+        if result["verify_errors"]:
+            click.echo(click.style("[verify 错误]", fg="red"))
+            for e in result["verify_errors"]:
+                click.echo(f"  - {e}")
+        if result["verify_warnings"]:
+            click.echo(click.style("[verify 警告]", fg="yellow"))
+            for w in result["verify_warnings"]:
+                click.echo(f"  - {w}")
+        if result["verify_conflict_types"]:
+            click.echo(click.style("[冲突类型]", fg="magenta"))
+            for t in result["verify_conflict_types"]:
+                click.echo(f"  - {t}")
+
+        if result.get("checksum"):
+            click.echo()
+            click.echo(f"交接包校验和: {result['checksum']}")
+        click.echo()
+        click.echo(f"历史导入记录数: {result['all_import_logs_count']}")
+
+    if result["verify_status"] != "valid":
         sys.exit(1)
 
 

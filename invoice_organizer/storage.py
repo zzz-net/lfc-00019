@@ -13,6 +13,7 @@ from .models import (
     SignoffRecord, SignoffConflictState, SignoffValidationHistory,
     ExecutionBundle, BundleImportLog, BundleSummary, BundleRunDetails,
     LandingFingerprint, LandingImportLog,
+    LandingHandoverBundle, HandoverImportLog,
     generate_id, now_iso,
 )
 
@@ -1086,4 +1087,82 @@ class StateStore:
         result = [LandingImportLog.from_dict(l) for l in logs]
         if landing_id:
             result = [l for l in result if l.landing_id == landing_id]
+        return sorted(result, key=lambda x: x.timestamp, reverse=True)
+
+    # ---- 落点交接包 ----
+
+    def save_handover(self, handover: LandingHandoverBundle) -> None:
+        """保存落点交接包"""
+        if "handovers" not in self._data:
+            self._data["handovers"] = {}
+        self._data["handovers"][handover.handover_id] = handover.to_dict()
+        self._data["last_handover"] = handover.handover_id
+        self.save()
+
+    def get_handover(self, handover_id: str) -> Optional[LandingHandoverBundle]:
+        """根据 handover_id 获取交接包"""
+        h_data = self._data.get("handovers", {}).get(handover_id)
+        if h_data:
+            return LandingHandoverBundle.from_dict(h_data)
+        return None
+
+    def get_last_handover(self) -> Optional[LandingHandoverBundle]:
+        """获取最近的交接包"""
+        hid = self._data.get("last_handover")
+        if hid:
+            return self.get_handover(hid)
+        return None
+
+    def get_handover_by_run_id(self, run_id: str) -> Optional[LandingHandoverBundle]:
+        """根据执行 ID 查找交接包"""
+        for hid, hdata in self._data.get("handovers", {}).items():
+            if hdata.get("run_id") == run_id:
+                return LandingHandoverBundle.from_dict(hdata)
+        return None
+
+    def get_handover_by_landing_id(self, landing_id: str) -> Optional[LandingHandoverBundle]:
+        """根据落点 ID 查找交接包"""
+        for hid, hdata in self._data.get("handovers", {}).items():
+            if hdata.get("landing_id") == landing_id:
+                return LandingHandoverBundle.from_dict(hdata)
+        return None
+
+    def list_handovers(self) -> List[Dict[str, Any]]:
+        """列出所有交接包（摘要信息）"""
+        result = []
+        handovers = self._data.get("handovers", {})
+        for hid, hdata in handovers.items():
+            result.append({
+                "handover_id": hid,
+                "created_at": hdata.get("created_at", ""),
+                "run_id": hdata.get("run_id", ""),
+                "snapshot_id": hdata.get("snapshot_id", ""),
+                "plan_id": hdata.get("plan_id", ""),
+                "landing_id": hdata.get("landing_id", ""),
+                "source_dir": hdata.get("source_dir", ""),
+                "dest_dir": hdata.get("dest_dir", ""),
+                "target_dir_count": len(hdata.get("target_dir_mappings", [])),
+                "file_count": len(hdata.get("landing_fingerprint", {}).get("file_fingerprints", [])),
+                "change_summary": hdata.get("change_summary", ""),
+                "imported": hdata.get("imported", False),
+                "import_source": hdata.get("import_source", ""),
+                "notes": hdata.get("notes", ""),
+            })
+        return sorted(result, key=lambda x: x["created_at"], reverse=True)
+
+    # ---- 交接包导入日志 ----
+
+    def add_handover_import_log(self, log: HandoverImportLog) -> None:
+        """添加交接包导入日志"""
+        if "handover_import_logs" not in self._data:
+            self._data["handover_import_logs"] = []
+        self._data["handover_import_logs"].append(log.to_dict())
+        self.save()
+
+    def get_handover_import_logs(self, handover_id: Optional[str] = None) -> List[HandoverImportLog]:
+        """获取交接包导入日志，可按 handover_id 筛选"""
+        logs = self._data.get("handover_import_logs", [])
+        result = [HandoverImportLog.from_dict(l) for l in logs]
+        if handover_id:
+            result = [l for l in result if l.handover_id == handover_id]
         return sorted(result, key=lambda x: x.timestamp, reverse=True)

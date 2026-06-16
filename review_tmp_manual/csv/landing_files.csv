@@ -1,0 +1,4 @@
+﻿序号,源文件,目标路径,目标目录,大小,内容哈希,规则名称,改名前,改名后
+1,D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source\invoice_A.pdf,D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest\pdfs\invoice_A.pdf,D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest\pdfs,1,02ab419a0ee3690b33a932a40a10e02173e0e2065a601035854f72297479fe5f,pdfs,,
+2,D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source\invoice_B.pdf,D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest\pdfs\invoice_B.pdf,D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest\pdfs,1,00450871e719def7c5ad9ed800a3a95d2fe543db3c14a27af29033970f173fb8,pdfs,,
+3,D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source\memo.txt,D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest\notes\memo.txt,D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest\notes,4,c0121c0318064be454211af624456f849dce3ac8fe2a92f076882dcee9c50e7a,notes,,

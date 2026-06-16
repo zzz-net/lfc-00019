@@ -1,0 +1,809 @@
+{
+  "scanned_files": [
+    {
+      "id": "7373c2258429",
+      "source_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source\\invoice_A.pdf",
+      "filename": "invoice_A.pdf",
+      "size": 1,
+      "mtime": 1781611657.0531902,
+      "matched_rule": "pdfs"
+    },
+    {
+      "id": "788b89be589f",
+      "source_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source\\invoice_B.pdf",
+      "filename": "invoice_B.pdf",
+      "size": 1,
+      "mtime": 1781611657.0531902,
+      "matched_rule": "pdfs"
+    },
+    {
+      "id": "15778ae81c23",
+      "source_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source\\memo.txt",
+      "filename": "memo.txt",
+      "size": 4,
+      "mtime": 1781611657.0543208,
+      "matched_rule": "notes"
+    }
+  ],
+  "plans": {
+    "39e760eaf73a": {
+      "id": "39e760eaf73a",
+      "created_at": "2026-06-16T20:07:37.515501",
+      "moves": [
+        {
+          "id": "e965d069f3b5",
+          "source_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source\\invoice_A.pdf",
+          "target_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest\\pdfs\\invoice_A.pdf",
+          "filename": "invoice_A.pdf",
+          "matched_rule": "pdfs",
+          "conflict_type": null,
+          "conflict_detail": null
+        },
+        {
+          "id": "0074341ed7de",
+          "source_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source\\invoice_B.pdf",
+          "target_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest\\pdfs\\invoice_B.pdf",
+          "filename": "invoice_B.pdf",
+          "matched_rule": "pdfs",
+          "conflict_type": null,
+          "conflict_detail": null
+        },
+        {
+          "id": "4c3b5ac4297d",
+          "source_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source\\memo.txt",
+          "target_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest\\notes\\memo.txt",
+          "filename": "memo.txt",
+          "matched_rule": "notes",
+          "conflict_type": null,
+          "conflict_detail": null
+        }
+      ],
+      "has_conflicts": false
+    }
+  },
+  "runs": {
+    "806322f2da3a": {
+      "id": "806322f2da3a",
+      "plan_id": "39e760eaf73a",
+      "created_at": "2026-06-16T20:07:38.008763",
+      "dry_run": false,
+      "completed_at": "2026-06-16T20:07:38.014682",
+      "moves": [
+        {
+          "id": "f4ba2851a451",
+          "run_id": "806322f2da3a",
+          "source_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source\\invoice_A.pdf",
+          "target_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest\\pdfs\\invoice_A.pdf",
+          "filename": "invoice_A.pdf",
+          "matched_rule": "pdfs",
+          "status": "moved",
+          "timestamp": "2026-06-16T20:07:38.010454",
+          "error_message": null
+        },
+        {
+          "id": "ac02565272c1",
+          "run_id": "806322f2da3a",
+          "source_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source\\invoice_B.pdf",
+          "target_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest\\pdfs\\invoice_B.pdf",
+          "filename": "invoice_B.pdf",
+          "matched_rule": "pdfs",
+          "status": "moved",
+          "timestamp": "2026-06-16T20:07:38.011515",
+          "error_message": null
+        },
+        {
+          "id": "02c724170ad3",
+          "run_id": "806322f2da3a",
+          "source_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source\\memo.txt",
+          "target_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest\\notes\\memo.txt",
+          "filename": "memo.txt",
+          "matched_rule": "notes",
+          "status": "moved",
+          "timestamp": "2026-06-16T20:07:38.013627",
+          "error_message": null
+        }
+      ],
+      "is_undone": false
+    }
+  },
+  "undo_records": [],
+  "snapshots": {
+    "e65411d0676a": {
+      "snapshot_id": "e65411d0676a",
+      "created_at": "2026-06-16T20:07:37.516647",
+      "plan_id": "39e760eaf73a",
+      "config_snapshot": {
+        "source_dir": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source",
+        "dest_dir": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest",
+        "rules": [
+          {
+            "name": "pdfs",
+            "pattern": "*.pdf",
+            "target": "pdfs",
+            "description": null
+          },
+          {
+            "name": "notes",
+            "pattern": "*.txt",
+            "target": "notes",
+            "description": null
+          }
+        ],
+        "state_file": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/state.json",
+        "recursive": true,
+        "file_extensions": null,
+        "config_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\review_tmp_manual\\orig\\config.yaml",
+        "config_mtime": 1781611657.0543208
+      },
+      "scanned_files": [
+        {
+          "id": "7373c2258429",
+          "source_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source\\invoice_A.pdf",
+          "filename": "invoice_A.pdf",
+          "size": 1,
+          "mtime": 1781611657.0531902,
+          "matched_rule": "pdfs"
+        },
+        {
+          "id": "788b89be589f",
+          "source_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source\\invoice_B.pdf",
+          "filename": "invoice_B.pdf",
+          "size": 1,
+          "mtime": 1781611657.0531902,
+          "matched_rule": "pdfs"
+        },
+        {
+          "id": "15778ae81c23",
+          "source_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source\\memo.txt",
+          "filename": "memo.txt",
+          "size": 4,
+          "mtime": 1781611657.0543208,
+          "matched_rule": "notes"
+        }
+      ],
+      "moves": [
+        {
+          "id": "e965d069f3b5",
+          "source_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source\\invoice_A.pdf",
+          "target_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest\\pdfs\\invoice_A.pdf",
+          "filename": "invoice_A.pdf",
+          "matched_rule": "pdfs",
+          "conflict_type": null,
+          "conflict_detail": null
+        },
+        {
+          "id": "0074341ed7de",
+          "source_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source\\invoice_B.pdf",
+          "target_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest\\pdfs\\invoice_B.pdf",
+          "filename": "invoice_B.pdf",
+          "matched_rule": "pdfs",
+          "conflict_type": null,
+          "conflict_detail": null
+        },
+        {
+          "id": "4c3b5ac4297d",
+          "source_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source\\memo.txt",
+          "target_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest\\notes\\memo.txt",
+          "filename": "memo.txt",
+          "matched_rule": "notes",
+          "conflict_type": null,
+          "conflict_detail": null
+        }
+      ],
+      "unmatched_files": [],
+      "new_target_dirs": [
+        {
+          "path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest\\notes",
+          "rule_names": [
+            "notes"
+          ],
+          "file_count": 1
+        },
+        {
+          "path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest\\pdfs",
+          "rule_names": [
+            "pdfs"
+          ],
+          "file_count": 2
+        }
+      ],
+      "has_conflicts": false,
+      "summary": {
+        "total_files": 3,
+        "matched_files": 3,
+        "unmatched_files": 0,
+        "new_target_dirs": [
+          "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest\\notes",
+          "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest\\pdfs"
+        ],
+        "rules_with_same_target": {},
+        "files_per_rule": {
+          "pdfs": 2,
+          "notes": 1
+        },
+        "files_per_target_dir": {
+          "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest\\pdfs": 2,
+          "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest\\notes": 1
+        },
+        "conflict_count": 0,
+        "conflict_details": []
+      },
+      "imported": false,
+      "import_source": null,
+      "remark": {
+        "remark": "",
+        "tags": [],
+        "handler": "",
+        "notes": "",
+        "updated_at": "",
+        "updated_by": ""
+      },
+      "signoffs": [],
+      "signoff_conflicts": []
+    }
+  },
+  "import_logs": [],
+  "plan_locks": [],
+  "lock_violations": [],
+  "plan_diffs": [],
+  "remark_histories": [],
+  "signoff_records": [],
+  "signoff_conflicts": [],
+  "validation_history": [
+    {
+      "validation_id": "041c691f32d5",
+      "snapshot_id": "e65411d0676a",
+      "plan_id": "39e760eaf73a",
+      "triggered_by": "apply",
+      "triggered_at": "2026-06-16T20:07:38.006686",
+      "status": "passed",
+      "block_types": [
+        "no_signoff"
+      ],
+      "errors": [],
+      "warnings": [],
+      "is_expired": false,
+      "config_mismatch": false,
+      "snapshot_replaced": false,
+      "has_unresolved_conflict": false,
+      "has_lock_mismatch": false,
+      "active_signoff_id": null,
+      "conflict_id": null,
+      "lock_id": null,
+      "resolved_at": null,
+      "resolved_by": null,
+      "resolution_note": "",
+      "resolution_command": ""
+    }
+  ],
+  "execution_bundles": {
+    "021ab98b8b7b": {
+      "bundle_id": "021ab98b8b7b",
+      "bundle_version": "1.0",
+      "created_at": "2026-06-16T20:07:38.016771",
+      "run_id": "806322f2da3a",
+      "plan_id": "39e760eaf73a",
+      "snapshot_id": "e65411d0676a",
+      "summary": {
+        "total_moves": 3,
+        "success_count": 3,
+        "skipped_conflict_count": 0,
+        "skipped_manual_count": 0,
+        "failed_count": 0,
+        "dry_run": false,
+        "is_undone": false,
+        "conflict_details": [],
+        "manual_skip_reasons": [],
+        "has_signoff": false,
+        "signoff_status": "",
+        "signed_by": "",
+        "signoff_id": ""
+      },
+      "snapshot": {
+        "snapshot_id": "e65411d0676a",
+        "created_at": "2026-06-16T20:07:37.516647",
+        "plan_id": "39e760eaf73a",
+        "config_snapshot": {
+          "source_dir": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source",
+          "dest_dir": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest",
+          "rules": [
+            {
+              "name": "pdfs",
+              "pattern": "*.pdf",
+              "target": "pdfs",
+              "description": null
+            },
+            {
+              "name": "notes",
+              "pattern": "*.txt",
+              "target": "notes",
+              "description": null
+            }
+          ],
+          "state_file": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/state.json",
+          "recursive": true,
+          "file_extensions": null,
+          "config_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\review_tmp_manual\\orig\\config.yaml",
+          "config_mtime": 1781611657.0543208
+        },
+        "scanned_files": [
+          {
+            "id": "7373c2258429",
+            "source_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source\\invoice_A.pdf",
+            "filename": "invoice_A.pdf",
+            "size": 1,
+            "mtime": 1781611657.0531902,
+            "matched_rule": "pdfs"
+          },
+          {
+            "id": "788b89be589f",
+            "source_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source\\invoice_B.pdf",
+            "filename": "invoice_B.pdf",
+            "size": 1,
+            "mtime": 1781611657.0531902,
+            "matched_rule": "pdfs"
+          },
+          {
+            "id": "15778ae81c23",
+            "source_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source\\memo.txt",
+            "filename": "memo.txt",
+            "size": 4,
+            "mtime": 1781611657.0543208,
+            "matched_rule": "notes"
+          }
+        ],
+        "moves": [
+          {
+            "id": "e965d069f3b5",
+            "source_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source\\invoice_A.pdf",
+            "target_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest\\pdfs\\invoice_A.pdf",
+            "filename": "invoice_A.pdf",
+            "matched_rule": "pdfs",
+            "conflict_type": null,
+            "conflict_detail": null
+          },
+          {
+            "id": "0074341ed7de",
+            "source_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source\\invoice_B.pdf",
+            "target_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest\\pdfs\\invoice_B.pdf",
+            "filename": "invoice_B.pdf",
+            "matched_rule": "pdfs",
+            "conflict_type": null,
+            "conflict_detail": null
+          },
+          {
+            "id": "4c3b5ac4297d",
+            "source_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source\\memo.txt",
+            "target_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest\\notes\\memo.txt",
+            "filename": "memo.txt",
+            "matched_rule": "notes",
+            "conflict_type": null,
+            "conflict_detail": null
+          }
+        ],
+        "unmatched_files": [],
+        "new_target_dirs": [
+          {
+            "path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest\\notes",
+            "rule_names": [
+              "notes"
+            ],
+            "file_count": 1
+          },
+          {
+            "path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest\\pdfs",
+            "rule_names": [
+              "pdfs"
+            ],
+            "file_count": 2
+          }
+        ],
+        "has_conflicts": false,
+        "summary": {
+          "total_files": 3,
+          "matched_files": 3,
+          "unmatched_files": 0,
+          "new_target_dirs": [
+            "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest\\notes",
+            "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest\\pdfs"
+          ],
+          "rules_with_same_target": {},
+          "files_per_rule": {
+            "pdfs": 2,
+            "notes": 1
+          },
+          "files_per_target_dir": {
+            "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest\\pdfs": 2,
+            "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest\\notes": 1
+          },
+          "conflict_count": 0,
+          "conflict_details": []
+        },
+        "imported": false,
+        "import_source": null,
+        "remark": {
+          "remark": "",
+          "tags": [],
+          "handler": "",
+          "notes": "",
+          "updated_at": "",
+          "updated_by": ""
+        },
+        "signoffs": [],
+        "signoff_conflicts": []
+      },
+      "run_details": {
+        "moves": [
+          {
+            "id": "f4ba2851a451",
+            "run_id": "806322f2da3a",
+            "source_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source\\invoice_A.pdf",
+            "target_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest\\pdfs\\invoice_A.pdf",
+            "filename": "invoice_A.pdf",
+            "matched_rule": "pdfs",
+            "status": "moved",
+            "timestamp": "2026-06-16T20:07:38.010454",
+            "error_message": null
+          },
+          {
+            "id": "ac02565272c1",
+            "run_id": "806322f2da3a",
+            "source_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source\\invoice_B.pdf",
+            "target_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest\\pdfs\\invoice_B.pdf",
+            "filename": "invoice_B.pdf",
+            "matched_rule": "pdfs",
+            "status": "moved",
+            "timestamp": "2026-06-16T20:07:38.011515",
+            "error_message": null
+          },
+          {
+            "id": "02c724170ad3",
+            "run_id": "806322f2da3a",
+            "source_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source\\memo.txt",
+            "target_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest\\notes\\memo.txt",
+            "filename": "memo.txt",
+            "matched_rule": "notes",
+            "status": "moved",
+            "timestamp": "2026-06-16T20:07:38.013627",
+            "error_message": null
+          }
+        ],
+        "filter_rules": [],
+        "filter_file_types": [],
+        "filter_target_dirs": [],
+        "created_at": "2026-06-16T20:07:38.008763",
+        "completed_at": "2026-06-16T20:07:38.014682",
+        "undo_records": []
+      },
+      "signoffs": [],
+      "signoff_conflicts": [],
+      "validation_history": [
+        {
+          "validation_id": "041c691f32d5",
+          "snapshot_id": "e65411d0676a",
+          "plan_id": "39e760eaf73a",
+          "triggered_by": "apply",
+          "triggered_at": "2026-06-16T20:07:38.006686",
+          "status": "passed",
+          "block_types": [
+            "no_signoff"
+          ],
+          "errors": [],
+          "warnings": [],
+          "is_expired": false,
+          "config_mismatch": false,
+          "snapshot_replaced": false,
+          "has_unresolved_conflict": false,
+          "has_lock_mismatch": false,
+          "active_signoff_id": null,
+          "conflict_id": null,
+          "lock_id": null,
+          "resolved_at": null,
+          "resolved_by": null,
+          "resolution_note": "",
+          "resolution_command": ""
+        }
+      ],
+      "imported": false,
+      "import_source": null,
+      "imported_at": null,
+      "checksum": "e69c2d2f09f303a6"
+    }
+  },
+  "bundle_import_logs": [],
+  "last_bundle": "021ab98b8b7b",
+  "landings": {
+    "d66ae5d88c26": {
+      "landing_id": "d66ae5d88c26",
+      "run_id": "806322f2da3a",
+      "snapshot_id": "e65411d0676a",
+      "plan_id": "39e760eaf73a",
+      "created_at": "2026-06-16T20:07:38.468239",
+      "dest_dir": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest",
+      "source_dir": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source",
+      "total_moved_count": 3,
+      "total_skipped_conflict_count": 0,
+      "total_skipped_manual_count": 0,
+      "total_failed_count": 0,
+      "is_dry_run": false,
+      "is_undone": false,
+      "undone_at": null,
+      "target_dirs": [
+        {
+          "target_dir": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest\\notes",
+          "file_count": 1,
+          "dir_path_digest": "6307a02f0e7c536c"
+        },
+        {
+          "target_dir": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest\\pdfs",
+          "file_count": 2,
+          "dir_path_digest": "39c0d4382bb478c2"
+        }
+      ],
+      "file_fingerprints": [
+        {
+          "fingerprint_id": "3656d4b74871",
+          "source_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source\\invoice_A.pdf",
+          "target_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest\\pdfs\\invoice_A.pdf",
+          "filename": "invoice_A.pdf",
+          "matched_rule": "pdfs",
+          "file_size": 1,
+          "mtime": 1781611657.0531902,
+          "content_digest": "02ab419a0ee3690b33a932a40a10e02173e0e2065a601035854f72297479fe5f"
+        },
+        {
+          "fingerprint_id": "de446463afbf",
+          "source_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source\\invoice_B.pdf",
+          "target_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest\\pdfs\\invoice_B.pdf",
+          "filename": "invoice_B.pdf",
+          "matched_rule": "pdfs",
+          "file_size": 1,
+          "mtime": 1781611657.0531902,
+          "content_digest": "00450871e719def7c5ad9ed800a3a95d2fe543db3c14a27af29033970f173fb8"
+        },
+        {
+          "fingerprint_id": "63c26cb9207c",
+          "source_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source\\memo.txt",
+          "target_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest\\notes\\memo.txt",
+          "filename": "memo.txt",
+          "matched_rule": "notes",
+          "file_size": 4,
+          "mtime": 1781611657.0543208,
+          "content_digest": "c0121c0318064be454211af624456f849dce3ac8fe2a92f076882dcee9c50e7a"
+        }
+      ],
+      "manual_renames": [],
+      "config_snapshot_digest": "96b060386c16e596",
+      "dest_dir_digest": "c1ddb37ca148427a",
+      "move_target_paths_digest": "2dab136a71630cc6",
+      "file_digests_summary": "5633462fc188f659",
+      "status": "active",
+      "checksum": "3fc56779702ddf2f",
+      "imported": false,
+      "import_source": null,
+      "imported_at": null,
+      "signoff_id": null,
+      "signoff_snapshot_config_digest": "",
+      "change_summary": "成功移动 3 个文件；涉及 2 个目标目录",
+      "export_result": "",
+      "landing_version": "1.0"
+    }
+  },
+  "landing_import_logs": [],
+  "last_landing": "d66ae5d88c26",
+  "last_scan": "2026-06-16T20:07:37.514440",
+  "last_plan": "39e760eaf73a",
+  "last_snapshot": "e65411d0676a",
+  "active_lock_id": null,
+  "created_at": "2026-06-16T20:07:37.513394",
+  "scan_config": {
+    "source_dir": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source",
+    "dest_dir": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest",
+    "rules": [
+      {
+        "name": "pdfs",
+        "pattern": "*.pdf",
+        "target": "pdfs",
+        "description": null
+      },
+      {
+        "name": "notes",
+        "pattern": "*.txt",
+        "target": "notes",
+        "description": null
+      }
+    ],
+    "state_file": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/state.json",
+    "recursive": true,
+    "file_extensions": null,
+    "config_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\review_tmp_manual\\orig\\config.yaml",
+    "config_mtime": 1781611657.0543208
+  },
+  "handovers": {
+    "hnd_4f0425fa732f": {
+      "handover_id": "hnd_4f0425fa732f",
+      "handover_version": "1.0.0",
+      "created_at": "2026-06-16T20:07:39.636607",
+      "run_id": "806322f2da3a",
+      "plan_id": "39e760eaf73a",
+      "snapshot_id": "e65411d0676a",
+      "landing_id": "d66ae5d88c26",
+      "source_dir": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source",
+      "dest_dir": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest",
+      "landing_fingerprint": {
+        "landing_id": "d66ae5d88c26",
+        "run_id": "806322f2da3a",
+        "snapshot_id": "e65411d0676a",
+        "plan_id": "39e760eaf73a",
+        "created_at": "2026-06-16T20:07:38.468239",
+        "dest_dir": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest",
+        "source_dir": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source",
+        "total_moved_count": 3,
+        "total_skipped_conflict_count": 0,
+        "total_skipped_manual_count": 0,
+        "total_failed_count": 0,
+        "is_dry_run": false,
+        "is_undone": false,
+        "undone_at": null,
+        "target_dirs": [
+          {
+            "target_dir": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest\\notes",
+            "file_count": 1,
+            "dir_path_digest": "6307a02f0e7c536c"
+          },
+          {
+            "target_dir": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest\\pdfs",
+            "file_count": 2,
+            "dir_path_digest": "39c0d4382bb478c2"
+          }
+        ],
+        "file_fingerprints": [
+          {
+            "fingerprint_id": "3656d4b74871",
+            "source_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source\\invoice_A.pdf",
+            "target_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest\\pdfs\\invoice_A.pdf",
+            "filename": "invoice_A.pdf",
+            "matched_rule": "pdfs",
+            "file_size": 1,
+            "mtime": 1781611657.0531902,
+            "content_digest": "02ab419a0ee3690b33a932a40a10e02173e0e2065a601035854f72297479fe5f"
+          },
+          {
+            "fingerprint_id": "de446463afbf",
+            "source_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source\\invoice_B.pdf",
+            "target_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest\\pdfs\\invoice_B.pdf",
+            "filename": "invoice_B.pdf",
+            "matched_rule": "pdfs",
+            "file_size": 1,
+            "mtime": 1781611657.0531902,
+            "content_digest": "00450871e719def7c5ad9ed800a3a95d2fe543db3c14a27af29033970f173fb8"
+          },
+          {
+            "fingerprint_id": "63c26cb9207c",
+            "source_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source\\memo.txt",
+            "target_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest\\notes\\memo.txt",
+            "filename": "memo.txt",
+            "matched_rule": "notes",
+            "file_size": 4,
+            "mtime": 1781611657.0543208,
+            "content_digest": "c0121c0318064be454211af624456f849dce3ac8fe2a92f076882dcee9c50e7a"
+          }
+        ],
+        "manual_renames": [],
+        "config_snapshot_digest": "96b060386c16e596",
+        "dest_dir_digest": "c1ddb37ca148427a",
+        "move_target_paths_digest": "2dab136a71630cc6",
+        "file_digests_summary": "5633462fc188f659",
+        "status": "active",
+        "checksum": "3fc56779702ddf2f",
+        "imported": false,
+        "import_source": null,
+        "imported_at": null,
+        "signoff_id": null,
+        "signoff_snapshot_config_digest": "",
+        "change_summary": "成功移动 3 个文件；涉及 2 个目标目录",
+        "export_result": "",
+        "landing_version": "1.0"
+      },
+      "config_fingerprint": {
+        "source_dir": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source",
+        "dest_dir": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest",
+        "state_file": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/state.json",
+        "file_extensions": [],
+        "rules_digest": "16ff2d3e78c5d58d",
+        "rules_count": 2,
+        "config_snapshot_digest": "96b060386c16e596",
+        "raw_rules": [
+          {
+            "name": "pdfs",
+            "pattern": "*.pdf",
+            "target": "pdfs",
+            "description": null
+          },
+          {
+            "name": "notes",
+            "pattern": "*.txt",
+            "target": "notes",
+            "description": null
+          }
+        ]
+      },
+      "target_dir_mappings": [
+        {
+          "original_target_dir": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest\\notes",
+          "target_dir_key": "notes",
+          "file_count": 1,
+          "file_list": [
+            "memo.txt"
+          ],
+          "dir_path_digest": "be65115430d05cfe"
+        },
+        {
+          "original_target_dir": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest\\pdfs",
+          "target_dir_key": "pdfs",
+          "file_count": 2,
+          "file_list": [
+            "invoice_A.pdf",
+            "invoice_B.pdf"
+          ],
+          "dir_path_digest": "f5f45605ded68f9c"
+        }
+      ],
+      "manual_renames": [],
+      "conflict_summary": {
+        "skipped_conflict_count": 0,
+        "skipped_manual_count": 0,
+        "failed_count": 0,
+        "conflict_reasons": [],
+        "manual_skip_reasons": [],
+        "error_details": []
+      },
+      "last_verify_result": {
+        "status": "valid",
+        "landing_id": "d66ae5d88c26",
+        "run_id": "806322f2da3a",
+        "snapshot_id": "e65411d0676a",
+        "plan_id": "39e760eaf73a",
+        "errors": [],
+        "warnings": [],
+        "conflict_types": [],
+        "diff_result": {
+          "diff_id": "2315ce3ae4a9",
+          "landing_id_local": "d66ae5d88c26",
+          "landing_id_imported": "d66ae5d88c26",
+          "compared_at": "2026-06-16T20:07:39.636607",
+          "has_diff": true,
+          "diff_fields": [
+            "duplicate_import"
+          ],
+          "diff_details": {
+            "duplicate_import": "本地已存在 landing_id=d66ae5d88c26"
+          },
+          "dest_dir_changed": false,
+          "target_dirs_diff": [],
+          "target_paths_diff": [],
+          "file_fingerprints_diff": [],
+          "file_count_mismatch": false,
+          "config_changed": false,
+          "duplicate_import": true
+        },
+        "current_config_dest_dir": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest",
+        "landing_dest_dir": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest",
+        "valid_items": [],
+        "invalid_items": [],
+        "conflict_items": [],
+        "verified_at": "2026-06-16T20:07:39.636607",
+        "verify_source": "generate_handover"
+      },
+      "change_summary": "成功移动 3 个文件；涉及 2 个目标目录",
+      "notes": "导出至: D:\\workSpace\\AI__SPACE\\lfc-00019\\review_tmp_manual\\bundle.json; 文件大小: 6573 字节; 目标目录映射: 2 个; 落点文件: 3 个",
+      "imported": false,
+      "import_source": null,
+      "imported_at": null,
+      "import_rebind_map": {},
+      "last_import_log_id": "",
+      "checksum": "498e9fd6452de2c0ee0f920347b99420"
+    }
+  },
+  "last_handover": "hnd_4f0425fa732f"
+}

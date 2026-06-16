@@ -1,0 +1,342 @@
+{
+  "scanned_files": [],
+  "plans": {},
+  "runs": {},
+  "undo_records": [],
+  "snapshots": {},
+  "import_logs": [],
+  "plan_locks": [],
+  "lock_violations": [],
+  "plan_diffs": [],
+  "remark_histories": [],
+  "signoff_records": [],
+  "signoff_conflicts": [],
+  "validation_history": [],
+  "execution_bundles": {},
+  "bundle_import_logs": [],
+  "last_bundle": null,
+  "landings": {
+    "d66ae5d88c26": {
+      "landing_id": "d66ae5d88c26",
+      "run_id": "806322f2da3a",
+      "snapshot_id": "e65411d0676a",
+      "plan_id": "39e760eaf73a",
+      "created_at": "2026-06-16T20:07:38.468239",
+      "dest_dir": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/fresh/dest",
+      "source_dir": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source",
+      "total_moved_count": 3,
+      "total_skipped_conflict_count": 0,
+      "total_skipped_manual_count": 0,
+      "total_failed_count": 0,
+      "is_dry_run": false,
+      "is_undone": false,
+      "undone_at": null,
+      "target_dirs": [
+        {
+          "target_dir": "D:\\workSpace\\AI__SPACE\\lfc-00019\\review_tmp_manual\\fresh\\dest\\notes",
+          "file_count": 1,
+          "dir_path_digest": "ddc5c7e5d0f873f3"
+        },
+        {
+          "target_dir": "D:\\workSpace\\AI__SPACE\\lfc-00019\\review_tmp_manual\\fresh\\dest\\pdfs",
+          "file_count": 2,
+          "dir_path_digest": "1efa6f36c2e39726"
+        }
+      ],
+      "file_fingerprints": [
+        {
+          "fingerprint_id": "3656d4b74871",
+          "source_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source\\invoice_A.pdf",
+          "target_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\review_tmp_manual\\fresh\\dest\\pdfs\\invoice_A.pdf",
+          "filename": "invoice_A.pdf",
+          "matched_rule": "pdfs",
+          "file_size": 1,
+          "mtime": 1781611657.0531902,
+          "content_digest": "02ab419a0ee3690b33a932a40a10e02173e0e2065a601035854f72297479fe5f"
+        },
+        {
+          "fingerprint_id": "de446463afbf",
+          "source_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source\\invoice_B.pdf",
+          "target_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\review_tmp_manual\\fresh\\dest\\pdfs\\invoice_B.pdf",
+          "filename": "invoice_B.pdf",
+          "matched_rule": "pdfs",
+          "file_size": 1,
+          "mtime": 1781611657.0531902,
+          "content_digest": "00450871e719def7c5ad9ed800a3a95d2fe543db3c14a27af29033970f173fb8"
+        },
+        {
+          "fingerprint_id": "63c26cb9207c",
+          "source_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source\\memo.txt",
+          "target_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\review_tmp_manual\\fresh\\dest\\notes\\memo.txt",
+          "filename": "memo.txt",
+          "matched_rule": "notes",
+          "file_size": 4,
+          "mtime": 1781611657.0543208,
+          "content_digest": "c0121c0318064be454211af624456f849dce3ac8fe2a92f076882dcee9c50e7a"
+        }
+      ],
+      "manual_renames": [],
+      "config_snapshot_digest": "96b060386c16e596",
+      "dest_dir_digest": "c1ddb37ca148427a",
+      "move_target_paths_digest": "2dab136a71630cc6",
+      "file_digests_summary": "5633462fc188f659",
+      "status": "active",
+      "checksum": "3fc56779702ddf2f",
+      "imported": false,
+      "import_source": null,
+      "imported_at": null,
+      "signoff_id": null,
+      "signoff_snapshot_config_digest": "",
+      "change_summary": "成功移动 3 个文件；涉及 2 个目标目录",
+      "export_result": "",
+      "landing_version": "1.0"
+    }
+  },
+  "landing_import_logs": [],
+  "last_landing": "d66ae5d88c26",
+  "last_scan": null,
+  "last_plan": null,
+  "last_snapshot": null,
+  "active_lock_id": null,
+  "created_at": "2026-06-16T20:07:40.485921",
+  "handovers": {
+    "hnd_4f0425fa732f": {
+      "handover_id": "hnd_4f0425fa732f",
+      "handover_version": "1.0.0",
+      "created_at": "2026-06-16T20:07:39.636607",
+      "run_id": "806322f2da3a",
+      "plan_id": "39e760eaf73a",
+      "snapshot_id": "e65411d0676a",
+      "landing_id": "d66ae5d88c26",
+      "source_dir": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source",
+      "dest_dir": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/fresh/dest",
+      "landing_fingerprint": {
+        "landing_id": "d66ae5d88c26",
+        "run_id": "806322f2da3a",
+        "snapshot_id": "e65411d0676a",
+        "plan_id": "39e760eaf73a",
+        "created_at": "2026-06-16T20:07:38.468239",
+        "dest_dir": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/fresh/dest",
+        "source_dir": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source",
+        "total_moved_count": 3,
+        "total_skipped_conflict_count": 0,
+        "total_skipped_manual_count": 0,
+        "total_failed_count": 0,
+        "is_dry_run": false,
+        "is_undone": false,
+        "undone_at": null,
+        "target_dirs": [
+          {
+            "target_dir": "D:\\workSpace\\AI__SPACE\\lfc-00019\\review_tmp_manual\\fresh\\dest\\notes",
+            "file_count": 1,
+            "dir_path_digest": "ddc5c7e5d0f873f3"
+          },
+          {
+            "target_dir": "D:\\workSpace\\AI__SPACE\\lfc-00019\\review_tmp_manual\\fresh\\dest\\pdfs",
+            "file_count": 2,
+            "dir_path_digest": "1efa6f36c2e39726"
+          }
+        ],
+        "file_fingerprints": [
+          {
+            "fingerprint_id": "3656d4b74871",
+            "source_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source\\invoice_A.pdf",
+            "target_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\review_tmp_manual\\fresh\\dest\\pdfs\\invoice_A.pdf",
+            "filename": "invoice_A.pdf",
+            "matched_rule": "pdfs",
+            "file_size": 1,
+            "mtime": 1781611657.0531902,
+            "content_digest": "02ab419a0ee3690b33a932a40a10e02173e0e2065a601035854f72297479fe5f"
+          },
+          {
+            "fingerprint_id": "de446463afbf",
+            "source_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source\\invoice_B.pdf",
+            "target_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\review_tmp_manual\\fresh\\dest\\pdfs\\invoice_B.pdf",
+            "filename": "invoice_B.pdf",
+            "matched_rule": "pdfs",
+            "file_size": 1,
+            "mtime": 1781611657.0531902,
+            "content_digest": "00450871e719def7c5ad9ed800a3a95d2fe543db3c14a27af29033970f173fb8"
+          },
+          {
+            "fingerprint_id": "63c26cb9207c",
+            "source_path": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source\\memo.txt",
+            "target_path": "D:\\workSpace\\AI__SPACE\\lfc-00019\\review_tmp_manual\\fresh\\dest\\notes\\memo.txt",
+            "filename": "memo.txt",
+            "matched_rule": "notes",
+            "file_size": 4,
+            "mtime": 1781611657.0543208,
+            "content_digest": "c0121c0318064be454211af624456f849dce3ac8fe2a92f076882dcee9c50e7a"
+          }
+        ],
+        "manual_renames": [],
+        "config_snapshot_digest": "96b060386c16e596",
+        "dest_dir_digest": "c1ddb37ca148427a",
+        "move_target_paths_digest": "2dab136a71630cc6",
+        "file_digests_summary": "5633462fc188f659",
+        "status": "active",
+        "checksum": "3fc56779702ddf2f",
+        "imported": false,
+        "import_source": null,
+        "imported_at": null,
+        "signoff_id": null,
+        "signoff_snapshot_config_digest": "",
+        "change_summary": "成功移动 3 个文件；涉及 2 个目标目录",
+        "export_result": "",
+        "landing_version": "1.0"
+      },
+      "config_fingerprint": {
+        "source_dir": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source",
+        "dest_dir": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest",
+        "state_file": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/state.json",
+        "file_extensions": [],
+        "rules_digest": "16ff2d3e78c5d58d",
+        "rules_count": 2,
+        "config_snapshot_digest": "96b060386c16e596",
+        "raw_rules": [
+          {
+            "name": "pdfs",
+            "pattern": "*.pdf",
+            "target": "pdfs",
+            "description": null
+          },
+          {
+            "name": "notes",
+            "pattern": "*.txt",
+            "target": "notes",
+            "description": null
+          }
+        ]
+      },
+      "target_dir_mappings": [
+        {
+          "original_target_dir": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest\\notes",
+          "target_dir_key": "notes",
+          "file_count": 1,
+          "file_list": [
+            "memo.txt"
+          ],
+          "dir_path_digest": "be65115430d05cfe"
+        },
+        {
+          "original_target_dir": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest\\pdfs",
+          "target_dir_key": "pdfs",
+          "file_count": 2,
+          "file_list": [
+            "invoice_A.pdf",
+            "invoice_B.pdf"
+          ],
+          "dir_path_digest": "f5f45605ded68f9c"
+        }
+      ],
+      "manual_renames": [],
+      "conflict_summary": {
+        "skipped_conflict_count": 0,
+        "skipped_manual_count": 0,
+        "failed_count": 0,
+        "conflict_reasons": [],
+        "manual_skip_reasons": [],
+        "error_details": []
+      },
+      "last_verify_result": {
+        "status": "valid",
+        "landing_id": "d66ae5d88c26",
+        "run_id": "806322f2da3a",
+        "snapshot_id": "e65411d0676a",
+        "plan_id": "39e760eaf73a",
+        "errors": [],
+        "warnings": [
+          "清单校验和不一致（期望: 3fc56779702ddf2f，实际: d07c8ab0e5bf6e18），文件可能在传输/保存过程中被修改。"
+        ],
+        "conflict_types": [],
+        "diff_result": {
+          "diff_id": "a21c533d8554",
+          "landing_id_local": "d66ae5d88c26",
+          "landing_id_imported": "d66ae5d88c26",
+          "compared_at": "2026-06-16T20:07:43.725953",
+          "has_diff": true,
+          "diff_fields": [
+            "duplicate_import"
+          ],
+          "diff_details": {
+            "duplicate_import": "本地已存在 landing_id=d66ae5d88c26"
+          },
+          "dest_dir_changed": false,
+          "target_dirs_diff": [],
+          "target_paths_diff": [],
+          "file_fingerprints_diff": [],
+          "file_count_mismatch": false,
+          "config_changed": false,
+          "duplicate_import": true
+        },
+        "current_config_dest_dir": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/fresh/dest",
+        "landing_dest_dir": "D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/fresh/dest",
+        "valid_items": [],
+        "invalid_items": [],
+        "conflict_items": [],
+        "verified_at": "2026-06-16T20:07:43.727505",
+        "verify_source": "review_handover"
+      },
+      "change_summary": "成功移动 3 个文件；涉及 2 个目标目录",
+      "notes": "",
+      "imported": true,
+      "import_source": "D:\\workSpace\\AI__SPACE\\lfc-00019\\review_tmp_manual\\bundle.json",
+      "imported_at": "2026-06-16T20:07:40.486950",
+      "import_rebind_map": {
+        "notes": "D:\\workSpace\\AI__SPACE\\lfc-00019\\review_tmp_manual\\fresh\\dest\\notes",
+        "pdfs": "D:\\workSpace\\AI__SPACE\\lfc-00019\\review_tmp_manual\\fresh\\dest\\pdfs"
+      },
+      "last_import_log_id": "hil_d51113af0abc",
+      "checksum": "498e9fd6452de2c0ee0f920347b99420"
+    }
+  },
+  "last_handover": "hnd_4f0425fa732f",
+  "handover_import_logs": [
+    {
+      "import_log_id": "hil_d51113af0abc",
+      "handover_id": "hnd_4f0425fa732f",
+      "landing_id": "d66ae5d88c26",
+      "run_id": "806322f2da3a",
+      "snapshot_id": "e65411d0676a",
+      "timestamp": "2026-06-16T20:07:40.490017",
+      "status": "success",
+      "source_file": "D:\\workSpace\\AI__SPACE\\lfc-00019\\review_tmp_manual\\bundle.json",
+      "errors": [],
+      "warnings": [
+        "目标目录已重绑定: D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest -> D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/fresh/dest"
+      ],
+      "conflict_details": [],
+      "rebind_map": {
+        "notes": "D:\\workSpace\\AI__SPACE\\lfc-00019\\review_tmp_manual\\fresh\\dest\\notes",
+        "pdfs": "D:\\workSpace\\AI__SPACE\\lfc-00019\\review_tmp_manual\\fresh\\dest\\pdfs"
+      },
+      "forced": false,
+      "imported_by": "cli"
+    },
+    {
+      "import_log_id": "hil_011b8b92e7d0",
+      "handover_id": "hnd_4f0425fa732f",
+      "landing_id": "d66ae5d88c26",
+      "run_id": "806322f2da3a",
+      "snapshot_id": "e65411d0676a",
+      "timestamp": "2026-06-16T20:07:41.542039",
+      "status": "skipped",
+      "source_file": "D:\\workSpace\\AI__SPACE\\lfc-00019\\review_tmp_manual\\bundle.json",
+      "errors": [
+        "该交接包已在此工作区导入过: handover_id=hnd_4f0425fa732f, 首次导入时间: 2026-06-16T20:07:40.486950"
+      ],
+      "warnings": [
+        "目标目录已重绑定: D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest -> D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/fresh/dest"
+      ],
+      "conflict_details": [
+        "重复导入: handover_id 已存在"
+      ],
+      "rebind_map": {
+        "notes": "D:\\workSpace\\AI__SPACE\\lfc-00019\\review_tmp_manual\\fresh\\dest\\notes",
+        "pdfs": "D:\\workSpace\\AI__SPACE\\lfc-00019\\review_tmp_manual\\fresh\\dest\\pdfs"
+      },
+      "forced": false,
+      "imported_by": "cli"
+    }
+  ]
+}

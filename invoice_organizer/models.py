@@ -1277,6 +1277,7 @@ class LandingFingerprint:
         result["target_dirs"] = [td.to_dict() for td in self.target_dirs]
         result["file_fingerprints"] = [fp.to_dict() for fp in self.file_fingerprints]
         result["manual_renames"] = [mr.to_dict() for mr in self.manual_renames]
+        result["landing_version"] = LANDING_FINGERPRINT_VERSION
         return result
 
     @classmethod
@@ -1457,6 +1458,29 @@ class LandingVerifyResult:
             result["diff_result"] = self.diff_result.to_dict()
         return result
 
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "LandingVerifyResult":
+        diff_data = data.get("diff_result")
+        diff = LandingFingerprintDiff.from_dict(diff_data) if diff_data else None
+        return cls(
+            status=data["status"],
+            landing_id=data["landing_id"],
+            run_id=data["run_id"],
+            snapshot_id=data.get("snapshot_id", ""),
+            plan_id=data.get("plan_id", ""),
+            errors=list(data.get("errors", [])),
+            warnings=list(data.get("warnings", [])),
+            conflict_types=list(data.get("conflict_types", [])),
+            diff_result=diff,
+            current_config_dest_dir=data.get("current_config_dest_dir", ""),
+            landing_dest_dir=data.get("landing_dest_dir", ""),
+            valid_items=list(data.get("valid_items", [])),
+            invalid_items=list(data.get("invalid_items", [])),
+            conflict_items=list(data.get("conflict_items", [])),
+            verified_at=data.get("verified_at", now_iso()),
+            verify_source=data.get("verify_source", ""),
+        )
+
 
 @dataclass
 class LandingImportLog:
@@ -1495,6 +1519,288 @@ class LandingImportLog:
             conflict_details=list(data.get("conflict_details", [])),
             forced=data.get("forced", False),
             imported_by=data.get("imported_by", "cli"),
+        )
+
+
+HANDOVER_BUNDLE_VERSION: str = "1.0.0"
+
+HANDOVER_REQUIRED_FIELDS: List[str] = [
+    "handover_id", "handover_version", "created_at",
+    "run_id", "plan_id", "snapshot_id", "landing_id",
+    "source_dir", "dest_dir",
+    "target_dir_mappings",
+    "landing_fingerprint",
+    "config_fingerprint",
+]
+
+
+@dataclass
+class TargetDirMapping:
+    """目标目录映射条目
+
+    记录交接中的目标目录映射，支持 fresh workspace 重绑定。
+    """
+    original_target_dir: str
+    target_dir_key: str  # 相对 key（如 invoices、docs 等）
+    file_count: int = 0
+    file_list: List[str] = field(default_factory=list)
+    dir_path_digest: str = ""
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "TargetDirMapping":
+        return cls(
+            original_target_dir=data["original_target_dir"],
+            target_dir_key=data.get("target_dir_key", ""),
+            file_count=data.get("file_count", 0),
+            file_list=list(data.get("file_list", [])),
+            dir_path_digest=data.get("dir_path_digest", ""),
+        )
+
+
+@dataclass
+class ConfigFingerprint:
+    """配置指纹
+
+    记录交接包生成时的关键配置特征，用于一致性校验和重绑定参考。
+    """
+    source_dir: str
+    dest_dir: str
+    state_file: str = ""
+    file_extensions: List[str] = field(default_factory=list)
+    rules_digest: str = ""  # rules JSON 哈希
+    rules_count: int = 0
+    config_snapshot_digest: str = ""  # 来自 LandingFingerprint 的 config_snapshot_digest
+    raw_rules: List[Dict[str, Any]] = field(default_factory=list)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "ConfigFingerprint":
+        return cls(
+            source_dir=data["source_dir"],
+            dest_dir=data["dest_dir"],
+            state_file=data.get("state_file", ""),
+            file_extensions=list(data.get("file_extensions", [])),
+            rules_digest=data.get("rules_digest", ""),
+            rules_count=data.get("rules_count", 0),
+            config_snapshot_digest=data.get("config_snapshot_digest", ""),
+            raw_rules=list(data.get("raw_rules", [])),
+        )
+
+
+@dataclass
+class HandoverConflictSummary:
+    """冲突摘要
+
+    记录交接包生成时的冲突情况、跳过原因等。
+    """
+    skipped_conflict_count: int = 0
+    skipped_manual_count: int = 0
+    failed_count: int = 0
+    conflict_reasons: List[str] = field(default_factory=list)
+    manual_skip_reasons: List[str] = field(default_factory=list)
+    error_details: List[str] = field(default_factory=list)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "HandoverConflictSummary":
+        return cls(
+            skipped_conflict_count=data.get("skipped_conflict_count", 0),
+            skipped_manual_count=data.get("skipped_manual_count", 0),
+            failed_count=data.get("failed_count", 0),
+            conflict_reasons=list(data.get("conflict_reasons", [])),
+            manual_skip_reasons=list(data.get("manual_skip_reasons", [])),
+            error_details=list(data.get("error_details", [])),
+        )
+
+
+@dataclass
+class HandoverPreviewResult:
+    """交接包预检结果
+
+    用于 preview-handover 命令输出重绑定映射和预检结论。
+    """
+    handover_id: str
+    status: str  # "ok" | "warnings" | "errors"
+    original_dest_dir: str
+    proposed_dest_dir: str
+    rebind_map: Dict[str, str]  # key: target_dir_key -> 新绝对路径
+    errors: List[str] = field(default_factory=list)
+    warnings: List[str] = field(default_factory=list)
+    permission_checks: List[Dict[str, Any]] = field(default_factory=list)
+    can_import: bool = True
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "HandoverPreviewResult":
+        return cls(
+            handover_id=data["handover_id"],
+            status=data["status"],
+            original_dest_dir=data["original_dest_dir"],
+            proposed_dest_dir=data["proposed_dest_dir"],
+            rebind_map=dict(data.get("rebind_map", {})),
+            errors=list(data.get("errors", [])),
+            warnings=list(data.get("warnings", [])),
+            permission_checks=list(data.get("permission_checks", [])),
+            can_import=data.get("can_import", True),
+        )
+
+
+@dataclass
+class HandoverImportLog:
+    """交接包导入日志"""
+    import_log_id: str
+    handover_id: str
+    landing_id: str
+    run_id: str
+    snapshot_id: str
+    timestamp: str
+    status: str  # "success" | "failed" | "forced" | "skipped"
+    source_file: str
+    errors: List[str] = field(default_factory=list)
+    warnings: List[str] = field(default_factory=list)
+    conflict_details: List[str] = field(default_factory=list)
+    rebind_map: Dict[str, str] = field(default_factory=dict)
+    forced: bool = False
+    imported_by: str = "cli"
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "HandoverImportLog":
+        return cls(
+            import_log_id=data["import_log_id"],
+            handover_id=data["handover_id"],
+            landing_id=data["landing_id"],
+            run_id=data["run_id"],
+            snapshot_id=data["snapshot_id"],
+            timestamp=data["timestamp"],
+            status=data["status"],
+            source_file=data["source_file"],
+            errors=list(data.get("errors", [])),
+            warnings=list(data.get("warnings", [])),
+            conflict_details=list(data.get("conflict_details", [])),
+            rebind_map=dict(data.get("rebind_map", {})),
+            forced=data.get("forced", False),
+            imported_by=data.get("imported_by", "cli"),
+        )
+
+
+@dataclass
+class LandingHandoverBundle:
+    """落点交接包
+
+    一次 apply 完成后的完整交接包，包含：
+    - 真实落点指纹（LandingFingerprint）
+    - 配置指纹（关键配置特征）
+    - 目标目录映射（支持重绑定）
+    - 手工改名记录
+    - 冲突摘要
+    - 最近一次 verify 结论
+
+    用于跨工作区交接、复原、继续核对。
+    """
+    handover_id: str
+    handover_version: str
+    created_at: str
+    run_id: str
+    plan_id: str
+    snapshot_id: str
+    landing_id: str
+
+    source_dir: str
+    dest_dir: str
+
+    landing_fingerprint: LandingFingerprint
+    config_fingerprint: ConfigFingerprint
+
+    target_dir_mappings: List[TargetDirMapping]
+    manual_renames: List[ManualRenameRecord]
+    conflict_summary: HandoverConflictSummary
+    last_verify_result: Optional[LandingVerifyResult] = None
+
+    change_summary: str = ""
+    notes: str = ""
+
+    imported: bool = False
+    import_source: Optional[str] = None
+    imported_at: Optional[str] = None
+    import_rebind_map: Dict[str, str] = field(default_factory=dict)
+    last_import_log_id: str = ""
+    checksum: str = ""
+
+    def to_dict(self) -> Dict[str, Any]:
+        result = {
+            "handover_id": self.handover_id,
+            "handover_version": self.handover_version,
+            "created_at": self.created_at,
+            "run_id": self.run_id,
+            "plan_id": self.plan_id,
+            "snapshot_id": self.snapshot_id,
+            "landing_id": self.landing_id,
+            "source_dir": self.source_dir,
+            "dest_dir": self.dest_dir,
+            "landing_fingerprint": self.landing_fingerprint.to_dict(),
+            "config_fingerprint": self.config_fingerprint.to_dict(),
+            "target_dir_mappings": [m.to_dict() for m in self.target_dir_mappings],
+            "manual_renames": [r.to_dict() for r in self.manual_renames],
+            "conflict_summary": self.conflict_summary.to_dict(),
+            "last_verify_result": self.last_verify_result.to_dict() if self.last_verify_result else None,
+            "change_summary": self.change_summary,
+            "notes": self.notes,
+            "imported": self.imported,
+            "import_source": self.import_source,
+            "imported_at": self.imported_at,
+            "import_rebind_map": dict(self.import_rebind_map),
+            "last_import_log_id": self.last_import_log_id,
+            "checksum": self.checksum,
+        }
+        return result
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "LandingHandoverBundle":
+        mappings_data = data.get("target_dir_mappings", [])
+        mappings = [TargetDirMapping.from_dict(m) for m in mappings_data] if mappings_data else []
+
+        renames_data = data.get("manual_renames", [])
+        renames = [ManualRenameRecord.from_dict(r) for r in renames_data] if renames_data else []
+
+        lv_data = data.get("last_verify_result")
+        last_verify = LandingVerifyResult.from_dict(lv_data) if lv_data else None
+
+        return cls(
+            handover_id=data["handover_id"],
+            handover_version=data.get("handover_version", HANDOVER_BUNDLE_VERSION),
+            created_at=data["created_at"],
+            run_id=data["run_id"],
+            plan_id=data.get("plan_id", ""),
+            snapshot_id=data["snapshot_id"],
+            landing_id=data["landing_id"],
+            source_dir=data["source_dir"],
+            dest_dir=data["dest_dir"],
+            landing_fingerprint=LandingFingerprint.from_dict(data["landing_fingerprint"]),
+            config_fingerprint=ConfigFingerprint.from_dict(data["config_fingerprint"]),
+            target_dir_mappings=mappings,
+            manual_renames=renames,
+            conflict_summary=HandoverConflictSummary.from_dict(data.get("conflict_summary", {})),
+            last_verify_result=last_verify,
+            change_summary=data.get("change_summary", ""),
+            notes=data.get("notes", ""),
+            imported=data.get("imported", False),
+            import_source=data.get("import_source"),
+            imported_at=data.get("imported_at"),
+            import_rebind_map=dict(data.get("import_rebind_map", {})),
+            last_import_log_id=data.get("last_import_log_id", ""),
+            checksum=data.get("checksum", ""),
         )
 
 

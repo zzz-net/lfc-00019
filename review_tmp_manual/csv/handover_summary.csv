@@ -1,0 +1,15 @@
+﻿字段,值
+handover_id,hnd_4f0425fa732f
+created_at,2026-06-16T20:07:39.636607
+run_id,806322f2da3a
+snapshot_id,e65411d0676a
+plan_id,39e760eaf73a
+landing_id,d66ae5d88c26
+source_dir,D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/source
+dest_dir,D:/workSpace/AI__SPACE/lfc-00019/review_tmp_manual/orig/dest
+target_dir_count,2
+file_count,3
+manual_rename_count,0
+change_summary,成功移动 3 个文件；涉及 2 个目标目录
+notes,导出至: D:\workSpace\AI__SPACE\lfc-00019\review_tmp_manual\bundle.json; 文件大小: 6573 字节; 目标目录映射: 2 个; 落点文件: 3 个
+checksum,498e9fd6452de2c0ee0f920347b99420
