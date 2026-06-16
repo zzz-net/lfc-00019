@@ -7,14 +7,16 @@
 
 === 执行记录 ===
 执行ID,预案ID,是否预演,撤销状态,创建时间,完成时间,文件,源->目标,状态,执行时间,错误信息
-758501d0f8f5,f2c26280be07,否,未撤销,2026-06-16T16:34:17.141562,2026-06-16T16:34:17.165971,notes.md,D:\workSpace\AI__SPACE\lfc-00019\examples\bundle_test_workspace\source\notes.md -> D:\workSpace\AI__SPACE\lfc-00019\examples\bundle_test_workspace\dest\documents\notes.md,skipped_manual,2026-06-16T16:34:17.143619,规则不在筛选范围内: 未分类文档
-758501d0f8f5,f2c26280be07,否,未撤销,2026-06-16T16:34:17.141562,2026-06-16T16:34:17.165971,2024年1月增值税专用发票_12345.pdf,D:\workSpace\AI__SPACE\lfc-00019\examples\bundle_test_workspace\source\2024年1月增值税专用发票_12345.pdf -> D:\workSpace\AI__SPACE\lfc-00019\examples\bundle_test_workspace\dest\vat_special\2024年1月增值税专用发票_12345.pdf,moved,2026-06-16T16:34:17.145705,
-758501d0f8f5,f2c26280be07,否,未撤销,2026-06-16T16:34:17.141562,2026-06-16T16:34:17.165971,2024年1月增值税专用发票_67890.pdf,D:\workSpace\AI__SPACE\lfc-00019\examples\bundle_test_workspace\source\2024年1月增值税专用发票_67890.pdf -> D:\workSpace\AI__SPACE\lfc-00019\examples\bundle_test_workspace\dest\vat_special\2024年1月增值税专用发票_67890.pdf,moved,2026-06-16T16:34:17.148800,
-758501d0f8f5,f2c26280be07,否,未撤销,2026-06-16T16:34:17.141562,2026-06-16T16:34:17.165971,2024年2月增值税普通发票_ABCDE.pdf,D:\workSpace\AI__SPACE\lfc-00019\examples\bundle_test_workspace\source\2024年2月增值税普通发票_ABCDE.pdf -> D:\workSpace\AI__SPACE\lfc-00019\examples\bundle_test_workspace\dest\vat/normal\2024年2月增值税普通发票_ABCDE.pdf,moved,2026-06-16T16:34:17.151832,
-758501d0f8f5,f2c26280be07,否,未撤销,2026-06-16T16:34:17.141562,2026-06-16T16:34:17.165971,出差报销单_202401.xlsx,D:\workSpace\AI__SPACE\lfc-00019\examples\bundle_test_workspace\source\出差报销单_202401.xlsx -> D:\workSpace\AI__SPACE\lfc-00019\examples\bundle_test_workspace\dest\reimbursement\出差报销单_202401.xlsx,moved,2026-06-16T16:34:17.155025,
-758501d0f8f5,f2c26280be07,否,未撤销,2026-06-16T16:34:17.141562,2026-06-16T16:34:17.165971,发票扫描件_出租车发票.png,D:\workSpace\AI__SPACE\lfc-00019\examples\bundle_test_workspace\source\发票扫描件_出租车发票.png -> D:\workSpace\AI__SPACE\lfc-00019\examples\bundle_test_workspace\dest\images\发票扫描件_出租车发票.png,moved,2026-06-16T16:34:17.157967,
-758501d0f8f5,f2c26280be07,否,未撤销,2026-06-16T16:34:17.141562,2026-06-16T16:34:17.165971,发票照片_餐厅发票.jpg,D:\workSpace\AI__SPACE\lfc-00019\examples\bundle_test_workspace\source\发票照片_餐厅发票.jpg -> D:\workSpace\AI__SPACE\lfc-00019\examples\bundle_test_workspace\dest\images/jpg\发票照片_餐厅发票.jpg,moved,2026-06-16T16:34:17.160641,
-758501d0f8f5,f2c26280be07,否,未撤销,2026-06-16T16:34:17.141562,2026-06-16T16:34:17.165971,采购合同_供应商A.docx,D:\workSpace\AI__SPACE\lfc-00019\examples\bundle_test_workspace\source\采购合同_供应商A.docx -> D:\workSpace\AI__SPACE\lfc-00019\examples\bundle_test_workspace\dest\contracts\采购合同_供应商A.docx,moved,2026-06-16T16:34:17.163802,
+a67fbb625d80,94819dd21cb2,否,未撤销,2026-06-16T18:04:18.717058,2026-06-16T18:04:18.783572,notes.md,D:\workSpace\AI__SPACE\lfc-00019\examples\bundle_test_workspace\source\notes.md -> D:\workSpace\AI__SPACE\lfc-00019\examples\bundle_test_workspace\dest\documents\notes.md,skipped_manual,2026-06-16T18:04:18.720686,规则不在筛选范围内: 未分类文档
+a67fbb625d80,94819dd21cb2,否,未撤销,2026-06-16T18:04:18.717058,2026-06-16T18:04:18.783572,2024年1月增值税专用发票_12345.pdf,D:\workSpace\AI__SPACE\lfc-00019\examples\bundle_test_workspace\source\2024年1月增值税专用发票_12345.pdf -> D:\workSpace\AI__SPACE\lfc-00019\examples\bundle_test_workspace\dest\vat_special\2024年1月增值税专用发票_12345.pdf,moved,2026-06-16T18:04:18.728632,
+a67fbb625d80,94819dd21cb2,否,未撤销,2026-06-16T18:04:18.717058,2026-06-16T18:04:18.783572,2024年1月增值税专用发票_67890.pdf,D:\workSpace\AI__SPACE\lfc-00019\examples\bundle_test_workspace\source\2024年1月增值税专用发票_67890.pdf -> D:\workSpace\AI__SPACE\lfc-00019\examples\bundle_test_workspace\dest\vat_special\2024年1月增值税专用发票_67890.pdf,moved,2026-06-16T18:04:18.734065,
+a67fbb625d80,94819dd21cb2,否,未撤销,2026-06-16T18:04:18.717058,2026-06-16T18:04:18.783572,2024年2月增值税普通发票_ABCDE.pdf,D:\workSpace\AI__SPACE\lfc-00019\examples\bundle_test_workspace\source\2024年2月增值税普通发票_ABCDE.pdf -> D:\workSpace\AI__SPACE\lfc-00019\examples\bundle_test_workspace\dest\vat/normal\2024年2月增值税普通发票_ABCDE.pdf,moved,2026-06-16T18:04:18.740297,
+a67fbb625d80,94819dd21cb2,否,未撤销,2026-06-16T18:04:18.717058,2026-06-16T18:04:18.783572,出差报销单_202401.xlsx,D:\workSpace\AI__SPACE\lfc-00019\examples\bundle_test_workspace\source\出差报销单_202401.xlsx -> D:\workSpace\AI__SPACE\lfc-00019\examples\bundle_test_workspace\dest\reimbursement\出差报销单_202401.xlsx,moved,2026-06-16T18:04:18.745360,
+a67fbb625d80,94819dd21cb2,否,未撤销,2026-06-16T18:04:18.717058,2026-06-16T18:04:18.783572,发票扫描件_出租车发票.png,D:\workSpace\AI__SPACE\lfc-00019\examples\bundle_test_workspace\source\发票扫描件_出租车发票.png -> D:\workSpace\AI__SPACE\lfc-00019\examples\bundle_test_workspace\dest\images\发票扫描件_出租车发票.png,moved,2026-06-16T18:04:18.751475,
+a67fbb625d80,94819dd21cb2,否,未撤销,2026-06-16T18:04:18.717058,2026-06-16T18:04:18.783572,发票照片_餐厅发票.jpg,D:\workSpace\AI__SPACE\lfc-00019\examples\bundle_test_workspace\source\发票照片_餐厅发票.jpg -> D:\workSpace\AI__SPACE\lfc-00019\examples\bundle_test_workspace\dest\images/jpg\发票照片_餐厅发票.jpg,moved,2026-06-16T18:04:18.759721,
+a67fbb625d80,94819dd21cb2,否,未撤销,2026-06-16T18:04:18.717058,2026-06-16T18:04:18.783572,电子发票_20240115_001.pdf,D:\workSpace\AI__SPACE\lfc-00019\examples\bundle_test_workspace\source\电子发票_20240115_001.pdf -> D:\workSpace\AI__SPACE\lfc-00019\examples\bundle_test_workspace\dest\electronic\电子发票_20240115_001.pdf,moved,2026-06-16T18:04:18.765578,
+a67fbb625d80,94819dd21cb2,否,未撤销,2026-06-16T18:04:18.717058,2026-06-16T18:04:18.783572,电子发票_20240116_002.pdf,D:\workSpace\AI__SPACE\lfc-00019\examples\bundle_test_workspace\source\电子发票_20240116_002.pdf -> D:\workSpace\AI__SPACE\lfc-00019\examples\bundle_test_workspace\dest\electronic\电子发票_20240116_002.pdf,moved,2026-06-16T18:04:18.775084,
+a67fbb625d80,94819dd21cb2,否,未撤销,2026-06-16T18:04:18.717058,2026-06-16T18:04:18.783572,采购合同_供应商A.docx,D:\workSpace\AI__SPACE\lfc-00019\examples\bundle_test_workspace\source\采购合同_供应商A.docx -> D:\workSpace\AI__SPACE\lfc-00019\examples\bundle_test_workspace\dest\contracts\采购合同_供应商A.docx,moved,2026-06-16T18:04:18.780475,
 
 === 撤销记录 ===
 执行ID,撤销时间,恢复数量,状态
@@ -30,7 +32,7 @@
 
 === 批次快照 ===
 快照ID,创建时间,预案ID,移动项数,有冲突,备注,标签,交接人,注意事项,备注更新时间,备注更新人
-e97a6173b9a3,2026-06-16T16:34:16.356068,f2c26280be07,8,否,,,,,,
+09f973177c24,2026-06-16T18:04:17.507873,94819dd21cb2,10,否,,,,,,
 
 === 备注修改历史 ===
 历史ID,快照ID,修改时间,修改人,修改来源,是否冲突,冲突详情,是否强制,变化字段
@@ -40,20 +42,35 @@ e97a6173b9a3,2026-06-16T16:34:16.356068,f2c26280be07,8,否,,,,,,
 
 === 签收记录 ===
 签收ID,快照ID,预案ID,状态,签收人,签收时间,截止时间,补充说明,创建时间,创建人,是否强制,是否活动,被取代ID,冲突详情,冲突ID
-5e5a952eff7b,e97a6173b9a3,f2c26280be07,已签收,验收测试员,2026-06-16T16:34:16.746544,2026-06-23T16:34:16,完整验收测试 - 批次归档包,2026-06-16T16:34:16.746544,cli,否,活动,,,
+f29607b27d03,09f973177c24,94819dd21cb2,已签收,验收测试员,2026-06-16T18:04:18.140921,2026-06-23T18:04:17,完整验收测试 - 批次归档包,2026-06-16T18:04:18.140921,cli,否,活动,,,
 
 === 签收冲突记录 ===
 冲突ID,快照ID,预案ID,状态,本地签收ID,导入签收ID,检测时间,导入来源,差异字段,差异详情,解决时间,解决人,解决说明,新签收ID
 
 === 签收校验历史 ===
 校验ID,快照ID,预案ID,触发命令,触发时间,状态,阻塞类型,是否过期,配置不一致,快照已更新,有未解决冲突,锁定不一致,活动签收ID,冲突ID,锁定ID,错误信息,警告信息,解决时间,解决人,解决说明,解决命令
-a39801173933,e97a6173b9a3,f2c26280be07,apply,2026-06-16T16:34:17.138036,通过,,否,否,否,否,否,5e5a952eff7b,,,,,,,,
-86df709cdd78,e97a6173b9a3,f2c26280be07,sign-off,2026-06-16T16:34:16.752130,通过,,否,否,否,否,否,5e5a952eff7b,,,,,,,,
+38fbbe29d620,09f973177c24,94819dd21cb2,apply,2026-06-16T18:04:18.712875,通过,,否,否,否,否,否,f29607b27d03,,,,,,,,
+2163880f51c7,09f973177c24,94819dd21cb2,sign-off,2026-06-16T18:04:18.148857,通过,,否,否,否,否,否,f29607b27d03,,,,,,,,
 
 === 执行批次归档包 ===
 Bundle ID,归档包版本,创建时间,Run ID,预案ID,快照ID,总记录数,成功数,冲突跳过数,人工跳过数,失败数,是否预演,是否撤销,签收状态,签收人,签收ID,校验和,是否导入,导入来源,导入时间
-8abbdccb15c4,1.0,2026-06-16T16:34:17.170090,758501d0f8f5,f2c26280be07,e97a6173b9a3,8,7,0,1,0,否,否,已签收,验收测试员,5e5a952eff7b,fb956ef0a9718a9b,是,D:\workSpace\AI__SPACE\lfc-00019\examples\bundle_test_workspace\outputs\original_bundle.json,2026-06-16T16:34:18.995065
+fe0a8e3b05cd,1.0,2026-06-16T18:04:18.788716,a67fbb625d80,94819dd21cb2,09f973177c24,10,9,0,1,0,否,否,已签收,验收测试员,f29607b27d03,efd8de07bb33045d,是,D:\workSpace\AI__SPACE\lfc-00019\examples\bundle_test_workspace\outputs\original_bundle.json,2026-06-16T18:04:21.838219
 
 === 归档包导入日志 ===
 导入日志ID,Bundle ID,Run ID,快照ID,导入时间,状态,源文件,是否强制导入,导入人,错误详情,警告详情,冲突类型
-9e8f7cf5439c,8abbdccb15c4,758501d0f8f5,e97a6173b9a3,2026-06-16T16:34:18.999187,成功,D:\workSpace\AI__SPACE\lfc-00019\examples\bundle_test_workspace\outputs\original_bundle.json,否,cli,,snapshot_id e97a6173b9a3 本地不存在，将从归档包导入。,
+a27770c9e108,fe0a8e3b05cd,a67fbb625d80,09f973177c24,2026-06-16T18:04:21.852880,成功,D:\workSpace\AI__SPACE\lfc-00019\examples\bundle_test_workspace\outputs\original_bundle.json,否,cli,,snapshot_id 09f973177c24 本地不存在，将从归档包导入。,
+
+=== 落点指纹清单 ===
+Landing ID,创建时间,Run ID,快照ID,预案ID,目标根目录,源目录,成功移动数,冲突跳过数,人工跳过数,失败数,目标目录数,文件指纹数,手工改名数,是否预演,是否撤销,撤销时间,状态,校验和,是否导入,导入来源,导入时间,签收ID
+
+=== 落点指纹-目标目录明细 ===
+Landing ID,目标目录,目录内文件数,目录路径摘要哈希
+
+=== 落点指纹-文件明细 ===
+Landing ID,指纹ID,文件名,源路径,目标路径,匹配规则,文件大小,修改时间,内容摘要哈希
+
+=== 落点指纹-手工改名明细 ===
+Landing ID,改名ID,原始目标路径,最终目标路径,改名原因,改名时间,改名人
+
+=== 落点指纹导入日志 ===
+导入日志ID,Landing ID,Run ID,快照ID,导入时间,状态,源文件,是否强制导入,导入人,错误详情,警告详情,冲突类型

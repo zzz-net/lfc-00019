@@ -1,69 +1,69 @@
 {
   "scanned_files": [
     {
-      "id": "91edae768aea",
+      "id": "1ce5947dcac2",
       "source_path": "./examples/sample_invoices\\2024年1月增值税专用发票_12345.pdf",
       "filename": "2024年1月增值税专用发票_12345.pdf",
       "size": 66,
-      "mtime": 1781556365.9680178,
+      "mtime": 1781604237.9416192,
       "matched_rule": "规则A-增值税专票"
     },
     {
-      "id": "e38ba93bea7f",
+      "id": "3bf3f390ba31",
       "source_path": "./examples/sample_invoices\\2024年1月增值税专用发票_67890.pdf",
       "filename": "2024年1月增值税专用发票_67890.pdf",
       "size": 66,
-      "mtime": 1781556365.9680178,
+      "mtime": 1781604237.94266,
       "matched_rule": "规则A-增值税专票"
     },
     {
-      "id": "144af0a56447",
+      "id": "b05d2ef0ad39",
       "source_path": "./examples/sample_invoices\\2024年2月增值税普通发票_ABCDE.pdf",
       "filename": "2024年2月增值税普通发票_ABCDE.pdf",
       "size": 66,
-      "mtime": 1781556365.969157,
+      "mtime": 1781604237.94266,
       "matched_rule": "规则B-增值税普票"
     },
     {
-      "id": "806b30452fcd",
+      "id": "d37d25c75316",
       "source_path": "./examples/sample_invoices\\发票扫描件_出租车发票.png",
       "filename": "发票扫描件_出租车发票.png",
       "size": 59,
-      "mtime": 1781556365.972334,
+      "mtime": 1781604237.9472404,
       "matched_rule": null
     },
     {
-      "id": "b02e0ba34912",
+      "id": "fe544b174aab",
       "source_path": "./examples/sample_invoices\\发票照片_餐厅发票.jpg",
       "filename": "发票照片_餐厅发票.jpg",
       "size": 53,
-      "mtime": 1781556365.9712982,
+      "mtime": 1781604237.9461892,
       "matched_rule": "发票图片"
     },
     {
-      "id": "e1c825441d5c",
+      "id": "8bbc847f2e96",
       "source_path": "./examples/sample_invoices\\电子发票_20240115_001.pdf",
       "filename": "电子发票_20240115_001.pdf",
       "size": 53,
-      "mtime": 1781556365.969157,
+      "mtime": 1781604237.9437096,
       "matched_rule": null
     },
     {
-      "id": "a4d44e479b78",
+      "id": "3037246eac91",
       "source_path": "./examples/sample_invoices\\电子发票_20240116_002.pdf",
       "filename": "电子发票_20240116_002.pdf",
       "size": 53,
-      "mtime": 1781556365.9702735,
+      "mtime": 1781604237.9447665,
       "matched_rule": null
     }
   ],
   "plans": {
-    "41d491ddbe22": {
-      "id": "41d491ddbe22",
-      "created_at": "2026-06-16T04:46:07.920616",
+    "fa45c26890db": {
+      "id": "fa45c26890db",
+      "created_at": "2026-06-16T18:04:00.102896",
       "moves": [
         {
-          "id": "92ecd8b7b06a",
+          "id": "4699f7bf2846",
           "source_path": "./examples/sample_invoices\\2024年1月增值税专用发票_12345.pdf",
           "target_path": "./examples/archived\\same_folder\\2024年1月增值税专用发票_12345.pdf",
           "filename": "2024年1月增值税专用发票_12345.pdf",
@@ -72,7 +72,7 @@
           "conflict_detail": null
         },
         {
-          "id": "53803b87fa9e",
+          "id": "40504639bef0",
           "source_path": "./examples/sample_invoices\\2024年1月增值税专用发票_67890.pdf",
           "target_path": "./examples/archived\\same_folder\\2024年1月增值税专用发票_67890.pdf",
           "filename": "2024年1月增值税专用发票_67890.pdf",
@@ -81,7 +81,7 @@
           "conflict_detail": null
         },
         {
-          "id": "143b6faa2789",
+          "id": "d75a934dd021",
           "source_path": "./examples/sample_invoices\\2024年2月增值税普通发票_ABCDE.pdf",
           "target_path": "./examples/archived\\same_folder\\2024年2月增值税普通发票_ABCDE.pdf",
           "filename": "2024年2月增值税普通发票_ABCDE.pdf",
@@ -90,7 +90,7 @@
           "conflict_detail": null
         },
         {
-          "id": "91ca833d9448",
+          "id": "1800151f2462",
           "source_path": "./examples/sample_invoices\\发票照片_餐厅发票.jpg",
           "target_path": "./examples/archived\\images\\发票照片_餐厅发票.jpg",
           "filename": "发票照片_餐厅发票.jpg",
@@ -105,10 +105,10 @@
   "runs": {},
   "undo_records": [],
   "snapshots": {
-    "7d5ebfc836c7": {
-      "snapshot_id": "7d5ebfc836c7",
-      "created_at": "2026-06-16T04:46:07.921679",
-      "plan_id": "41d491ddbe22",
+    "29709a987281": {
+      "snapshot_id": "29709a987281",
+      "created_at": "2026-06-16T18:04:00.103838",
+      "plan_id": "fa45c26890db",
       "config_snapshot": {
         "source_dir": "./examples/sample_invoices",
         "dest_dir": "./examples/archived",
@@ -144,65 +144,65 @@
       },
       "scanned_files": [
         {
-          "id": "91edae768aea",
+          "id": "1ce5947dcac2",
           "source_path": "./examples/sample_invoices\\2024年1月增值税专用发票_12345.pdf",
           "filename": "2024年1月增值税专用发票_12345.pdf",
           "size": 66,
-          "mtime": 1781556365.9680178,
+          "mtime": 1781604237.9416192,
           "matched_rule": "规则A-增值税专票"
         },
         {
-          "id": "e38ba93bea7f",
+          "id": "3bf3f390ba31",
           "source_path": "./examples/sample_invoices\\2024年1月增值税专用发票_67890.pdf",
           "filename": "2024年1月增值税专用发票_67890.pdf",
           "size": 66,
-          "mtime": 1781556365.9680178,
+          "mtime": 1781604237.94266,
           "matched_rule": "规则A-增值税专票"
         },
         {
-          "id": "144af0a56447",
+          "id": "b05d2ef0ad39",
           "source_path": "./examples/sample_invoices\\2024年2月增值税普通发票_ABCDE.pdf",
           "filename": "2024年2月增值税普通发票_ABCDE.pdf",
           "size": 66,
-          "mtime": 1781556365.969157,
+          "mtime": 1781604237.94266,
           "matched_rule": "规则B-增值税普票"
         },
         {
-          "id": "806b30452fcd",
+          "id": "d37d25c75316",
           "source_path": "./examples/sample_invoices\\发票扫描件_出租车发票.png",
           "filename": "发票扫描件_出租车发票.png",
           "size": 59,
-          "mtime": 1781556365.972334,
+          "mtime": 1781604237.9472404,
           "matched_rule": null
         },
         {
-          "id": "b02e0ba34912",
+          "id": "fe544b174aab",
           "source_path": "./examples/sample_invoices\\发票照片_餐厅发票.jpg",
           "filename": "发票照片_餐厅发票.jpg",
           "size": 53,
-          "mtime": 1781556365.9712982,
+          "mtime": 1781604237.9461892,
           "matched_rule": "发票图片"
         },
         {
-          "id": "e1c825441d5c",
+          "id": "8bbc847f2e96",
           "source_path": "./examples/sample_invoices\\电子发票_20240115_001.pdf",
           "filename": "电子发票_20240115_001.pdf",
           "size": 53,
-          "mtime": 1781556365.969157,
+          "mtime": 1781604237.9437096,
           "matched_rule": null
         },
         {
-          "id": "a4d44e479b78",
+          "id": "3037246eac91",
           "source_path": "./examples/sample_invoices\\电子发票_20240116_002.pdf",
           "filename": "电子发票_20240116_002.pdf",
           "size": 53,
-          "mtime": 1781556365.9702735,
+          "mtime": 1781604237.9447665,
           "matched_rule": null
         }
       ],
       "moves": [
         {
-          "id": "92ecd8b7b06a",
+          "id": "4699f7bf2846",
           "source_path": "./examples/sample_invoices\\2024年1月增值税专用发票_12345.pdf",
           "target_path": "./examples/archived\\same_folder\\2024年1月增值税专用发票_12345.pdf",
           "filename": "2024年1月增值税专用发票_12345.pdf",
@@ -211,7 +211,7 @@
           "conflict_detail": null
         },
         {
-          "id": "53803b87fa9e",
+          "id": "40504639bef0",
           "source_path": "./examples/sample_invoices\\2024年1月增值税专用发票_67890.pdf",
           "target_path": "./examples/archived\\same_folder\\2024年1月增值税专用发票_67890.pdf",
           "filename": "2024年1月增值税专用发票_67890.pdf",
@@ -220,7 +220,7 @@
           "conflict_detail": null
         },
         {
-          "id": "143b6faa2789",
+          "id": "d75a934dd021",
           "source_path": "./examples/sample_invoices\\2024年2月增值税普通发票_ABCDE.pdf",
           "target_path": "./examples/archived\\same_folder\\2024年2月增值税普通发票_ABCDE.pdf",
           "filename": "2024年2月增值税普通发票_ABCDE.pdf",
@@ -229,7 +229,7 @@
           "conflict_detail": null
         },
         {
-          "id": "91ca833d9448",
+          "id": "1800151f2462",
           "source_path": "./examples/sample_invoices\\发票照片_餐厅发票.jpg",
           "target_path": "./examples/archived\\images\\发票照片_餐厅发票.jpg",
           "filename": "发票照片_餐厅发票.jpg",
@@ -243,21 +243,21 @@
           "filename": "发票扫描件_出租车发票.png",
           "source_path": "./examples/sample_invoices\\发票扫描件_出租车发票.png",
           "size": 59,
-          "mtime": 1781556365.972334,
+          "mtime": 1781604237.9472404,
           "reason": "no_rule_match"
         },
         {
           "filename": "电子发票_20240115_001.pdf",
           "source_path": "./examples/sample_invoices\\电子发票_20240115_001.pdf",
           "size": 53,
-          "mtime": 1781556365.969157,
+          "mtime": 1781604237.9437096,
           "reason": "no_rule_match"
         },
         {
           "filename": "电子发票_20240116_002.pdf",
           "source_path": "./examples/sample_invoices\\电子发票_20240116_002.pdf",
           "size": 53,
-          "mtime": 1781556365.9702735,
+          "mtime": 1781604237.9447665,
           "reason": "no_rule_match"
         }
       ],
@@ -306,18 +306,38 @@
         "conflict_details": []
       },
       "imported": false,
-      "import_source": null
+      "import_source": null,
+      "remark": {
+        "remark": "",
+        "tags": [],
+        "handler": "",
+        "notes": "",
+        "updated_at": "",
+        "updated_by": ""
+      },
+      "signoffs": [],
+      "signoff_conflicts": []
     }
   },
   "import_logs": [],
   "plan_locks": [],
   "lock_violations": [],
   "plan_diffs": [],
-  "last_scan": "2026-06-16T04:46:07.918578",
-  "last_plan": "41d491ddbe22",
-  "last_snapshot": "7d5ebfc836c7",
+  "remark_histories": [],
+  "signoff_records": [],
+  "signoff_conflicts": [],
+  "validation_history": [],
+  "execution_bundles": {},
+  "bundle_import_logs": [],
+  "last_bundle": null,
+  "landings": {},
+  "landing_import_logs": [],
+  "last_landing": null,
+  "last_scan": "2026-06-16T18:04:00.101160",
+  "last_plan": "fa45c26890db",
+  "last_snapshot": "29709a987281",
   "active_lock_id": null,
-  "created_at": "2026-06-16T04:46:07.915444",
+  "created_at": "2026-06-16T18:04:00.097005",
   "scan_config": {
     "source_dir": "./examples/sample_invoices",
     "dest_dir": "./examples/archived",

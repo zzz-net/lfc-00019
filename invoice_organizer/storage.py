@@ -12,6 +12,7 @@ from .models import (
     SnapshotRemark, RemarkHistory, RemarkFieldChange,
     SignoffRecord, SignoffConflictState, SignoffValidationHistory,
     ExecutionBundle, BundleImportLog, BundleSummary, BundleRunDetails,
+    LandingFingerprint, LandingImportLog,
     generate_id, now_iso,
 )
 
@@ -48,6 +49,9 @@ class StateStore:
             "execution_bundles": {},
             "bundle_import_logs": [],
             "last_bundle": None,
+            "landings": {},
+            "landing_import_logs": [],
+            "last_landing": None,
             "last_scan": None,
             "last_plan": None,
             "last_snapshot": None,
@@ -976,4 +980,110 @@ class StateStore:
         result = [BundleImportLog.from_dict(l) for l in logs]
         if bundle_id:
             result = [l for l in result if l.bundle_id == bundle_id]
+        return sorted(result, key=lambda x: x.timestamp, reverse=True)
+
+    # ---- 落点指纹清单 ----
+
+    def save_landing(self, landing: LandingFingerprint) -> None:
+        """保存落点指纹清单"""
+        if "landings" not in self._data:
+            self._data["landings"] = {}
+        self._data["landings"][landing.landing_id] = landing.to_dict()
+        self._data["last_landing"] = landing.landing_id
+        self.save()
+
+    def get_landing(self, landing_id: str) -> Optional[LandingFingerprint]:
+        """根据 landing_id 获取落点指纹清单"""
+        landing_data = self._data.get("landings", {}).get(landing_id)
+        if landing_data:
+            return LandingFingerprint.from_dict(landing_data)
+        return None
+
+    def get_last_landing(self) -> Optional[LandingFingerprint]:
+        """获取最近的落点指纹清单"""
+        landing_id = self._data.get("last_landing")
+        if landing_id:
+            return self.get_landing(landing_id)
+        return None
+
+    def get_landing_by_run_id(self, run_id: str) -> Optional[LandingFingerprint]:
+        """根据执行 ID 查找落点指纹清单"""
+        for lid, ldata in self._data.get("landings", {}).items():
+            if ldata.get("run_id") == run_id:
+                return LandingFingerprint.from_dict(ldata)
+        return None
+
+    def get_landing_by_snapshot_id(self, snapshot_id: str) -> Optional[LandingFingerprint]:
+        """根据快照 ID 查找落点指纹清单"""
+        for lid, ldata in self._data.get("landings", {}).items():
+            if ldata.get("snapshot_id") == snapshot_id:
+                return LandingFingerprint.from_dict(ldata)
+        return None
+
+    def list_landings(self, undone_only: bool = False, active_only: bool = False) -> List[Dict[str, Any]]:
+        """列出所有落点指纹清单（摘要信息）
+
+        参数:
+            undone_only: 只列出已撤销的
+            active_only: 只列出未撤销的（与 undone_only 互斥）
+        """
+        result = []
+        landings = self._data.get("landings", {})
+        for lid, ldata in landings.items():
+            is_undone = ldata.get("is_undone", False)
+            if undone_only and not is_undone:
+                continue
+            if active_only and is_undone:
+                continue
+            result.append({
+                "landing_id": lid,
+                "created_at": ldata.get("created_at", ""),
+                "run_id": ldata.get("run_id", ""),
+                "snapshot_id": ldata.get("snapshot_id", ""),
+                "plan_id": ldata.get("plan_id", ""),
+                "dest_dir": ldata.get("dest_dir", ""),
+                "total_moved_count": ldata.get("total_moved_count", 0),
+                "total_skipped_conflict_count": ldata.get("total_skipped_conflict_count", 0),
+                "total_skipped_manual_count": ldata.get("total_skipped_manual_count", 0),
+                "total_failed_count": ldata.get("total_failed_count", 0),
+                "target_dir_count": len(ldata.get("target_dirs", [])),
+                "file_fingerprint_count": len(ldata.get("file_fingerprints", [])),
+                "manual_rename_count": len(ldata.get("manual_renames", [])),
+                "is_dry_run": ldata.get("is_dry_run", False),
+                "is_undone": is_undone,
+                "undone_at": ldata.get("undone_at", ""),
+                "status": ldata.get("status", "active"),
+                "signoff_id": ldata.get("signoff_id", ""),
+            })
+        return sorted(result, key=lambda x: x["created_at"], reverse=True)
+
+    def update_landing_undone(self, run_id: str, is_undone: bool = True) -> bool:
+        """更新落点指纹清单的撤销状态（当执行被 undo 时调用）"""
+        for lid, ldata in self._data.get("landings", {}).items():
+            if ldata.get("run_id") == run_id:
+                ldata["is_undone"] = is_undone
+                ldata["status"] = "undone" if is_undone else "active"
+                if is_undone:
+                    ldata["undone_at"] = now_iso()
+                else:
+                    ldata["undone_at"] = None
+                self.save()
+                return True
+        return False
+
+    # ---- 落点指纹导入日志 ----
+
+    def add_landing_import_log(self, log: LandingImportLog) -> None:
+        """添加落点指纹导入日志"""
+        if "landing_import_logs" not in self._data:
+            self._data["landing_import_logs"] = []
+        self._data["landing_import_logs"].append(log.to_dict())
+        self.save()
+
+    def get_landing_import_logs(self, landing_id: Optional[str] = None) -> List[LandingImportLog]:
+        """获取落点指纹导入日志，可按 landing_id 筛选"""
+        logs = self._data.get("landing_import_logs", [])
+        result = [LandingImportLog.from_dict(l) for l in logs]
+        if landing_id:
+            result = [l for l in result if l.landing_id == landing_id]
         return sorted(result, key=lambda x: x.timestamp, reverse=True)

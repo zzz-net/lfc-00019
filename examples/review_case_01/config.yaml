@@ -1,0 +1,32 @@
+﻿source_dir: "./examples/review_case_01/source"
+dest_dir: "./examples/review_case_01/dest"
+state_file: "./examples/review_case_01/.state/review_state.json"
+recursive: true
+file_extensions:
+  - pdf
+  - jpg
+  - png
+  - xlsx
+  - docx
+rules:
+  - name: "增值税专用发票"
+    pattern: "*增值税*专用*.pdf"
+    target: "vat_special"
+  - name: "增值税普通发票"
+    pattern: "*增值税*普通*.pdf"
+    target: "vat_normal"
+  - name: "电子发票PDF"
+    pattern: "*电子*.pdf"
+    target: "electronic"
+  - name: "发票图片JPG"
+    pattern: "*发票*.jpg"
+    target: "images/jpg"
+  - name: "发票图片PNG"
+    pattern: "*发票*.png"
+    target: "images/png"
+  - name: "报销单Excel"
+    pattern: "*报销*.xlsx"
+    target: "reimbursement"
+  - name: "合同文档"
+    pattern: "*合同*.docx"
+    target: "contracts"

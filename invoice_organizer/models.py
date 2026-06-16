@@ -1123,6 +1123,337 @@ class BundleValidationResult:
         return result
 
 
+# ============================================================
+# 落点指纹清单相关模型
+# ============================================================
+
+
+@dataclass
+class TargetDirFingerprint:
+    """目标目录指纹
+
+    记录某个目标目录的摘要信息：
+    - 目录路径
+    - 该目录下的文件数量
+    - 该目录的路径摘要哈希（路径哈希，用于快速比对
+    """
+    target_dir: str
+    file_count: int
+    dir_path_digest: str = ""
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "TargetDirFingerprint":
+        return cls(
+            target_dir=data["target_dir"],
+            file_count=data["file_count"],
+            dir_path_digest=data.get("dir_path_digest", ""),
+        )
+
+
+@dataclass
+class FileFingerprint:
+    """单个文件的落点指纹
+
+    用于在导入核对时逐文件深度比对的关键信息：
+    - 源路径（原始文件名）
+    - 目标路径（实际落点）
+    - move 时文件名（可追溯）
+    - 匹配的规则名
+    - 文件大小
+    - 修改时间戳
+    - 内容摘要哈希（前 N KB + 大小 + 后 N KB 的哈希）
+    """
+    fingerprint_id: str
+    source_path: str
+    target_path: str
+    filename: str
+    matched_rule: str
+    file_size: int
+    mtime: float
+    content_digest: str = ""
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "FileFingerprint":
+        return cls(
+            fingerprint_id=data["fingerprint_id"],
+            source_path=data["source_path"],
+            target_path=data["target_path"],
+            filename=data["filename"],
+            matched_rule=data["matched_rule"],
+            file_size=data["file_size"],
+            mtime=data["mtime"],
+            content_digest=data.get("content_digest", ""),
+        )
+
+
+@dataclass
+class ManualRenameRecord:
+    """手工改名记录
+
+    如果 apply 过程中发生的手工改名（如目标存在时的改名策略）
+    或用户手动改名）
+    - 原始目标路径
+    - 最终目标路径
+    - 改名原因
+    """
+    rename_id: str
+    original_target_path: str
+    final_target_path: str
+    rename_reason: str
+    renamed_at: str
+    renamed_by: str = "system"
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "ManualRenameRecord":
+        return cls(
+            rename_id=data["rename_id"],
+            original_target_path=data["original_target_path"],
+            final_target_path=data["final_target_path"],
+            rename_reason=data["rename_reason"],
+            renamed_at=data["renamed_at"],
+            renamed_by=data.get("renamed_by", "system"),
+        )
+
+
+@dataclass
+class LandingFingerprint:
+    """落点指纹清单
+
+    一次 apply 执行后生成的完整落点追溯清单：
+    包含所有关键信息，用于导入核对时深度比对
+
+    清单状态跨重启保留，undo 后可回看上一次落点记录。
+    """
+    landing_id: str
+    run_id: str
+    snapshot_id: str
+    plan_id: str
+    created_at: str
+
+    dest_dir: str
+    source_dir: str
+
+    total_moved_count: int
+    total_skipped_conflict_count: int
+    total_skipped_manual_count: int
+    total_failed_count: int
+    is_dry_run: bool
+    is_undone: bool = False
+    undone_at: Optional[str] = None
+
+    target_dirs: List[TargetDirFingerprint] = field(default_factory=list)
+    file_fingerprints: List[FileFingerprint] = field(default_factory=list)
+    manual_renames: List[ManualRenameRecord] = field(default_factory=list)
+
+    config_snapshot_digest: str = ""
+    dest_dir_digest: str = ""
+    move_target_paths_digest: str = ""
+    file_digests_summary: str = ""
+
+    status: str = "active"
+    checksum: str = ""
+
+    imported: bool = False
+    import_source: Optional[str] = None
+    imported_at: Optional[str] = None
+
+    signoff_id: Optional[str] = None
+    signoff_snapshot_config_digest: str = ""
+
+    def to_dict(self) -> Dict[str, Any]:
+        result = asdict(self)
+        result["target_dirs"] = [td.to_dict() for td in self.target_dirs]
+        result["file_fingerprints"] = [fp.to_dict() for fp in self.file_fingerprints]
+        result["manual_renames"] = [mr.to_dict() for mr in self.manual_renames]
+        return result
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "LandingFingerprint":
+        target_dirs_data = data.get("target_dirs", [])
+        file_fps_data = data.get("file_fingerprints", [])
+        manual_rns_data = data.get("manual_renames", [])
+        return cls(
+            landing_id=data["landing_id"],
+            run_id=data["run_id"],
+            snapshot_id=data["snapshot_id"],
+            plan_id=data["plan_id"],
+            created_at=data["created_at"],
+            dest_dir=data["dest_dir"],
+            source_dir=data["source_dir"],
+            total_moved_count=data["total_moved_count"],
+            total_skipped_conflict_count=data.get("total_skipped_conflict_count", 0),
+            total_skipped_manual_count=data["total_skipped_manual_count"],
+            total_failed_count=data["total_failed_count"],
+            is_dry_run=data.get("is_dry_run", False),
+            is_undone=data.get("is_undone", False),
+            undone_at=data.get("undone_at"),
+            target_dirs=[TargetDirFingerprint.from_dict(td) for td in target_dirs_data],
+            file_fingerprints=[FileFingerprint.from_dict(fp) for fp in file_fps_data],
+            manual_renames=[ManualRenameRecord.from_dict(mr) for mr in manual_rns_data],
+            config_snapshot_digest=data.get("config_snapshot_digest", ""),
+            dest_dir_digest=data.get("dest_dir_digest", ""),
+            move_target_paths_digest=data.get("move_target_paths_digest", ""),
+            file_digests_summary=data.get("file_digests_summary", ""),
+            status=data.get("status", "active"),
+            checksum=data.get("checksum", ""),
+            imported=data.get("imported", False),
+            import_source=data.get("import_source"),
+            imported_at=data.get("imported_at"),
+            signoff_id=data.get("signoff_id"),
+            signoff_snapshot_config_digest=data.get("signoff_snapshot_config_digest", ""),
+        )
+
+
+LANDING_FINGERPRINT_VERSION: str = "1.0"
+
+
+@dataclass
+class LandingFingerprintDiff:
+    """落点指纹清单的对比差异结果
+
+    用于导入核对时的深度差异记录，逐字段对比两份清单的差异。
+    """
+    diff_id: str
+    landing_id_local: Optional[str]
+    landing_id_imported: str
+    compared_at: str
+    has_diff: bool
+    diff_fields: List[str] = field(default_factory=list)
+    diff_details: Dict[str, Any] = field(default_factory=dict)
+
+    dest_dir_changed: bool = False
+    target_dirs_diff: List[Dict[str, Any]] = field(default_factory=list)
+    target_paths_diff: List[Dict[str, Any]] = field(default_factory=list)
+    file_fingerprints_diff: List[Dict[str, Any]] = field(default_factory=list)
+    file_count_mismatch: bool = False
+    config_changed: bool = False
+    duplicate_import: bool = False
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "LandingFingerprintDiff":
+        return cls(
+            diff_id=data["diff_id"],
+            landing_id_local=data.get("landing_id_local"),
+            landing_id_imported=data["landing_id_imported"],
+            compared_at=data["compared_at"],
+            has_diff=data["has_diff"],
+            diff_fields=list(data.get("diff_fields", [])),
+            diff_details=dict(data.get("diff_details", {})),
+            dest_dir_changed=data.get("dest_dir_changed", False),
+            target_dirs_diff=list(data.get("target_dirs_diff", [])),
+            target_paths_diff=list(data.get("target_paths_diff", [])),
+            file_fingerprints_diff=list(data.get("file_fingerprints_diff", [])),
+            file_count_mismatch=data.get("file_count_mismatch", False),
+            config_changed=data.get("config_changed", False),
+            duplicate_import=data.get("duplicate_import", False),
+        )
+
+
+@dataclass
+class LandingImportValidationResult:
+    """落点指纹清单导入校验结果
+
+    用于导入核对时的完整校验结果。
+    """
+    valid: bool
+    errors: List[str] = field(default_factory=list)
+    warnings: List[str] = field(default_factory=list)
+    conflict_types: List[str] = field(default_factory=list)
+    diff_result: Optional[LandingFingerprintDiff] = None
+    existing_landing: Optional[LandingFingerprint] = None
+    existing_run: Optional[Dict[str, Any]] = None
+
+    @property
+    def has_errors(self) -> bool:
+        return len(self.errors) > 0
+
+    def to_dict(self) -> Dict[str, Any]:
+        result = asdict(self)
+        if self.diff_result:
+            result["diff_result"] = self.diff_result.to_dict()
+        if self.existing_landing:
+            result["existing_landing"] = self.existing_landing.to_dict()
+        return result
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "LandingImportValidationResult":
+        diff_data = data.get("diff_result")
+        diff_result = LandingFingerprintDiff.from_dict(diff_data) if diff_data else None
+        existing_data = data.get("existing_landing")
+        existing_landing = LandingFingerprint.from_dict(existing_data) if existing_data else None
+        return cls(
+            valid=data["valid"],
+            errors=list(data.get("errors", [])),
+            warnings=list(data.get("warnings", [])),
+            conflict_types=list(data.get("conflict_types", [])),
+            diff_result=diff_result,
+            existing_landing=existing_landing,
+            existing_run=data.get("existing_run"),
+        )
+
+
+@dataclass
+class LandingImportLog:
+    """落点指纹清单导入日志
+
+    记录每次导入尝试（成功/失败/强制），用于跨重启回查。
+    """
+    import_log_id: str
+    landing_id: str
+    run_id: str
+    snapshot_id: str
+    timestamp: str
+    status: str
+    source_file: str
+    errors: List[str] = field(default_factory=list)
+    warnings: List[str] = field(default_factory=list)
+    conflict_details: List[str] = field(default_factory=list)
+    forced: bool = False
+    imported_by: str = "cli"
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "LandingImportLog":
+        return cls(
+            import_log_id=data["import_log_id"],
+            landing_id=data["landing_id"],
+            run_id=data["run_id"],
+            snapshot_id=data["snapshot_id"],
+            timestamp=data["timestamp"],
+            status=data["status"],
+            source_file=data["source_file"],
+            errors=list(data.get("errors", [])),
+            warnings=list(data.get("warnings", [])),
+            conflict_details=list(data.get("conflict_details", [])),
+            forced=data.get("forced", False),
+            imported_by=data.get("imported_by", "cli"),
+        )
+
+
+LANDING_REQUIRED_FIELDS: List[str] = [
+    "landing_id", "landing_version", "created_at",
+    "run_id", "plan_id", "snapshot_id",
+    "dest_dir", "source_dir",
+    "target_dirs", "file_fingerprints",
+    "total_moved_count", "total_skipped_conflict_count",
+    "total_skipped_manual_count", "total_failed_count",
+]
+
+
 def load_config(config_path: str) -> Config:
     """从 YAML 文件加载配置"""
     if not os.path.exists(config_path):

@@ -17,6 +17,9 @@ from .models import (
     SnapshotRemark, RemarkValidationResult, RemarkFieldChange,
     SignoffRecord, SignoffValidationResult, SignoffFieldChange,
     SignoffConflictState, SignoffValidationHistory,
+    TargetDirFingerprint, FileFingerprint, ManualRenameRecord,
+    LandingFingerprint, LandingFingerprintDiff, LandingImportValidationResult,
+    LandingImportLog, LANDING_FINGERPRINT_VERSION, LANDING_REQUIRED_FIELDS,
     generate_id, now_iso,
 )
 from .storage import StateStore
@@ -469,6 +472,8 @@ def undo_run(
         status=status,
     ))
 
+    store.update_landing_undone(run_id, is_undone=True)
+
     success = (failed == 0)
     return success, restored, failed, errors_detail
 
@@ -805,6 +810,131 @@ def export_logs(
                     "; ".join(il.get("errors", [])) if il.get("errors") else "",
                     "; ".join(il.get("warnings", [])) if il.get("warnings") else "",
                     "; ".join(il.get("conflict_types", [])) if il.get("conflict_types") else "",
+                ])
+
+            writer.writerow([])
+            writer.writerow(["=== 落点指纹清单 ==="])
+            writer.writerow([
+                "Landing ID", "创建时间", "Run ID", "快照ID", "预案ID",
+                "目标根目录", "源目录",
+                "成功移动数", "冲突跳过数", "人工跳过数", "失败数",
+                "目标目录数", "文件指纹数", "手工改名数",
+                "是否预演", "是否撤销", "撤销时间",
+                "状态", "校验和", "是否导入", "导入来源", "导入时间", "签收ID"
+            ])
+            landings_dict = full_state.get("landings", {})
+            landing_items = sorted(
+                landings_dict.items(),
+                key=lambda kv: kv[1].get("created_at", ""),
+                reverse=True,
+            )
+            for landing_id, ld in landing_items:
+                writer.writerow([
+                    ld.get("landing_id", landing_id),
+                    ld.get("created_at", ""),
+                    ld.get("run_id", ""),
+                    ld.get("snapshot_id", ""),
+                    ld.get("plan_id", ""),
+                    ld.get("dest_dir", ""),
+                    ld.get("source_dir", ""),
+                    ld.get("total_moved_count", 0),
+                    ld.get("total_skipped_conflict_count", 0),
+                    ld.get("total_skipped_manual_count", 0),
+                    ld.get("total_failed_count", 0),
+                    len(ld.get("target_dirs", [])),
+                    len(ld.get("file_fingerprints", [])),
+                    len(ld.get("manual_renames", [])),
+                    "是" if ld.get("is_dry_run") else "否",
+                    "是" if ld.get("is_undone") else "否",
+                    ld.get("undone_at", ""),
+                    ld.get("status", ""),
+                    ld.get("checksum", ""),
+                    "是" if ld.get("imported") else "否",
+                    ld.get("import_source", ""),
+                    ld.get("imported_at", ""),
+                    ld.get("signoff_id", ""),
+                ])
+
+            writer.writerow([])
+            writer.writerow(["=== 落点指纹-目标目录明细 ==="])
+            writer.writerow([
+                "Landing ID", "目标目录", "目录内文件数", "目录路径摘要哈希"
+            ])
+            for landing_id, ld in landing_items:
+                for td in ld.get("target_dirs", []):
+                    writer.writerow([
+                        landing_id,
+                        td.get("target_dir", ""),
+                        td.get("file_count", 0),
+                        td.get("dir_path_digest", ""),
+                    ])
+
+            writer.writerow([])
+            writer.writerow(["=== 落点指纹-文件明细 ==="])
+            writer.writerow([
+                "Landing ID", "指纹ID", "文件名", "源路径", "目标路径",
+                "匹配规则", "文件大小", "修改时间", "内容摘要哈希"
+            ])
+            for landing_id, ld in landing_items:
+                for fp in ld.get("file_fingerprints", []):
+                    writer.writerow([
+                        landing_id,
+                        fp.get("fingerprint_id", ""),
+                        fp.get("filename", ""),
+                        fp.get("source_path", ""),
+                        fp.get("target_path", ""),
+                        fp.get("matched_rule", ""),
+                        fp.get("file_size", 0),
+                        fp.get("mtime", 0),
+                        fp.get("content_digest", ""),
+                    ])
+
+            writer.writerow([])
+            writer.writerow(["=== 落点指纹-手工改名明细 ==="])
+            writer.writerow([
+                "Landing ID", "改名ID", "原始目标路径", "最终目标路径",
+                "改名原因", "改名时间", "改名人"
+            ])
+            for landing_id, ld in landing_items:
+                for mr in ld.get("manual_renames", []):
+                    writer.writerow([
+                        landing_id,
+                        mr.get("rename_id", ""),
+                        mr.get("original_target_path", ""),
+                        mr.get("final_target_path", ""),
+                        mr.get("rename_reason", ""),
+                        mr.get("renamed_at", ""),
+                        mr.get("renamed_by", ""),
+                    ])
+
+            writer.writerow([])
+            writer.writerow(["=== 落点指纹导入日志 ==="])
+            writer.writerow([
+                "导入日志ID", "Landing ID", "Run ID", "快照ID",
+                "导入时间", "状态", "源文件", "是否强制导入", "导入人",
+                "错误详情", "警告详情", "冲突类型"
+            ])
+            landing_import_logs = full_state.get("landing_import_logs", [])
+            for lil in landing_import_logs:
+                status_cn = {
+                    "success": "成功",
+                    "failed": "失败",
+                    "skipped": "跳过",
+                    "forced": "强制",
+                }.get(lil.get("status", ""), lil.get("status", ""))
+                writer.writerow([
+                    lil.get("import_log_id", ""),
+                    lil.get("landing_id", ""),
+                    lil.get("run_id", ""),
+                    lil.get("snapshot_id", ""),
+                    lil.get("timestamp", ""),
+                    status_cn,
+                    lil.get("source_file", ""),
+                    "是" if lil.get("forced") else "否",
+                    lil.get("imported_by", ""),
+                    "; ".join(lil.get("errors", [])) if lil.get("errors") else "",
+                    "; ".join(lil.get("warnings", [])) if lil.get("warnings") else "",
+                    "; ".join(lil.get("conflict_details", [])) if lil.get("conflict_details") else "",
                 ])
 
         return 1
@@ -2704,3 +2834,667 @@ def import_bundle_into_store(
         store.add_bundle_import_log(_make_log("success"))
 
     return True, validation, _make_log("success"), info_messages
+
+
+# ============================================================
+# 落点指纹清单（Landing Fingerprint）核心逻辑
+# ============================================================
+
+def compute_file_content_digest(file_path: str, sample_kb: int = 64) -> str:
+    """
+    计算文件内容摘要哈希
+
+    策略：读取文件前 sample_kb KB + 文件大小字符串 + 文件后 sample_kb KB，
+    然后计算 SHA256，避免大文件全量哈希。
+
+    如果文件不存在或读取失败，返回空字符串。
+    """
+    import hashlib
+
+    if not os.path.exists(file_path) or not os.path.isfile(file_path):
+        return ""
+
+    try:
+        stat = os.stat(file_path)
+        file_size = stat.st_size
+        sample_bytes = sample_kb * 1024
+
+        h = hashlib.sha256()
+        h.update(f"SIZE:{file_size}".encode("utf-8"))
+
+        with open(file_path, "rb") as f:
+            if file_size > 0:
+                head = f.read(min(sample_bytes, file_size))
+                h.update(f"HEAD:{len(head)}".encode("utf-8"))
+                h.update(head)
+
+                if file_size > sample_bytes * 2:
+                    f.seek(-sample_bytes, os.SEEK_END)
+                    tail = f.read(sample_bytes)
+                    h.update(f"TAIL:{len(tail)}".encode("utf-8"))
+                    h.update(tail)
+                elif file_size > sample_bytes:
+                    remaining = file_size - sample_bytes
+                    f.seek(sample_bytes, os.SEEK_SET)
+                    tail = f.read(remaining)
+                    h.update(f"TAIL:{len(tail)}".encode("utf-8"))
+                    h.update(tail)
+
+        return h.hexdigest()
+    except Exception:
+        return ""
+
+
+def _compute_landing_checksum(landing_dict: Dict[str, Any]) -> str:
+    """计算落点指纹清单的校验和（用于完整性检测）"""
+    import hashlib
+
+    target_dirs_sig = [
+        {"target_dir": td.get("target_dir"), "file_count": td.get("file_count")}
+        for td in landing_dict.get("target_dirs", [])
+    ]
+    file_fps_sig = [
+        {
+            "target_path": fp.get("target_path"),
+            "file_size": fp.get("file_size"),
+            "content_digest": fp.get("content_digest"),
+        }
+        for fp in landing_dict.get("file_fingerprints", [])
+    ]
+
+    relevant = {
+        "landing_id": landing_dict.get("landing_id"),
+        "run_id": landing_dict.get("run_id"),
+        "plan_id": landing_dict.get("plan_id"),
+        "snapshot_id": landing_dict.get("snapshot_id"),
+        "created_at": landing_dict.get("created_at"),
+        "dest_dir": landing_dict.get("dest_dir"),
+        "total_moved_count": landing_dict.get("total_moved_count"),
+        "total_skipped_conflict_count": landing_dict.get("total_skipped_conflict_count"),
+        "total_skipped_manual_count": landing_dict.get("total_skipped_manual_count"),
+        "total_failed_count": landing_dict.get("total_failed_count"),
+        "target_dirs": target_dirs_sig,
+        "file_fingerprints": file_fps_sig,
+    }
+    raw = json.dumps(relevant, sort_keys=True, ensure_ascii=False)
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
+
+
+def create_landing_fingerprint(
+    store: StateStore,
+    run_id: str,
+    config: Optional[Config] = None,
+) -> LandingFingerprint:
+    """
+    根据执行记录创建落点指纹清单
+
+    收集：
+    - 目标目录列表（每个目录的文件数和路径摘要）
+    - 每个成功移动文件的指纹（路径、大小、mtime、内容摘要哈希）
+    - 手工改名记录
+    - 四个摘要哈希（配置/目标目录/target_paths/文件内容）
+
+    返回 LandingFingerprint 对象，并自动保存到状态存储。
+    """
+    import hashlib
+
+    run = store.get_run(run_id)
+    if not run:
+        raise ValueError(f"执行记录不存在: {run_id}")
+
+    plan_id = run.get("plan_id", "")
+    snapshot_id = run.get("snapshot_id", "")
+    signoff_id = run.get("signoff_id", "")
+
+    if not snapshot_id:
+        snapshot = store.get_snapshot_by_plan_id(plan_id)
+    else:
+        snapshot = store.get_snapshot(snapshot_id)
+
+    if not snapshot:
+        raise ValueError(f"找不到与执行 {run_id} 关联的快照")
+
+    snapshot_id = snapshot.snapshot_id
+    plan_id = snapshot.plan_id
+
+    if config:
+        dest_dir = config.dest_dir
+        source_dir = config.source_dir
+    else:
+        config_snap = snapshot.config_snapshot
+        dest_dir = config_snap.dest_dir if config_snap else ""
+        source_dir = config_snap.source_dir if config_snap else ""
+
+    move_data = run.get("moves", [])
+    success_count = sum(1 for m in move_data if m.get("status") == "moved")
+    skipped_conflict_count = sum(1 for m in move_data if m.get("status") == "skipped_conflict")
+    skipped_manual_count = sum(1 for m in move_data if m.get("status") == "skipped_manual")
+    failed_count = sum(1 for m in move_data if m.get("status") == "failed")
+
+    target_dir_map: Dict[str, List[str]] = defaultdict(list)
+    file_fingerprints: List[FileFingerprint] = []
+    manual_renames: List[ManualRenameRecord] = []
+    all_target_paths: List[str] = []
+    all_content_digests: List[str] = []
+
+    for move in move_data:
+        status = move.get("status", "")
+        target_path = move.get("target_path", "")
+        source_path = move.get("source_path", "")
+        filename = move.get("filename", "")
+        matched_rule = move.get("matched_rule", "")
+
+        if target_path:
+            target_dir = os.path.dirname(target_path)
+            if target_dir:
+                target_dir_map[target_dir].append(target_path)
+
+        if status == "moved" and target_path:
+            all_target_paths.append(target_path)
+
+            file_size = 0
+            mtime = 0.0
+            content_digest = ""
+
+            if os.path.exists(target_path):
+                try:
+                    stat = os.stat(target_path)
+                    file_size = stat.st_size
+                    mtime = stat.st_mtime
+                    content_digest = compute_file_content_digest(target_path)
+                except Exception:
+                    pass
+
+            fp = FileFingerprint(
+                fingerprint_id=generate_id(),
+                source_path=source_path,
+                target_path=target_path,
+                filename=filename,
+                matched_rule=matched_rule,
+                file_size=file_size,
+                mtime=mtime,
+                content_digest=content_digest,
+            )
+            file_fingerprints.append(fp)
+            if content_digest:
+                all_content_digests.append(content_digest)
+
+        error_msg = move.get("error_message", "")
+        if error_msg and ("改名" in error_msg or "rename" in error_msg.lower()):
+            mr = ManualRenameRecord(
+                rename_id=generate_id(),
+                original_target_path=target_path,
+                final_target_path=target_path,
+                rename_reason=error_msg,
+                renamed_at=move.get("timestamp", now_iso()),
+                renamed_by="system",
+            )
+            manual_renames.append(mr)
+
+    target_dirs: List[TargetDirFingerprint] = []
+    for tdir, files in sorted(target_dir_map.items()):
+        actual_count = 0
+        if os.path.isdir(tdir):
+            try:
+                actual_count = len([f for f in os.listdir(tdir) if os.path.isfile(os.path.join(tdir, f))])
+            except Exception:
+                actual_count = len(files)
+        else:
+            actual_count = len(files)
+
+        td = TargetDirFingerprint(
+            target_dir=tdir,
+            file_count=actual_count,
+            dir_path_digest=hashlib.sha256(tdir.encode("utf-8")).hexdigest()[:16],
+        )
+        target_dirs.append(td)
+
+    config_snapshot_digest = ""
+    if snapshot.config_snapshot:
+        try:
+            snap_dict = snapshot.config_snapshot.to_dict()
+            raw = json.dumps(snap_dict, sort_keys=True, ensure_ascii=False)
+            config_snapshot_digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
+        except Exception:
+            pass
+
+    dest_dir_digest = hashlib.sha256(dest_dir.encode("utf-8")).hexdigest()[:16] if dest_dir else ""
+
+    sorted_target_paths = sorted(all_target_paths)
+    if sorted_target_paths:
+        raw_paths = json.dumps(sorted_target_paths, ensure_ascii=False)
+        move_target_paths_digest = hashlib.sha256(raw_paths.encode("utf-8")).hexdigest()[:16]
+    else:
+        move_target_paths_digest = ""
+
+    sorted_digests = sorted(all_content_digests)
+    if sorted_digests:
+        raw_digests = "|".join(sorted_digests)
+        file_digests_summary = hashlib.sha256(raw_digests.encode("utf-8")).hexdigest()[:16]
+    else:
+        file_digests_summary = ""
+
+    landing_id = generate_id()
+    landing = LandingFingerprint(
+        landing_id=landing_id,
+        run_id=run_id,
+        snapshot_id=snapshot_id,
+        plan_id=plan_id,
+        created_at=now_iso(),
+        dest_dir=dest_dir,
+        source_dir=source_dir,
+        total_moved_count=success_count,
+        total_skipped_conflict_count=skipped_conflict_count,
+        total_skipped_manual_count=skipped_manual_count,
+        total_failed_count=failed_count,
+        is_dry_run=run.get("dry_run", False),
+        is_undone=run.get("is_undone", False),
+        undone_at=None,
+        target_dirs=target_dirs,
+        file_fingerprints=file_fingerprints,
+        manual_renames=manual_renames,
+        config_snapshot_digest=config_snapshot_digest,
+        dest_dir_digest=dest_dir_digest,
+        move_target_paths_digest=move_target_paths_digest,
+        file_digests_summary=file_digests_summary,
+        status="active",
+        checksum="",
+        imported=False,
+        import_source=None,
+        imported_at=None,
+        signoff_id=signoff_id if signoff_id else None,
+        signoff_snapshot_config_digest="",
+    )
+
+    landing_dict = landing.to_dict()
+    landing_dict["landing_version"] = LANDING_FINGERPRINT_VERSION
+    landing.checksum = _compute_landing_checksum(landing_dict)
+    store.save_landing(landing)
+
+    return landing
+
+
+def diff_landing_fingerprints(
+    local: Optional[LandingFingerprint],
+    imported: LandingFingerprint,
+) -> LandingFingerprintDiff:
+    """
+    深度对比两份落点指纹清单
+
+    对比维度：
+    1. duplicate_import: landing_id/run_id 是否已存在
+    2. config_changed: 配置快照摘要是否一致
+    3. dest_dir_changed: 目标根目录是否一致
+    4. target_paths_diff: 逐条比较 target_path 列表
+    5. file_fingerprints_diff: 逐个比较文件指纹（content_digest + size）
+    6. file_count_mismatch: 文件数量不一致
+    """
+    diff_id = generate_id()
+    has_diff = False
+    diff_fields: List[str] = []
+    diff_details: Dict[str, Any] = {}
+    target_dirs_diff: List[Dict[str, Any]] = []
+    target_paths_diff: List[Dict[str, Any]] = []
+    file_fingerprints_diff: List[Dict[str, Any]] = []
+    dest_dir_changed = False
+    config_changed = False
+    duplicate_import = False
+    file_count_mismatch = False
+
+    if local is not None:
+        duplicate_import = True
+        has_diff = True
+        diff_fields.append("duplicate_import")
+        diff_details["duplicate_import"] = f"本地已存在 landing_id={local.landing_id}"
+
+        if local.dest_dir != imported.dest_dir:
+            dest_dir_changed = True
+            has_diff = True
+            diff_fields.append("dest_dir")
+            diff_details["dest_dir"] = {
+                "local": local.dest_dir,
+                "imported": imported.dest_dir,
+            }
+
+        if local.config_snapshot_digest and imported.config_snapshot_digest:
+            if local.config_snapshot_digest != imported.config_snapshot_digest:
+                config_changed = True
+                has_diff = True
+                diff_fields.append("config_snapshot_digest")
+                diff_details["config_snapshot_digest"] = {
+                    "local": local.config_snapshot_digest,
+                    "imported": imported.config_snapshot_digest,
+                }
+
+        local_td_map = {td.target_dir: td for td in local.target_dirs}
+        imported_td_map = {td.target_dir: td for td in imported.target_dirs}
+        all_tdirs = set(local_td_map.keys()) | set(imported_td_map.keys())
+        for tdir in sorted(all_tdirs):
+            ltd = local_td_map.get(tdir)
+            itd = imported_td_map.get(tdir)
+            if ltd is None or itd is None or ltd.file_count != itd.file_count:
+                target_dirs_diff.append({
+                    "target_dir": tdir,
+                    "local_file_count": ltd.file_count if ltd else None,
+                    "imported_file_count": itd.file_count if itd else None,
+                })
+
+        if target_dirs_diff:
+            has_diff = True
+            diff_fields.append("target_dirs")
+            diff_details["target_dirs_changed"] = len(target_dirs_diff)
+
+        local_fp_map = {fp.target_path: fp for fp in local.file_fingerprints}
+        imported_fp_map = {fp.target_path: fp for fp in imported.file_fingerprints}
+        all_fps = set(local_fp_map.keys()) | set(imported_fp_map.keys())
+
+        if len(local.file_fingerprints) != len(imported.file_fingerprints):
+            file_count_mismatch = True
+            has_diff = True
+            diff_fields.append("file_count")
+            diff_details["file_count"] = {
+                "local": len(local.file_fingerprints),
+                "imported": len(imported.file_fingerprints),
+            }
+
+        for tp in sorted(all_fps):
+            lfp = local_fp_map.get(tp)
+            ifp = imported_fp_map.get(tp)
+            if lfp is None or ifp is None:
+                target_paths_diff.append({
+                    "target_path": tp,
+                    "status": "missing_in_local" if lfp is None else "missing_in_imported",
+                })
+            elif (lfp.content_digest != ifp.content_digest or lfp.file_size != ifp.file_size):
+                file_fingerprints_diff.append({
+                    "target_path": tp,
+                    "local_size": lfp.file_size,
+                    "imported_size": ifp.file_size,
+                    "local_digest": lfp.content_digest,
+                    "imported_digest": ifp.content_digest,
+                })
+
+        if target_paths_diff:
+            has_diff = True
+            diff_fields.append("target_paths")
+            diff_details["target_paths_changed"] = len(target_paths_diff)
+
+        if file_fingerprints_diff:
+            has_diff = True
+            diff_fields.append("file_fingerprints")
+            diff_details["file_fingerprints_changed"] = len(file_fingerprints_diff)
+
+        if (local.move_target_paths_digest and imported.move_target_paths_digest
+                and local.move_target_paths_digest != imported.move_target_paths_digest):
+            if "target_paths" not in diff_fields:
+                diff_fields.append("move_target_paths_digest")
+                has_diff = True
+            diff_details["move_target_paths_digest"] = {
+                "local": local.move_target_paths_digest,
+                "imported": imported.move_target_paths_digest,
+            }
+
+        if (local.file_digests_summary and imported.file_digests_summary
+                and local.file_digests_summary != imported.file_digests_summary):
+            if "file_digests_summary" not in diff_fields:
+                diff_fields.append("file_digests_summary")
+                has_diff = True
+            diff_details["file_digests_summary"] = {
+                "local": local.file_digests_summary,
+                "imported": imported.file_digests_summary,
+            }
+
+    return LandingFingerprintDiff(
+        diff_id=diff_id,
+        landing_id_local=local.landing_id if local else None,
+        landing_id_imported=imported.landing_id,
+        compared_at=now_iso(),
+        has_diff=has_diff,
+        diff_fields=diff_fields,
+        diff_details=diff_details,
+        dest_dir_changed=dest_dir_changed,
+        target_dirs_diff=target_dirs_diff,
+        target_paths_diff=target_paths_diff,
+        file_fingerprints_diff=file_fingerprints_diff,
+        file_count_mismatch=file_count_mismatch,
+        config_changed=config_changed,
+        duplicate_import=duplicate_import,
+    )
+
+
+def validate_landing_for_import(
+    store: StateStore,
+    landing: LandingFingerprint,
+    check_duplicate: bool = True,
+) -> LandingImportValidationResult:
+    """
+    验证落点指纹清单是否可以导入
+
+    深度比对项（不能只看 snapshot_id 和计数）：
+    1. 同批次重复导入（landing_id 或 run_id 已存在）
+    2. 本地配置改动（目标目录 dest_dir 不一致）
+    3. move.target_path 变化（路径列表摘要不同）
+    4. 清单内容与现场对不上（文件指纹不一致）
+    5. 必填字段缺失
+
+    Args:
+        check_duplicate: 是否检查重复导入。本地自核对时传 False。
+    """
+    errors: List[str] = []
+    warnings: List[str] = []
+    conflict_types: List[str] = []
+    existing_landing: Optional[LandingFingerprint] = None
+    existing_run: Optional[Dict[str, Any]] = None
+
+    landing_dict = landing.to_dict()
+    for f in LANDING_REQUIRED_FIELDS:
+        if f not in landing_dict or landing_dict.get(f) in (None, "", [], {}):
+            if f == "landing_version":
+                continue
+            errors.append(f"落点指纹清单缺少必填字段（值为空）: {f}")
+            if "清单缺字段" not in conflict_types:
+                conflict_types.append("清单缺字段")
+
+    local_landing_by_id = store.get_landing(landing.landing_id)
+    if local_landing_by_id:
+        existing_landing = local_landing_by_id
+        if check_duplicate:
+            errors.append(
+                f"重复导入: landing_id {landing.landing_id} 已存在于本地。"
+                f" 原清单创建于 {local_landing_by_id.created_at}"
+            )
+            if "同批次重复导入" not in conflict_types:
+                conflict_types.append("同批次重复导入")
+
+    local_landing_by_run = store.get_landing_by_run_id(landing.run_id)
+    if local_landing_by_run and local_landing_by_run.landing_id != landing.landing_id:
+        if existing_landing is None:
+            existing_landing = local_landing_by_run
+        if check_duplicate:
+            errors.append(
+                f"重复导入: run_id {landing.run_id} 已被清单 {local_landing_by_run.landing_id} 占用。"
+                f" 同一执行批次不能重复导入。"
+            )
+            if "同批次重复导入" not in conflict_types:
+                conflict_types.append("同批次重复导入")
+
+    local_run = store.get_run(landing.run_id)
+    if local_run:
+        existing_run = local_run
+
+    diff_result = diff_landing_fingerprints(existing_landing, landing)
+
+    if diff_result.dest_dir_changed:
+        errors.append(
+            f"目标目录不一致: 本地={diff_result.diff_details.get('dest_dir', {}).get('local')}，"
+            f"导入={diff_result.diff_details.get('dest_dir', {}).get('imported')}"
+        )
+        if "本地配置改动" not in conflict_types:
+            conflict_types.append("本地配置改动")
+
+    if diff_result.config_changed:
+        errors.append(
+            f"配置快照不一致: 本地配置和导入清单对应的配置不同。"
+            f" (config_snapshot_digest 不一致)"
+        )
+        if "本地配置改动" not in conflict_types:
+            conflict_types.append("本地配置改动")
+
+    if diff_result.target_paths_diff:
+        for tpd in diff_result.target_paths_diff:
+            errors.append(
+                f"目标路径不一致: {tpd.get('target_path')} - {tpd.get('status')}"
+            )
+        if "move.target_path 变化" not in conflict_types:
+            conflict_types.append("move.target_path 变化")
+
+    if diff_result.file_fingerprints_diff:
+        for ffd in diff_result.file_fingerprints_diff:
+            errors.append(
+                f"文件指纹不一致: {ffd.get('target_path')} - "
+                f"本地(size={ffd.get('local_size')}, digest={ffd.get('local_digest')[:8]}...) vs "
+                f"导入(size={ffd.get('imported_size')}, digest={ffd.get('imported_digest')[:8]}...)"
+            )
+        if "清单内容与现场对不上" not in conflict_types:
+            conflict_types.append("清单内容与现场对不上")
+
+    if diff_result.file_count_mismatch:
+        errors.append(
+            f"文件数量不一致: {diff_result.diff_details.get('file_count', {})}"
+        )
+        if "清单内容与现场对不上" not in conflict_types:
+            conflict_types.append("清单内容与现场对不上")
+
+    if diff_result.target_dirs_diff:
+        for tdd in diff_result.target_dirs_diff:
+            warnings.append(
+                f"目标目录文件数变化: {tdd.get('target_dir')} - "
+                f"本地={tdd.get('local_file_count')}, 导入={tdd.get('imported_file_count')}"
+            )
+
+    if landing.checksum:
+        recomputed = _compute_landing_checksum(landing_dict)
+        if recomputed != landing.checksum:
+            warnings.append(
+                f"清单校验和不一致（期望: {landing.checksum}，实际: {recomputed}），"
+                f"文件可能在传输/保存过程中被修改。"
+            )
+
+    valid = len(errors) == 0
+    return LandingImportValidationResult(
+        valid=valid,
+        errors=errors,
+        warnings=warnings,
+        conflict_types=conflict_types,
+        diff_result=diff_result,
+        existing_landing=existing_landing,
+        existing_run=existing_run,
+    )
+
+
+def import_landing_into_store(
+    store: StateStore,
+    landing: LandingFingerprint,
+    import_source: str,
+    force: bool = False,
+    imported_by: str = "cli",
+) -> Tuple[bool, LandingImportValidationResult, LandingImportLog, List[str]]:
+    """
+    将落点指纹清单导入到本地状态存储
+
+    返回: (是否成功, 验证结果, 导入日志, 提示信息列表)
+    """
+    info_messages: List[str] = []
+
+    validation = validate_landing_for_import(store, landing)
+
+    def _make_log(status: str, forced_flag: bool = False) -> LandingImportLog:
+        return LandingImportLog(
+            import_log_id=generate_id(),
+            landing_id=landing.landing_id,
+            run_id=landing.run_id,
+            snapshot_id=landing.snapshot_id,
+            timestamp=now_iso(),
+            status=status,
+            source_file=os.path.abspath(import_source),
+            errors=list(validation.errors),
+            warnings=list(validation.warnings),
+            conflict_details=list(validation.conflict_types),
+            forced=forced_flag,
+            imported_by=imported_by,
+        )
+
+    if validation.has_errors and not force:
+        store.add_landing_import_log(_make_log("failed"))
+        return False, validation, _make_log("failed"), info_messages
+
+    if not store.get_landing(landing.landing_id):
+        landing_to_save = landing
+        landing_to_save.imported = True
+        landing_to_save.import_source = os.path.abspath(import_source)
+        landing_to_save.imported_at = now_iso()
+        store.save_landing(landing_to_save)
+        info_messages.append(f"落点指纹清单 {landing.landing_id} 已导入本地状态")
+    else:
+        info_messages.append(f"落点指纹清单 {landing.landing_id} 本地已存在，跳过导入")
+
+    if force and validation.has_errors:
+        store.add_landing_import_log(_make_log("forced", forced_flag=True))
+    else:
+        store.add_landing_import_log(_make_log("success"))
+
+    return True, validation, _make_log("success"), info_messages
+
+
+def export_landing_to_file(landing: LandingFingerprint, output_path: str) -> None:
+    """导出落点指纹清单到 JSON 文件"""
+    data = landing.to_dict()
+    data["landing_version"] = LANDING_FINGERPRINT_VERSION
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+
+def load_landing_from_file(file_path: str) -> LandingFingerprint:
+    """
+    从 JSON 文件加载落点指纹清单
+
+    会检查：
+    1. 文件存在性
+    2. 必填字段完整性
+    3. JSON 格式合法性
+    """
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"落点指纹清单文件不存在: {file_path}")
+
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"落点指纹清单文件格式错误，不是合法的 JSON: {e}")
+
+    missing_fields = [f for f in LANDING_REQUIRED_FIELDS if f not in data and f != "landing_version"]
+    if missing_fields:
+        raise ValueError(
+            f"落点指纹清单缺少必填字段: {', '.join(missing_fields)}。"
+            f" 清单文件可能已损坏或不是有效的落点指纹清单。"
+        )
+
+    if "target_dirs" in data:
+        for i, td in enumerate(data["target_dirs"]):
+            td_missing = [f for f in ["target_dir", "file_count"] if f not in td]
+            if td_missing:
+                raise ValueError(
+                    f"落点指纹清单第 {i+1} 条目标目录记录缺少字段: {', '.join(td_missing)}"
+                )
+
+    if "file_fingerprints" in data:
+        for i, fp in enumerate(data["file_fingerprints"]):
+            fp_required = ["fingerprint_id", "source_path", "target_path", "filename",
+                           "matched_rule", "file_size", "mtime"]
+            fp_missing = [f for f in fp_required if f not in fp]
+            if fp_missing:
+                raise ValueError(
+                    f"落点指纹清单第 {i+1} 条文件指纹记录缺少字段: {', '.join(fp_missing)}"
+                )
+
+    return LandingFingerprint.from_dict(data)

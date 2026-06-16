@@ -30,6 +30,9 @@ from .workflow import (
     has_unresolved_signoff_conflict, save_validation_history,
     create_execution_bundle, load_bundle_from_file, export_bundle_to_file,
     validate_bundle_for_import, import_bundle_into_store,
+    create_landing_fingerprint, load_landing_from_file, export_landing_to_file,
+    validate_landing_for_import, import_landing_into_store,
+    diff_landing_fingerprints, compute_file_content_digest,
 )
 
 
@@ -585,6 +588,14 @@ def cmd_apply(
         click.echo(f"  可使用 export-bundle -b {bundle.bundle_id} 导出或 list-bundles 查看")
     except Exception as be:
         click.echo(click.style(f"\n[警告] 归档包生成失败: {be}", fg="yellow"))
+
+    try:
+        landing = create_landing_fingerprint(store, run_id, config=config)
+        click.echo(click.style(f"\n[落点指纹完成] Landing ID: {landing.landing_id}", fg="cyan"))
+        click.echo(f"  目标目录数: {len(landing.target_dirs)}  文件指纹数: {len(landing.file_fingerprints)}")
+        click.echo(f"  可使用 generate-landing/list-landings/view-landing/export-landing 管理")
+    except Exception as le:
+        click.echo(click.style(f"\n[警告] 落点指纹清单生成失败: {le}", fg="yellow"))
 
     click.echo(click.style(f"\n[执行完成] Run ID: {run_id}", fg="green"))
     click.echo(f"  成功移动: {success}")
@@ -3147,6 +3158,540 @@ def _check_lock_before_apply(store: StateStore, snapshot) -> Tuple[bool, Optiona
     store.add_lock_violation(violation)
 
     return False, detail
+
+
+# ============================================================
+# 落点指纹清单 CLI 命令
+# ============================================================
+
+@cli.command("generate-landing", help="为某次执行生成落点指纹清单（apply 时已自动生成，此命令可手动补录）")
+@click.option("-c", "--config", "config_path", required=True, type=click.Path(),
+              help="配置文件路径 (YAML)")
+@click.option("-r", "--run-id", "run_id", help="指定执行 ID (默认使用最近一次)")
+@click.option("-v", "--verbose", is_flag=True, help="显示详细信息")
+def cmd_generate_landing(config_path: str, run_id: Optional[str], verbose: bool):
+    try:
+        config = load_config(config_path)
+    except Exception as e:
+        click.echo(f"[错误] 加载配置失败: {e}", err=True)
+        sys.exit(1)
+
+    store = _get_store(config)
+
+    if not run_id:
+        runs = store.get_all_runs()
+        if not runs:
+            click.echo("[错误] 没有执行记录，请先执行 apply。", err=True)
+            sys.exit(1)
+        runs_sorted = sorted(runs, key=lambda r: r.get("created_at", ""), reverse=True)
+        run_id = runs_sorted[0]["id"]
+
+    run = store.get_run(run_id)
+    if not run:
+        click.echo(f"[错误] 执行记录不存在: {run_id}", err=True)
+        sys.exit(1)
+
+    existing = store.get_landing_by_run_id(run_id)
+    if existing:
+        click.echo(click.style(f"[提示] 执行 {run_id} 已有落点指纹清单: {existing.landing_id}", fg="yellow"))
+        if not click.confirm("是否重新生成？", default=False):
+            click.echo("已取消。")
+            sys.exit(0)
+
+    try:
+        landing = create_landing_fingerprint(store, run_id, config=config)
+        click.echo(click.style(f"[生成成功] Landing ID: {landing.landing_id}", fg="green"))
+        click.echo(f"  Run ID: {landing.run_id}")
+        click.echo(f"  Snapshot ID: {landing.snapshot_id}")
+        click.echo(f"  目标根目录: {landing.dest_dir}")
+        click.echo(f"  目标目录数: {len(landing.target_dirs)}")
+        click.echo(f"  文件指纹数: {len(landing.file_fingerprints)}")
+        click.echo(f"  手工改名数: {len(landing.manual_renames)}")
+        click.echo(f"  成功移动: {landing.total_moved_count}")
+        click.echo(f"  冲突跳过: {landing.total_skipped_conflict_count}")
+        click.echo(f"  人工跳过: {landing.total_skipped_manual_count}")
+        click.echo(f"  失败: {landing.total_failed_count}")
+        click.echo(f"  校验和: {landing.checksum}")
+
+        if verbose and landing.target_dirs:
+            click.echo("\n[目标目录明细]")
+            for td in sorted(landing.target_dirs, key=lambda x: x.target_dir):
+                click.echo(f"  {td.target_dir}  ({td.file_count} 个文件)")
+
+        if verbose and landing.file_fingerprints:
+            click.echo("\n[文件指纹明细]")
+            for fp in landing.file_fingerprints:
+                click.echo(f"  {fp.filename}")
+                click.echo(f"    源: {fp.source_path}")
+                click.echo(f"    目标: {fp.target_path}")
+                click.echo(f"    大小: {fp.file_size} 字节  摘要: {fp.content_digest[:16]}...")
+
+    except Exception as e:
+        click.echo(click.style(f"[错误] 生成落点指纹清单失败: {e}", fg="red"), err=True)
+        sys.exit(1)
+
+
+@cli.command("list-landings", help="列出所有落点指纹清单")
+@click.option("-c", "--config", "config_path", required=True, type=click.Path(),
+              help="配置文件路径 (YAML)")
+@click.option("--active-only", is_flag=True, help="只列出未撤销的清单")
+@click.option("--undone-only", is_flag=True, help="只列出已撤销的清单")
+@click.option("--json", "as_json", is_flag=True, help="以 JSON 格式输出")
+def cmd_list_landings(config_path: str, active_only: bool, undone_only: bool, as_json: bool):
+    try:
+        config = load_config(config_path)
+    except Exception as e:
+        click.echo(f"[错误] 加载配置失败: {e}", err=True)
+        sys.exit(1)
+
+    store = _get_store(config)
+    landings = store.list_landings(undone_only=undone_only, active_only=active_only)
+
+    if as_json:
+        click.echo(json.dumps(landings, ensure_ascii=False, indent=2))
+        return
+
+    if not landings:
+        click.echo("[提示] 暂无落点指纹清单记录。")
+        return
+
+    click.echo(f"共 {len(landings)} 条落点指纹清单记录:")
+    click.echo()
+    click.echo(f"{'Landing ID':<20} {'创建时间':<20} {'Run ID':<12} {'目标目录':<30} {'文件数':<6} {'状态':<8}")
+    click.echo("-" * 100)
+    for ld in landings:
+        status = "已撤销" if ld["is_undone"] else "活动"
+        click.echo(
+            f"{ld['landing_id']:<20} "
+            f"{ld['created_at'][:19]:<20} "
+            f"{ld['run_id'][:10]:<12} "
+            f"{ld['dest_dir'][-28:]:<30} "
+            f"{ld['file_fingerprint_count']:<6} "
+            f"{status:<8}"
+        )
+
+
+@cli.command("view-landing", help="查看落点指纹清单的详细信息")
+@click.option("-c", "--config", "config_path", required=True, type=click.Path(),
+              help="配置文件路径 (YAML)")
+@click.option("-l", "--landing-id", "landing_id", help="指定 Landing ID (默认使用最近一次)")
+@click.option("-v", "--verbose", is_flag=True, help="显示所有文件指纹的完整信息")
+def cmd_view_landing(config_path: str, landing_id: Optional[str], verbose: bool):
+    try:
+        config = load_config(config_path)
+    except Exception as e:
+        click.echo(f"[错误] 加载配置失败: {e}", err=True)
+        sys.exit(1)
+
+    store = _get_store(config)
+
+    if not landing_id:
+        landing = store.get_last_landing()
+        if not landing:
+            click.echo("[错误] 没有落点指纹清单记录，请先执行 apply 或 generate-landing。", err=True)
+            sys.exit(1)
+    else:
+        landing = store.get_landing(landing_id)
+        if not landing:
+            click.echo(f"[错误] 落点指纹清单不存在: {landing_id}", err=True)
+            sys.exit(1)
+
+    status = "已撤销" if landing.is_undone else "活动"
+    click.echo(click.style(f"[落点指纹清单] {landing.landing_id}", fg="cyan", bold=True))
+    click.echo(f"  创建时间: {landing.created_at}")
+    click.echo(f"  Run ID: {landing.run_id}")
+    click.echo(f"  Snapshot ID: {landing.snapshot_id}")
+    click.echo(f"  Plan ID: {landing.plan_id}")
+    if landing.signoff_id:
+        click.echo(f"  Signoff ID: {landing.signoff_id}")
+    click.echo(f"  源目录: {landing.source_dir}")
+    click.echo(f"  目标根目录: {landing.dest_dir}")
+    click.echo(f"  状态: {status}")
+    if landing.is_undone and landing.undone_at:
+        click.echo(f"  撤销时间: {landing.undone_at}")
+    click.echo(f"  模式: {'预演 (DRY-RUN)' if landing.is_dry_run else '实际执行'}")
+    click.echo()
+    click.echo(click.style("[统计]", fg="yellow"))
+    click.echo(f"  成功移动: {landing.total_moved_count}")
+    click.echo(f"  冲突跳过: {landing.total_skipped_conflict_count}")
+    click.echo(f"  人工跳过: {landing.total_skipped_manual_count}")
+    click.echo(f"  失败: {landing.total_failed_count}")
+    click.echo(f"  目标目录数: {len(landing.target_dirs)}")
+    click.echo(f"  文件指纹数: {len(landing.file_fingerprints)}")
+    click.echo(f"  手工改名数: {len(landing.manual_renames)}")
+    click.echo()
+    click.echo(click.style("[摘要哈希]", fg="yellow"))
+    click.echo(f"  配置快照哈希: {landing.config_snapshot_digest or '(空)'}")
+    click.echo(f"  目标根目录哈希: {landing.dest_dir_digest or '(空)'}")
+    click.echo(f"  Target Paths 哈希: {landing.move_target_paths_digest or '(空)'}")
+    click.echo(f"  文件内容汇总哈希: {landing.file_digests_summary or '(空)'}")
+    click.echo(f"  清单校验和: {landing.checksum or '(空)'}")
+    if landing.imported:
+        click.echo()
+        click.echo(click.style("[导入信息]", fg="yellow"))
+        click.echo(f"  导入来源: {landing.import_source}")
+        click.echo(f"  导入时间: {landing.imported_at}")
+
+    if landing.target_dirs:
+        click.echo()
+        click.echo(click.style("[目标目录明细]", fg="cyan"))
+        for td in sorted(landing.target_dirs, key=lambda x: x.target_dir):
+            click.echo(f"  {td.target_dir}")
+            click.echo(f"    文件数: {td.file_count}  路径哈希: {td.dir_path_digest}")
+
+    if landing.manual_renames:
+        click.echo()
+        click.echo(click.style("[手工改名记录]", fg="cyan"))
+        for mr in landing.manual_renames:
+            click.echo(f"  {mr.rename_id}")
+            click.echo(f"    原路径: {mr.original_target_path}")
+            click.echo(f"    终路径: {mr.final_target_path}")
+            click.echo(f"    原因: {mr.rename_reason}")
+            click.echo(f"    时间: {mr.renamed_at}  操作人: {mr.renamed_by}")
+
+    if landing.file_fingerprints:
+        click.echo()
+        click.echo(click.style("[文件指纹明细]", fg="cyan"))
+        for i, fp in enumerate(landing.file_fingerprints):
+            click.echo(f"  [{i+1}] {fp.filename}")
+            click.echo(f"      规则: {fp.matched_rule}")
+            click.echo(f"      源: {fp.source_path}")
+            click.echo(f"      目标: {fp.target_path}")
+            click.echo(f"      大小: {fp.file_size} 字节  mtime: {fp.mtime}")
+            if verbose:
+                click.echo(f"      内容摘要: {fp.content_digest}")
+            else:
+                click.echo(f"      内容摘要: {fp.content_digest[:24]}..." if fp.content_digest else "      内容摘要: (空)")
+
+    import_logs = store.get_landing_import_logs(landing.landing_id)
+    if import_logs:
+        click.echo()
+        click.echo(click.style("[导入日志]", fg="cyan"))
+        for log in import_logs:
+            status_cn = {"success": "成功", "failed": "失败", "forced": "强制", "skipped": "跳过"}.get(log.status, log.status)
+            click.echo(f"  {log.timestamp}  [{status_cn}]  来源: {log.source_file}")
+            if log.errors:
+                click.echo(f"    错误: {'; '.join(log.errors)}")
+            if log.conflict_details:
+                click.echo(f"    冲突类型: {', '.join(log.conflict_details)}")
+
+
+@cli.command("export-landing", help="导出落点指纹清单为 JSON 文件")
+@click.option("-c", "--config", "config_path", required=True, type=click.Path(),
+              help="配置文件路径 (YAML)")
+@click.option("-l", "--landing-id", "landing_id", help="指定 Landing ID (默认使用最近一次)")
+@click.option("-o", "--output", "output_path", required=True, type=click.Path(),
+              help="输出文件路径 (JSON)")
+@click.option("-v", "--verbose", is_flag=True, help="显示详细信息")
+def cmd_export_landing(config_path: str, landing_id: Optional[str], output_path: str, verbose: bool):
+    try:
+        config = load_config(config_path)
+    except Exception as e:
+        click.echo(f"[错误] 加载配置失败: {e}", err=True)
+        sys.exit(1)
+
+    store = _get_store(config)
+
+    if not landing_id:
+        landing = store.get_last_landing()
+        if not landing:
+            click.echo("[错误] 没有落点指纹清单记录，请先执行 apply 或 generate-landing。", err=True)
+            sys.exit(1)
+    else:
+        landing = store.get_landing(landing_id)
+        if not landing:
+            click.echo(f"[错误] 落点指纹清单不存在: {landing_id}", err=True)
+            sys.exit(1)
+
+    try:
+        export_landing_to_file(landing, output_path)
+        click.echo(click.style(f"[导出成功] 已导出到: {output_path}", fg="green"))
+        click.echo(f"  Landing ID: {landing.landing_id}")
+        click.echo(f"  Run ID: {landing.run_id}")
+        click.echo(f"  文件指纹数: {len(landing.file_fingerprints)}")
+        click.echo(f"  校验和: {landing.checksum}")
+
+        if verbose:
+            abs_path = os.path.abspath(output_path)
+            file_size = os.path.getsize(abs_path)
+            click.echo(f"  绝对路径: {abs_path}")
+            click.echo(f"  文件大小: {file_size} 字节")
+    except Exception as e:
+        click.echo(click.style(f"[错误] 导出失败: {e}", fg="red"), err=True)
+        sys.exit(1)
+
+
+@cli.command("import-landing", help="从 JSON 文件导入落点指纹清单，进行深度比对校验")
+@click.option("-c", "--config", "config_path", required=True, type=click.Path(),
+              help="配置文件路径 (YAML)")
+@click.option("-i", "--input", "input_path", required=True, type=click.Path(),
+              help="输入文件路径 (JSON)")
+@click.option("--force", is_flag=True, help="即使存在冲突也强制导入（冲突仍会记录到日志）")
+@click.option("--by", "imported_by", default="cli", help="导入人标识 (默认: cli)")
+@click.option("-v", "--verbose", is_flag=True, help="显示详细信息")
+def cmd_import_landing(config_path: str, input_path: str, force: bool, imported_by: str, verbose: bool):
+    try:
+        config = load_config(config_path)
+    except Exception as e:
+        click.echo(f"[错误] 加载配置失败: {e}", err=True)
+        sys.exit(1)
+
+    store = _get_store(config)
+
+    try:
+        landing = load_landing_from_file(input_path)
+    except Exception as e:
+        click.echo(click.style(f"[错误] 加载落点指纹清单失败: {e}", fg="red"), err=True)
+        sys.exit(1)
+
+    click.echo(click.style(f"[导入清单] Landing ID: {landing.landing_id}", fg="cyan"))
+    click.echo(f"  Run ID: {landing.run_id}")
+    click.echo(f"  Snapshot ID: {landing.snapshot_id}")
+    click.echo(f"  目标根目录: {landing.dest_dir}")
+    click.echo(f"  文件指纹数: {len(landing.file_fingerprints)}")
+    click.echo()
+
+    success, validation, import_log, info_messages = import_landing_into_store(
+        store, landing, import_source=input_path, force=force, imported_by=imported_by
+    )
+
+    if not success:
+        click.echo(click.style("[导入失败] 清单被深度比对拦截", fg="red", bold=True))
+        click.echo()
+
+        if validation.conflict_types:
+            click.echo(click.style("[冲突类型]", fg="red"))
+            for ct in validation.conflict_types:
+                click.echo(f"  - {ct}")
+            click.echo()
+
+        if validation.errors:
+            click.echo(click.style("[详细错误]", fg="red"))
+            for err in validation.errors:
+                click.echo(f"  - {err}")
+            click.echo()
+
+        if validation.diff_result and validation.diff_result.has_diff:
+            click.echo(click.style("[差异对比]", fg="yellow"))
+            dr = validation.diff_result
+            if dr.dest_dir_changed:
+                click.echo(f"  目标目录变化: {dr.diff_details.get('dest_dir', {})}")
+            if dr.config_changed:
+                click.echo(f"  配置快照变化 (config_snapshot_digest 不一致)")
+            if dr.target_paths_diff:
+                click.echo(f"  Target Path 差异: {len(dr.target_paths_diff)} 条")
+                if verbose:
+                    for tpd in dr.target_paths_diff:
+                        click.echo(f"    - {tpd.get('target_path')}: {tpd.get('status')}")
+            if dr.file_fingerprints_diff:
+                click.echo(f"  文件指纹差异: {len(dr.file_fingerprints_diff)} 条")
+                if verbose:
+                    for ffd in dr.file_fingerprints_diff:
+                        click.echo(f"    - {ffd.get('target_path')}: size/digest 不一致")
+            if dr.file_count_mismatch:
+                click.echo(f"  文件数量不一致: {dr.diff_details.get('file_count', {})}")
+            if dr.target_dirs_diff and verbose:
+                click.echo(f"  目标目录文件数差异: {len(dr.target_dirs_diff)} 条")
+                for tdd in dr.target_dirs_diff:
+                    click.echo(f"    - {tdd.get('target_dir')}: local={tdd.get('local_file_count')} imported={tdd.get('imported_file_count')}")
+            click.echo()
+
+        click.echo(f"  导入日志 ID: {import_log.import_log_id}")
+        click.echo(f"  状态: {import_log.status} (已记录到状态文件)")
+        click.echo()
+        click.echo(click.style("[提示]", fg="yellow"))
+        click.echo("  1. 确认清单来源是否正确")
+        click.echo("  2. 核对本地配置 dest_dir 和 rules 是否与清单匹配")
+        click.echo("  3. 检查目标目录下的文件是否被改动")
+        click.echo("  4. 如需强制导入，使用 --force（冲突仍会记录）")
+        sys.exit(1)
+
+    if force and validation.conflict_types:
+        click.echo(click.style(f"[强制导入成功] Landing ID: {landing.landing_id}", fg="green"))
+        click.echo(click.style(f"  冲突类型: {', '.join(validation.conflict_types)}", fg="yellow"))
+    else:
+        click.echo(click.style(f"[导入成功] Landing ID: {landing.landing_id}", fg="green"))
+
+    click.echo(f"  导入日志 ID: {import_log.import_log_id}")
+    click.echo(f"  导入人: {import_log.imported_by}")
+    click.echo(f"  导入时间: {import_log.timestamp}")
+    click.echo(f"  状态: {import_log.status}")
+
+    if info_messages:
+        click.echo()
+        click.echo(click.style("[导入详情]", fg="cyan"))
+        for msg in info_messages:
+            click.echo(f"  - {msg}")
+
+    if verbose and import_log.warnings:
+        click.echo()
+        click.echo(click.style("[警告回顾]", fg="yellow"))
+        for w in import_log.warnings:
+            click.echo(f"  - {w}")
+
+    if validation.conflict_types:
+        click.echo()
+        click.echo(click.style("[注意] 导入时存在冲突，建议核对：", fg="yellow"))
+        for ct in validation.conflict_types:
+            click.echo(f"  - {ct}")
+        if import_log.status == "forced":
+            click.echo(click.style("  (已使用 --force，冲突状态已记录为 forced)", fg="yellow"))
+
+    click.echo()
+    click.echo(f"  可使用 list-landings 查看，或 verify-landing -l {landing.landing_id} 进行核对。")
+
+
+@cli.command("verify-landing", help="核对落点指纹清单：与本地状态和现场文件进行深度比对")
+@click.option("-c", "--config", "config_path", required=True, type=click.Path(),
+              help="配置文件路径 (YAML)")
+@click.option("-l", "--landing-id", "landing_id", help="指定 Landing ID (默认使用最近一次)")
+@click.option("-f", "--from-file", "from_file", type=click.Path(),
+              help="从 JSON 文件加载清单进行核对（不使用本地状态）")
+@click.option("--json", "as_json", is_flag=True, help="以 JSON 格式输出完整核对结果")
+@click.option("-v", "--verbose", is_flag=True, help="显示详细差异信息")
+def cmd_verify_landing(config_path: str, landing_id: Optional[str], from_file: Optional[str],
+                        as_json: bool, verbose: bool):
+    try:
+        config = load_config(config_path)
+    except Exception as e:
+        click.echo(f"[错误] 加载配置失败: {e}", err=True)
+        sys.exit(1)
+
+    store = _get_store(config)
+
+    if from_file:
+        try:
+            imported = load_landing_from_file(from_file)
+        except Exception as e:
+            click.echo(click.style(f"[错误] 加载清单文件失败: {e}", fg="red"), err=True)
+            sys.exit(1)
+        local = store.get_landing_by_run_id(imported.run_id)
+        if not as_json:
+            click.echo(click.style(f"[核对] 文件清单 vs 本地状态", fg="cyan", bold=True))
+            click.echo(f"  文件 Landing ID: {imported.landing_id}")
+            click.echo(f"  本地 Landing ID: {local.landing_id if local else '(不存在)'}")
+            click.echo(f"  Run ID: {imported.run_id}")
+    else:
+        if not landing_id:
+            landing = store.get_last_landing()
+            if not landing:
+                click.echo("[错误] 没有落点指纹清单记录，请先执行 apply 或 generate-landing。", err=True)
+                sys.exit(1)
+        else:
+            landing = store.get_landing(landing_id)
+            if not landing:
+                click.echo(f"[错误] 落点指纹清单不存在: {landing_id}", err=True)
+                sys.exit(1)
+
+        imported = landing
+        local = store.get_landing(landing.landing_id)
+        if not as_json:
+            click.echo(click.style(f"[核对] Landing ID: {landing.landing_id}", fg="cyan", bold=True))
+            click.echo(f"  Run ID: {landing.run_id}")
+            click.echo(f"  Snapshot ID: {landing.snapshot_id}")
+
+    _check_dup = bool(from_file)
+    validation = validate_landing_for_import(store, imported, check_duplicate=_check_dup)
+    diff = validation.diff_result
+
+    if as_json:
+        result = {
+            "landing_id": imported.landing_id,
+            "run_id": imported.run_id,
+            "valid": validation.valid,
+            "errors": validation.errors,
+            "warnings": validation.warnings,
+            "conflict_types": validation.conflict_types,
+            "diff": diff.to_dict() if diff else None,
+            "local_exists": local is not None,
+            "local_landing_id": local.landing_id if local else None,
+        }
+        click.echo(json.dumps(result, ensure_ascii=False, indent=2))
+        if not validation.valid:
+            sys.exit(1)
+        return
+
+    click.echo()
+
+    if validation.valid:
+        click.echo(click.style("[核对通过] 清单与本地状态一致 ✓", fg="green", bold=True))
+    else:
+        click.echo(click.style("[核对失败] 发现冲突 ✗", fg="red", bold=True))
+
+    if validation.conflict_types:
+        click.echo()
+        click.echo(click.style("[冲突类型]", fg="yellow"))
+        for ct in validation.conflict_types:
+            click.echo(f"  - {ct}")
+
+    if validation.errors:
+        click.echo()
+        click.echo(click.style("[详细错误]", fg="red"))
+        for err in validation.errors:
+            click.echo(f"  - {err}")
+
+    if diff and diff.has_diff:
+        click.echo()
+        click.echo(click.style("[差异明细]", fg="yellow"))
+        if diff.duplicate_import:
+            click.echo(f"  重复导入: {diff.diff_details.get('duplicate_import', '')}")
+        if diff.dest_dir_changed:
+            info = diff.diff_details.get('dest_dir', {})
+            click.echo(f"  目标根目录变化:")
+            click.echo(f"    本地: {info.get('local', '')}")
+            click.echo(f"    导入: {info.get('imported', '')}")
+        if diff.config_changed:
+            click.echo(f"  配置快照哈希不一致")
+            info = diff.diff_details.get('config_snapshot_digest', {})
+            click.echo(f"    本地: {info.get('local', '')}")
+            click.echo(f"    导入: {info.get('imported', '')}")
+        if diff.file_count_mismatch:
+            info = diff.diff_details.get('file_count', {})
+            click.echo(f"  文件指纹数量不一致:")
+            click.echo(f"    本地: {info.get('local', 0)}")
+            click.echo(f"    导入: {info.get('imported', 0)}")
+        if diff.target_paths_diff:
+            click.echo(f"  Target Path 差异: {len(diff.target_paths_diff)} 条")
+            if verbose:
+                for tpd in diff.target_paths_diff:
+                    click.echo(f"    - {tpd.get('target_path')}: {tpd.get('status')}")
+        if diff.file_fingerprints_diff:
+            click.echo(f"  文件指纹差异: {len(diff.file_fingerprints_diff)} 条")
+            if verbose:
+                for ffd in diff.file_fingerprints_diff:
+                    click.echo(f"    - {ffd.get('target_path')}:")
+                    click.echo(f"        本地 size={ffd.get('local_size')}, digest={str(ffd.get('local_digest', ''))[:16]}...")
+                    click.echo(f"        导入 size={ffd.get('imported_size')}, digest={str(ffd.get('imported_digest', ''))[:16]}...")
+        if diff.target_dirs_diff:
+            click.echo(f"  目标目录文件数差异: {len(diff.target_dirs_diff)} 条")
+            if verbose:
+                for tdd in diff.target_dirs_diff:
+                    click.echo(f"    - {tdd.get('target_dir')}: local={tdd.get('local_file_count')}, imported={tdd.get('imported_file_count')}")
+
+    if validation.warnings:
+        click.echo()
+        click.echo(click.style("[警告]", fg="yellow"))
+        for w in validation.warnings:
+            click.echo(f"  - {w}")
+
+    import_logs = store.get_landing_import_logs(imported.landing_id)
+    if import_logs:
+        click.echo()
+        click.echo(click.style("[历史导入记录]", fg="cyan"))
+        for log in import_logs:
+            status_cn = {"success": "成功", "failed": "失败", "forced": "强制", "skipped": "跳过"}.get(log.status, log.status)
+            tag = click.style(f"[{status_cn}]", fg="green" if log.status == "success" else "red")
+            click.echo(f"  {log.timestamp} {tag} 来源: {log.source_file}")
+            if log.conflict_details:
+                click.echo(f"    冲突: {', '.join(log.conflict_details)}")
+
+    click.echo()
+    if validation.valid:
+        click.echo(click.style("✓ 清单、JSON/CSV 导出和状态文件三处信息一致。", fg="green"))
+    else:
+        click.echo(click.style("✗ 存在冲突，建议使用 list-landings/view-landing 查看状态文件，"
+                               "或 export-landing 重新导出后对比。", fg="red"))
+        sys.exit(1)
 
 
 def main():
