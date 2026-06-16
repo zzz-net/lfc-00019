@@ -1,0 +1,23 @@
+﻿source_dir: D:\workSpace\AI__SPACE\lfc-00019\examples\review_runtime_bundle\source
+dest_dir: D:\workSpace\AI__SPACE\lfc-00019\examples\review_runtime_bundle\dest
+state_file: D:\workSpace\AI__SPACE\lfc-00019\examples\review_runtime_bundle\.state\invoice_state.json
+recursive: true
+rules:
+  - name: pdf_docs
+    pattern: "*.pdf"
+    target: pdfs
+  - name: png_docs
+    pattern: "*.png"
+    target: images\png
+  - name: jpg_docs
+    pattern: "*.jpg"
+    target: images\jpg
+  - name: xlsx_docs
+    pattern: "*.xlsx"
+    target: sheets
+  - name: docx_docs
+    pattern: "*.docx"
+    target: docs
+  - name: md_docs
+    pattern: "*.md"
+    target: notes

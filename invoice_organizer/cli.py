@@ -1,6 +1,7 @@
 """CLI 入口 - 发票文件批量整理工作流"""
 from __future__ import annotations
 
+import json
 import os
 import sys
 from typing import Optional, Tuple
@@ -27,6 +28,8 @@ from .workflow import (
     check_signoff_expired,
     detect_and_create_signoff_conflict, format_signoff_conflict_summary,
     has_unresolved_signoff_conflict, save_validation_history,
+    create_execution_bundle, load_bundle_from_file, export_bundle_to_file,
+    validate_bundle_for_import, import_bundle_into_store,
 )
 
 
@@ -568,6 +571,21 @@ def cmd_apply(
     if active_signoff:
         store.update_run_signoff(run_id, active_signoff.signoff_id, snapshot_id)
 
+    try:
+        fr_list = list(filter_rules) if filter_rules else None
+        ft_list = list(filter_types) if filter_types else None
+        ftargs_list = list(filter_targets) if filter_targets else None
+        bundle = create_execution_bundle(
+            store, run_id,
+            filter_rules=fr_list,
+            filter_file_types=ft_list,
+            filter_target_dirs=ftargs_list,
+        )
+        click.echo(click.style(f"\n[归档完成] Bundle ID: {bundle.bundle_id}", fg="cyan"))
+        click.echo(f"  可使用 export-bundle -b {bundle.bundle_id} 导出或 list-bundles 查看")
+    except Exception as be:
+        click.echo(click.style(f"\n[警告] 归档包生成失败: {be}", fg="yellow"))
+
     click.echo(click.style(f"\n[执行完成] Run ID: {run_id}", fg="green"))
     click.echo(f"  成功移动: {success}")
     if skipped_conflict > 0:
@@ -653,6 +671,11 @@ def cmd_undo(config_path: str, run_id: Optional[str], yes: bool, verbose: bool):
             sys.exit(0)
 
     success, restored, failed, errors_detail = undo_run(store, run_id)
+
+    try:
+        store.update_bundle_undone_status(run_id, is_undone=True)
+    except Exception:
+        pass
 
     if success:
         click.echo(click.style(f"\n[撤销成功] 已恢复 {restored} 个文件", fg="green"))
@@ -2717,6 +2740,379 @@ def cmd_resolve_signoff_conflict(
         for err in result.errors:
             click.echo(click.style(f"  - {err}", fg="yellow"))
         click.echo(click.style("  请根据上述提示调整后再执行 apply。", fg="yellow"))
+
+
+@cli.command("list-bundles", help="列出所有执行批次归档包")
+@click.option("-c", "--config", "config_path", required=True, type=click.Path(),
+              help="配置文件路径 (YAML)")
+@click.option("-v", "--verbose", is_flag=True, help="显示详细信息（签收、撤销状态等）")
+@click.option("--json", "as_json", is_flag=True, help="以 JSON 格式输出")
+def cmd_list_bundles(config_path: str, verbose: bool, as_json: bool):
+    try:
+        config = load_config(config_path)
+    except Exception as e:
+        click.echo(f"[错误] 加载配置失败: {e}", err=True)
+        sys.exit(1)
+
+    store = _get_store(config)
+    bundles = store.list_bundles()
+
+    if not bundles:
+        if as_json:
+            click.echo("[]")
+        else:
+            click.echo("暂无执行批次归档包。请先执行 apply 命令。")
+        return
+
+    if as_json:
+        click.echo(json.dumps(bundles, ensure_ascii=False, indent=2))
+        return
+
+    click.echo(click.style(f"[执行批次归档包] 共 {len(bundles)} 个", fg="cyan", bold=True))
+    click.echo()
+
+    if verbose:
+        header = (
+            f"{'Bundle ID':<14} {'创建时间':<27} {'Run ID':<14} "
+            f"{'快照ID':<14} {'总数':<6} {'成功':<6} {'跳过冲突':<8} {'人工跳过':<8} "
+            f"{'失败':<6} {'预演':<4} {'撤销':<4} {'签收':<8}"
+        )
+        click.echo(header)
+        click.echo("-" * 150)
+        for b in bundles:
+            created = b.get("created_at", "")[:26]
+            dry = "是" if b.get("dry_run") else "否"
+            undone = "是" if b.get("is_undone") else "否"
+            signoff = ""
+            if b.get("has_signoff"):
+                signed_by = b.get("signed_by", "")
+                if len(signed_by) > 6:
+                    signed_by = signed_by[:6] + "..."
+                signoff = f"已签收({signed_by})" if signed_by else "已签收"
+            elif verbose:
+                signoff = "未签收"
+            src = "导入" if b.get("imported") else "本地"
+            click.echo(
+                f"{b['bundle_id']:<14} {created:<27} {b.get('run_id',''):<14} "
+                f"{b.get('snapshot_id',''):<14} "
+                f"{b.get('total_moves',0):<6} {b.get('success_count',0):<6} "
+                f"{b.get('skipped_conflict_count',0):<8} {b.get('skipped_manual_count',0):<8} "
+                f"{b.get('failed_count',0):<6} {dry:<4} {undone:<4} {signoff:<8}"
+            )
+            if b.get("imported"):
+                click.echo(f"  {'':<14} {'':<27} {'':<14} {'':<14} 来源: {src}")
+    else:
+        header = (
+            f"{'Bundle ID':<14} {'创建时间':<27} {'Run ID':<14} "
+            f"{'移动数':<8} {'状态':<16} {'签收':<12} {'来源':<8}"
+        )
+        click.echo(header)
+        click.echo("-" * 110)
+        for b in bundles:
+            created = b.get("created_at", "")[:26]
+            status_parts = []
+            if b.get("is_undone"):
+                status_parts.append(click.style("已撤销", fg="yellow"))
+            elif b.get("failed_count", 0) > 0:
+                status_parts.append(click.style(f"失败{b.get('failed_count',0)}", fg="red"))
+            if b.get("dry_run"):
+                status_parts.append("预演")
+            if not status_parts:
+                status_parts.append(click.style("生效", fg="green"))
+            if b.get("skipped_conflict_count", 0) > 0:
+                status_parts.append(f"冲突跳过{b.get('skipped_conflict_count',0)}")
+            status_display = " | ".join(status_parts)
+
+            signoff_display = ""
+            if b.get("has_signoff"):
+                signed_by = b.get("signed_by", "")
+                if len(signed_by) > 8:
+                    signed_by = signed_by[:8] + "..."
+                signoff_display = f"by {signed_by}" if signed_by else "已签收"
+            else:
+                signoff_display = click.style("未签收", fg="yellow")
+
+            src_display = "导入" if b.get("imported") else "本地"
+
+            click.echo(
+                f"{b['bundle_id']:<14} {created:<27} {b.get('run_id',''):<14} "
+                f"{b.get('total_moves',0):<8} {status_display:<40} {signoff_display:<14} {src_display:<8}"
+            )
+
+
+@cli.command("export-bundle", help="导出执行批次归档包为 JSON 文件，用于交接或备份")
+@click.option("-c", "--config", "config_path", required=True, type=click.Path(),
+              help="配置文件路径 (YAML)")
+@click.option("-b", "--bundle-id", "bundle_id", help="指定归档包 ID (默认使用最近的)")
+@click.option("-r", "--run-id", "run_id", help="按执行 ID 查找归档包 (优先级低于 bundle-id)")
+@click.option("-o", "--output", "output_path", required=True, type=click.Path(),
+              help="导出文件路径")
+@click.option("-v", "--verbose", is_flag=True, help="显示详细信息")
+def cmd_export_bundle(
+    config_path: str,
+    bundle_id: Optional[str],
+    run_id: Optional[str],
+    output_path: str,
+    verbose: bool,
+):
+    try:
+        config = load_config(config_path)
+    except Exception as e:
+        click.echo(f"[错误] 加载配置失败: {e}", err=True)
+        sys.exit(1)
+
+    store = _get_store(config)
+
+    bundle = None
+    if bundle_id:
+        bundle = store.get_bundle(bundle_id)
+        if not bundle:
+            click.echo(f"[错误] 未找到归档包: {bundle_id}", err=True)
+            sys.exit(1)
+    elif run_id:
+        bundle = store.get_bundle_by_run_id(run_id)
+        if not bundle:
+            click.echo(f"[错误] 执行 ID {run_id} 没有对应的归档包", err=True)
+            sys.exit(1)
+    else:
+        bundle = store.get_last_bundle()
+        if not bundle:
+            click.echo("[错误] 未找到归档包，请先执行 apply 命令。", err=True)
+            sys.exit(1)
+
+    try:
+        export_bundle_to_file(bundle, output_path)
+    except Exception as e:
+        click.echo(f"[错误] 导出失败: {e}", err=True)
+        sys.exit(1)
+
+    click.echo(click.style(f"[导出成功] 归档包导出文件: {output_path}", fg="green"))
+    click.echo(f"  Bundle ID: {bundle.bundle_id}")
+    click.echo(f"  版本: {bundle.bundle_version}")
+    click.echo(f"  创建时间: {bundle.created_at}")
+    click.echo(f"  Run ID: {bundle.run_id}")
+    click.echo(f"  Plan ID: {bundle.plan_id}")
+    click.echo(f"  Snapshot ID: {bundle.snapshot_id}")
+    if bundle.imported:
+        click.echo(f"  来源: 导入 (自 {bundle.import_source})")
+        if bundle.imported_at:
+            click.echo(f"  导入时间: {bundle.imported_at}")
+    if bundle.checksum:
+        click.echo(f"  校验和: {bundle.checksum}")
+
+    click.echo()
+    s = bundle.summary
+    click.echo(click.style("[执行摘要]", fg="cyan"))
+    click.echo(f"  总记录数: {s.total_moves}")
+    click.echo(f"  成功移动: {s.success_count}")
+    if s.skipped_conflict_count > 0:
+        click.echo(click.style(f"  冲突跳过: {s.skipped_conflict_count}", fg="yellow"))
+    if s.skipped_manual_count > 0:
+        click.echo(click.style(f"  人工跳过: {s.skipped_manual_count}", fg="bright_black"))
+    if s.failed_count > 0:
+        click.echo(click.style(f"  执行失败: {s.failed_count}", fg="red"))
+    click.echo(f"  预演模式: {'是' if s.dry_run else '否'}")
+    click.echo(f"  已撤销: {'是' if s.is_undone else '否'}")
+    if s.has_signoff:
+        click.echo(f"  签收状态: {s.signoff_status} (ID: {s.signoff_id})")
+        click.echo(f"  签收人: {s.signed_by}")
+
+    if verbose:
+        click.echo()
+        if s.conflict_details:
+            click.echo(click.style("[冲突跳过详情]", fg="yellow"))
+            for d in s.conflict_details[:10]:
+                click.echo(f"  - {d}")
+            if len(s.conflict_details) > 10:
+                click.echo(f"  ... 还有 {len(s.conflict_details) - 10} 条，请在导出文件中查看")
+        if s.manual_skip_reasons:
+            click.echo()
+            click.echo(click.style("[人工跳过原因]", fg="bright_black"))
+            for d in s.manual_skip_reasons[:10]:
+                click.echo(f"  - {d}")
+            if len(s.manual_skip_reasons) > 10:
+                click.echo(f"  ... 还有 {len(s.manual_skip_reasons) - 10} 条，请在导出文件中查看")
+
+        if bundle.signoffs:
+            click.echo()
+            click.echo(click.style(f"[归档内含签收记录: {len(bundle.signoffs)} 条]", fg="cyan"))
+        if bundle.signoff_conflicts:
+            click.echo(click.style(f"[归档内含签收冲突: {len(bundle.signoff_conflicts)} 条]", fg="yellow"))
+        if bundle.validation_history:
+            click.echo(click.style(f"[归档内含校验历史: {len(bundle.validation_history)} 条]", fg="cyan"))
+
+
+@cli.command("import-bundle", help="从 JSON 文件导入执行批次归档包，用于查阅或交接")
+@click.option("-c", "--config", "config_path", required=True, type=click.Path(),
+              help="配置文件路径 (YAML)")
+@click.option("-i", "--input", "input_path", required=True, type=click.Path(),
+              help="归档包 JSON 文件路径")
+@click.option("--force", is_flag=True,
+              help="即使检测到冲突（重复导入/快照版本不一致等）也强制导入")
+@click.option("--by", "imported_by", default="cli", help="导入人 (默认: cli)")
+@click.option("--no-check-snapshot", is_flag=True,
+              help="不检查本地快照与归档包快照的版本一致性（谨慎使用）")
+@click.option("-y", "--yes", is_flag=True, help="跳过确认提示")
+@click.option("-v", "--verbose", is_flag=True, help="显示详细信息")
+def cmd_import_bundle(
+    config_path: str,
+    input_path: str,
+    force: bool,
+    imported_by: str,
+    no_check_snapshot: bool,
+    yes: bool,
+    verbose: bool,
+):
+    try:
+        config = load_config(config_path)
+    except Exception as e:
+        click.echo(f"[错误] 加载配置失败: {e}", err=True)
+        sys.exit(1)
+
+    store = _get_store(config)
+
+    try:
+        bundle = load_bundle_from_file(input_path)
+    except Exception as e:
+        click.echo(click.style("[错误] 加载归档包文件失败：", fg="red", bold=True), err=True)
+        click.echo(click.style(f"  - {e}", fg="red"), err=True)
+        sys.exit(1)
+
+    click.echo(click.style("[导入归档包] 解析成功", fg="green"))
+    click.echo(f"  Bundle ID: {bundle.bundle_id}")
+    click.echo(f"  版本: {bundle.bundle_version}")
+    click.echo(f"  创建时间: {bundle.created_at}")
+    click.echo(f"  Run ID: {bundle.run_id}")
+    click.echo(f"  Plan ID: {bundle.plan_id}")
+    click.echo(f"  Snapshot ID: {bundle.snapshot_id}")
+
+    s = bundle.summary
+    click.echo()
+    click.echo(click.style("[执行摘要]", fg="cyan"))
+    click.echo(f"  总记录数: {s.total_moves}")
+    click.echo(f"  成功移动: {s.success_count}")
+    if s.skipped_conflict_count > 0:
+        click.echo(click.style(f"  冲突跳过: {s.skipped_conflict_count}", fg="yellow"))
+    if s.skipped_manual_count > 0:
+        click.echo(click.style(f"  人工跳过: {s.skipped_manual_count}", fg="bright_black"))
+    if s.failed_count > 0:
+        click.echo(click.style(f"  执行失败: {s.failed_count}", fg="red"))
+    click.echo(f"  预演模式: {'是' if s.dry_run else '否'}")
+    click.echo(f"  已撤销: {'是' if s.is_undone else '否'}")
+    if s.has_signoff:
+        click.echo(f"  签收: {s.signoff_status} by {s.signed_by}")
+
+    check_snapshot = not no_check_snapshot
+    validation = validate_bundle_for_import(store, bundle, check_snapshot=check_snapshot)
+
+    if validation.conflict_types:
+        click.echo()
+        click.echo(click.style("[冲突检测]", fg="yellow", bold=True))
+        for ct in validation.conflict_types:
+            tag = click.style(ct, fg="red", bold=True)
+            click.echo(f"  冲突类型: {tag}")
+        click.echo()
+
+    if validation.warnings:
+        click.echo(click.style("[警告]", fg="yellow", bold=True))
+        for w in validation.warnings:
+            click.echo(click.style(f"  - {w}", fg="yellow"))
+        click.echo()
+
+    if validation.has_errors:
+        click.echo(click.style("[错误] 导入验证失败：", fg="red", bold=True))
+        for err in validation.errors:
+            click.echo(click.style(f"  - {err}", fg="red"))
+        click.echo()
+        if not force:
+            from .models import generate_id as _gen_id, now_iso as _now_iso, BundleImportLog as _BIL
+            failed_log = _BIL(
+                import_log_id=_gen_id(),
+                bundle_id=bundle.bundle_id,
+                run_id=bundle.run_id,
+                snapshot_id=bundle.snapshot_id,
+                timestamp=_now_iso(),
+                status="failed",
+                source_file=os.path.abspath(input_path),
+                errors=list(validation.errors),
+                warnings=list(validation.warnings),
+                conflict_details=list(validation.conflict_types),
+                forced=False,
+                imported_by=imported_by,
+            )
+            store.add_bundle_import_log(failed_log)
+            click.echo(
+                click.style(
+                    "使用 --force 可强制导入（冲突会被覆盖并记录为 forced 状态）。",
+                    fg="yellow",
+                )
+            )
+            sys.exit(1)
+        else:
+            click.echo(click.style("[警告] 使用 --force 强制导入，冲突将被覆盖并标记为 forced。", fg="yellow"))
+            click.echo()
+
+    if not yes:
+        if force and validation.has_errors:
+            confirm_msg = "\n确认强制导入该归档包（覆盖冲突）？"
+        else:
+            confirm_msg = "\n确认导入该归档包？"
+        if not click.confirm(confirm_msg, default=False):
+            click.echo("已取消。")
+            sys.exit(0)
+
+    success, validation, import_log, info_messages = import_bundle_into_store(
+        store=store,
+        bundle=bundle,
+        import_source=input_path,
+        force=force,
+        imported_by=imported_by,
+        check_snapshot=check_snapshot,
+    )
+
+    if not success:
+        click.echo(click.style("\n[错误] 导入失败：", fg="red", bold=True))
+        for err in validation.errors:
+            click.echo(click.style(f"  - {err}", fg="red"))
+        if import_log.status == "failed":
+            click.echo()
+            click.echo(click.style(f"[导入日志] 已记录失败导入: {import_log.import_log_id}", fg="yellow"))
+        sys.exit(1)
+
+    click.echo()
+    if force and validation.has_errors:
+        click.echo(click.style(f"[导入成功] 已强制导入归档包: {bundle.bundle_id}", fg="green"))
+        if validation.conflict_types:
+            click.echo(click.style(f"  冲突类型: {', '.join(validation.conflict_types)}", fg="yellow"))
+    else:
+        click.echo(click.style(f"[导入成功] 归档包已导入: {bundle.bundle_id}", fg="green"))
+    click.echo(f"  导入日志 ID: {import_log.import_log_id}")
+    click.echo(f"  导入人: {import_log.imported_by}")
+    click.echo(f"  导入时间: {import_log.timestamp}")
+    click.echo(f"  状态: {import_log.status}")
+
+    if info_messages:
+        click.echo()
+        click.echo(click.style("[导入详情]", fg="cyan"))
+        for msg in info_messages:
+            click.echo(f"  - {msg}")
+
+    if verbose and import_log.warnings:
+        click.echo()
+        click.echo(click.style("[警告回顾]", fg="yellow"))
+        for w in import_log.warnings:
+            click.echo(f"  - {w}")
+
+    if validation.conflict_types:
+        click.echo()
+        click.echo(click.style("[注意] 导入时存在冲突，建议核对：", fg="yellow"))
+        for ct in validation.conflict_types:
+            click.echo(f"  - {ct}")
+        if import_log.status == "forced":
+            click.echo(click.style("  (已使用 --force，冲突状态已记录为 forced)", fg="yellow"))
+
+    click.echo()
+    click.echo(f"  可使用 list-bundles 查看，或 export-bundle -b {bundle.bundle_id} 重新导出。")
 
 
 def _check_lock_before_apply(store: StateStore, snapshot) -> Tuple[bool, Optional[str]]:

@@ -735,6 +735,78 @@ def export_logs(
                     vh.get("resolution_command", ""),
                 ])
 
+            writer.writerow([])
+            writer.writerow(["=== 执行批次归档包 ==="])
+            writer.writerow([
+                "Bundle ID", "归档包版本", "创建时间",
+                "Run ID", "预案ID", "快照ID",
+                "总记录数", "成功数", "冲突跳过数", "人工跳过数", "失败数",
+                "是否预演", "是否撤销",
+                "签收状态", "签收人", "签收ID",
+                "校验和", "是否导入", "导入来源", "导入时间"
+            ])
+            bundles_dict = full_state.get("execution_bundles", {})
+            bundle_items = sorted(
+                bundles_dict.items(),
+                key=lambda kv: kv[1].get("created_at", ""),
+                reverse=True,
+            )
+            for bundle_id, bd in bundle_items:
+                summary = bd.get("summary", {})
+                run_details = bd.get("run_details", {})
+                writer.writerow([
+                    bd.get("bundle_id", bundle_id),
+                    bd.get("bundle_version", ""),
+                    bd.get("created_at", ""),
+                    bd.get("run_id", ""),
+                    bd.get("plan_id", ""),
+                    bd.get("snapshot_id", ""),
+                    summary.get("total_moves", 0),
+                    summary.get("success_count", 0),
+                    summary.get("skipped_conflict_count", 0),
+                    summary.get("skipped_manual_count", 0),
+                    summary.get("failed_count", 0),
+                    "是" if summary.get("dry_run") else "否",
+                    "是" if summary.get("is_undone") else "否",
+                    summary.get("signoff_status", ""),
+                    summary.get("signed_by", ""),
+                    summary.get("signoff_id", ""),
+                    bd.get("checksum", ""),
+                    "是" if bd.get("imported") else "否",
+                    bd.get("import_source", ""),
+                    bd.get("imported_at", ""),
+                ])
+
+            writer.writerow([])
+            writer.writerow(["=== 归档包导入日志 ==="])
+            writer.writerow([
+                "导入日志ID", "Bundle ID", "Run ID", "快照ID",
+                "导入时间", "状态", "源文件", "是否强制导入", "导入人",
+                "错误详情", "警告详情", "冲突类型"
+            ])
+            import_logs = full_state.get("bundle_import_logs", [])
+            for il in import_logs:
+                status_cn = {
+                    "success": "成功",
+                    "failed": "失败",
+                    "skipped": "跳过",
+                    "forced": "强制",
+                }.get(il.get("status", ""), il.get("status", ""))
+                writer.writerow([
+                    il.get("import_log_id", ""),
+                    il.get("bundle_id", ""),
+                    il.get("run_id", ""),
+                    il.get("snapshot_id", ""),
+                    il.get("timestamp", ""),
+                    status_cn,
+                    il.get("source_file", ""),
+                    "是" if il.get("forced") else "否",
+                    il.get("imported_by", ""),
+                    "; ".join(il.get("errors", [])) if il.get("errors") else "",
+                    "; ".join(il.get("warnings", [])) if il.get("warnings") else "",
+                    "; ".join(il.get("conflict_types", [])) if il.get("conflict_types") else "",
+                ])
+
         return 1
 
     else:
@@ -2129,3 +2201,506 @@ def save_validation_history(
 
     store.add_validation_history(record)
     return record
+
+
+# ============================================================
+# 执行批次归档包相关功能
+# ============================================================
+
+from .models import (
+    ExecutionBundle, BundleSummary, BundleRunDetails,
+    BundleValidationResult, BundleImportLog,
+    BUNDLE_VERSION, BUNDLE_REQUIRED_FIELDS,
+)
+
+
+def _compute_bundle_checksum(bundle_dict: Dict[str, Any]) -> str:
+    """计算归档包内容的简单校验和（用于完整性检测）"""
+    import hashlib
+    relevant = {
+        "bundle_id": bundle_dict.get("bundle_id"),
+        "run_id": bundle_dict.get("run_id"),
+        "plan_id": bundle_dict.get("plan_id"),
+        "snapshot_id": bundle_dict.get("snapshot_id"),
+        "created_at": bundle_dict.get("created_at"),
+        "summary": bundle_dict.get("summary"),
+        "moves": [
+            {"filename": m.get("filename"), "status": m.get("status")}
+            for m in bundle_dict.get("run_details", {}).get("moves", [])
+        ],
+    }
+    raw = json.dumps(relevant, sort_keys=True, ensure_ascii=False)
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
+
+
+def create_execution_bundle(
+    store: StateStore,
+    run_id: str,
+    filter_rules: Optional[List[str]] = None,
+    filter_file_types: Optional[List[str]] = None,
+    filter_target_dirs: Optional[List[str]] = None,
+) -> ExecutionBundle:
+    """
+    根据执行记录创建完整的执行批次归档包
+
+    归档包包含：
+    - 批次快照
+    - 签收信息
+    - 校验结果
+    - 移动明细
+    - 冲突和人工跳过原因
+    """
+    run = store.get_run(run_id)
+    if not run:
+        raise ValueError(f"执行记录不存在: {run_id}")
+
+    plan_id = run.get("plan_id", "")
+    snapshot_id = run.get("snapshot_id", "")
+    if not snapshot_id:
+        snapshot = store.get_snapshot_by_plan_id(plan_id)
+    else:
+        snapshot = store.get_snapshot(snapshot_id)
+    if not snapshot:
+        raise ValueError(f"找不到与执行 {run_id} 关联的快照")
+    snapshot_id = snapshot.snapshot_id
+    plan_id = snapshot.plan_id
+
+    all_signoffs = store.get_signoffs_by_snapshot(snapshot_id)
+    all_signoff_conflicts = store.list_signoff_conflicts(snapshot_id=snapshot_id)
+    validation_history = store.get_validation_history(snapshot_id=snapshot_id, limit=50)
+
+    move_data = run.get("moves", [])
+    success_count = sum(1 for m in move_data if m.get("status") == "moved")
+    skipped_conflict_count = sum(1 for m in move_data if m.get("status") == "skipped_conflict")
+    skipped_manual_count = sum(1 for m in move_data if m.get("status") == "skipped_manual")
+    failed_count = sum(1 for m in move_data if m.get("status") == "failed")
+
+    conflict_details = [
+        f"{m.get('filename')}: {m.get('error_message', '')}"
+        for m in move_data if m.get("status") == "skipped_conflict"
+    ]
+    manual_skip_reasons = [
+        f"{m.get('filename')}: {m.get('error_message', '')}"
+        for m in move_data if m.get("status") == "skipped_manual"
+    ]
+
+    active_signoff = store.get_active_signoff(snapshot_id)
+    run_signoff_id = run.get("signoff_id", "")
+    if run_signoff_id:
+        signoff_for_run = store.get_signoff(run_signoff_id)
+    else:
+        signoff_for_run = active_signoff
+
+    has_signoff = signoff_for_run is not None
+    if has_signoff and signoff_for_run:
+        signoff_status_display = {
+            "signed": "已签收", "rejected": "已拒绝", "pending": "待处理"
+        }.get(signoff_for_run.status, signoff_for_run.status)
+        signed_by_display = signoff_for_run.signed_by
+        signoff_id_display = signoff_for_run.signoff_id
+    else:
+        signoff_status_display = ""
+        signed_by_display = ""
+        signoff_id_display = ""
+
+    undo_records_for_run = [
+        u.to_dict() for u in store.get_undo_records()
+        if u.run_id == run_id
+    ]
+
+    summary = BundleSummary(
+        total_moves=len(move_data),
+        success_count=success_count,
+        skipped_conflict_count=skipped_conflict_count,
+        skipped_manual_count=skipped_manual_count,
+        failed_count=failed_count,
+        dry_run=run.get("dry_run", False),
+        is_undone=run.get("is_undone", False),
+        conflict_details=conflict_details,
+        manual_skip_reasons=manual_skip_reasons,
+        has_signoff=has_signoff,
+        signoff_status=signoff_status_display,
+        signed_by=signed_by_display,
+        signoff_id=signoff_id_display,
+    )
+
+    run_details = BundleRunDetails(
+        moves=list(move_data),
+        filter_rules=list(filter_rules) if filter_rules else [],
+        filter_file_types=list(filter_file_types) if filter_file_types else [],
+        filter_target_dirs=list(filter_target_dirs) if filter_target_dirs else [],
+        created_at=run.get("created_at", ""),
+        completed_at=run.get("completed_at", ""),
+        undo_records=undo_records_for_run,
+    )
+
+    bundle_id = generate_id()
+    bundle = ExecutionBundle(
+        bundle_id=bundle_id,
+        bundle_version=BUNDLE_VERSION,
+        created_at=now_iso(),
+        run_id=run_id,
+        plan_id=plan_id,
+        snapshot_id=snapshot_id,
+        summary=summary,
+        snapshot=snapshot,
+        run_details=run_details,
+        signoffs=all_signoffs,
+        signoff_conflicts=all_signoff_conflicts,
+        validation_history=validation_history,
+    )
+
+    bundle_dict = bundle.to_dict()
+    bundle.checksum = _compute_bundle_checksum(bundle_dict)
+    store.save_bundle(bundle)
+
+    return bundle
+
+
+def load_bundle_from_file(file_path: str) -> ExecutionBundle:
+    """
+    从 JSON 文件加载执行归档包
+
+    会检查：
+    1. 文件存在性
+    2. 必填字段完整性
+    3. JSON 格式合法性
+    """
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"归档包文件不存在: {file_path}")
+
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"归档包文件格式错误，不是合法的 JSON: {e}")
+
+    missing_fields = [f for f in BUNDLE_REQUIRED_FIELDS if f not in data]
+    if missing_fields:
+        raise ValueError(
+            f"归档包缺少必填字段: {', '.join(missing_fields)}。"
+            f" 归档包文件可能已损坏或不是有效的执行批次归档包。"
+        )
+
+    if "snapshot" in data:
+        snap_missing = [f for f in ["snapshot_id", "config_snapshot", "moves"] if f not in data["snapshot"]]
+        if snap_missing:
+            raise ValueError(
+                f"归档包内快照不完整，缺少字段: {', '.join(snap_missing)}"
+            )
+
+    if "run_details" in data and "moves" in data["run_details"]:
+        for i, m in enumerate(data["run_details"]["moves"]):
+            req_move_fields = ["filename", "source_path", "target_path", "status"]
+            move_missing = [f for f in req_move_fields if f not in m]
+            if move_missing:
+                raise ValueError(
+                    f"归档包执行明细第 {i+1} 条记录缺少字段: {', '.join(move_missing)}"
+                )
+
+    if "summary" in data:
+        sum_req_fields = ["total_moves", "success_count", "skipped_conflict_count",
+                          "skipped_manual_count", "failed_count"]
+        sum_missing = [f for f in sum_req_fields if f not in data["summary"]]
+        if sum_missing:
+            raise ValueError(
+                f"归档包摘要缺少字段: {', '.join(sum_missing)}"
+            )
+
+    return ExecutionBundle.from_dict(data)
+
+
+def export_bundle_to_file(bundle: ExecutionBundle, output_path: str) -> None:
+    """导出归档包到 JSON 文件"""
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(bundle.to_dict(), f, ensure_ascii=False, indent=2)
+
+
+def validate_bundle_for_import(
+    store: StateStore,
+    bundle: ExecutionBundle,
+    check_snapshot: bool = True,
+) -> BundleValidationResult:
+    """
+    验证归档包是否可以导入
+
+    检查项：
+    1. 同一批次重复导入（bundle_id 或 run_id 已存在）
+    2. 快照版本对不上（snapshot_id 在本地存在但内容不一致）
+    3. 日志缺字段
+
+    返回验证结果
+    """
+    errors: List[str] = []
+    warnings: List[str] = []
+    conflict_types: List[str] = []
+    existing_bundle: Optional[ExecutionBundle] = None
+    existing_run: Optional[Dict[str, Any]] = None
+
+    bundle_dict = bundle.to_dict()
+    required_top_fields = [
+        "bundle_id", "bundle_version", "run_id", "plan_id",
+        "snapshot_id", "summary", "snapshot", "run_details"
+    ]
+    for f in required_top_fields:
+        if not bundle_dict.get(f):
+            errors.append(f"归档包缺少顶层字段（值为空）: {f}")
+            if "日志缺字段" not in conflict_types:
+                conflict_types.append("日志缺字段")
+
+    summary = bundle.summary.to_dict()
+    summary_fields = [
+        "total_moves", "success_count", "skipped_conflict_count",
+        "skipped_manual_count", "failed_count"
+    ]
+    for f in summary_fields:
+        if f not in summary:
+            errors.append(f"归档包摘要缺字段: {f}")
+            if "日志缺字段" not in conflict_types:
+                conflict_types.append("日志缺字段")
+
+    moves = bundle.run_details.moves
+    for i, m in enumerate(moves):
+        move_required = ["id", "filename", "source_path", "target_path", "status", "timestamp"]
+        for f in move_required:
+            if f not in m:
+                errors.append(f"归档包执行明细第 {i+1} 条缺字段: {f}")
+                if "日志缺字段" not in conflict_types:
+                    conflict_types.append("日志缺字段")
+
+    local_bundle_by_id = store.get_bundle(bundle.bundle_id)
+    if local_bundle_by_id:
+        existing_bundle = local_bundle_by_id
+        errors.append(
+            f"重复导入: bundle_id {bundle.bundle_id} 已存在于本地归档。"
+            f" 原归档创建于 {local_bundle_by_id.created_at}"
+        )
+        conflict_types.append("同一批次重复导入")
+
+    local_bundle_by_run = store.get_bundle_by_run_id(bundle.run_id)
+    if local_bundle_by_run and local_bundle_by_run.bundle_id != bundle.bundle_id:
+        if existing_bundle is None:
+            existing_bundle = local_bundle_by_run
+        errors.append(
+            f"重复导入: run_id {bundle.run_id} 已被归档包 {local_bundle_by_run.bundle_id} 占用。"
+            f" 同一执行批次不能重复归档。"
+        )
+        if "同一批次重复导入" not in conflict_types:
+            conflict_types.append("同一批次重复导入")
+
+    local_run = store.get_run(bundle.run_id)
+    if local_run:
+        existing_run = local_run
+        errors.append(
+            f"执行 ID {bundle.run_id} 已存在于本地状态文件。"
+            f" 执行创建于 {local_run.get('created_at', 'N/A')}"
+        )
+        if "同一批次重复导入" not in conflict_types:
+            conflict_types.append("同一批次重复导入")
+
+    if check_snapshot:
+        local_snapshot = store.get_snapshot(bundle.snapshot_id)
+        if local_snapshot:
+            local_dict = local_snapshot.to_dict()
+            bundle_dict_snap = bundle.snapshot.to_dict()
+
+            def _strip_imported(d):
+                return {k: v for k, v in d.items() if k not in ["imported", "import_source"]}
+
+            local_stripped = _strip_imported(local_dict)
+            bundle_stripped = _strip_imported(bundle_dict_snap)
+
+            local_signature = {
+                "move_count": len(local_stripped.get("moves", [])),
+                "unmatched_count": len(local_stripped.get("unmatched_files", [])),
+                "has_conflicts": local_stripped.get("has_conflicts"),
+            }
+            bundle_signature = {
+                "move_count": len(bundle_stripped.get("moves", [])),
+                "unmatched_count": len(bundle_stripped.get("unmatched_files", [])),
+                "has_conflicts": bundle_stripped.get("has_conflicts"),
+            }
+            if local_signature != bundle_signature:
+                errors.append(
+                    f"快照版本不一致: snapshot_id {bundle.snapshot_id} 在本地存在但内容不同。"
+                    f" 本地: {local_signature}，归档包内: {bundle_signature}"
+                )
+                conflict_types.append("快照版本对不上")
+            else:
+                warnings.append(
+                    f"snapshot_id {bundle.snapshot_id} 本地已存在，内容一致，将跳过快照写入。"
+                )
+        else:
+            warnings.append(
+                f"snapshot_id {bundle.snapshot_id} 本地不存在，将从归档包导入。"
+            )
+
+    if bundle.checksum:
+        recomputed = _compute_bundle_checksum(bundle_dict)
+        if recomputed != bundle.checksum:
+            warnings.append(
+                f"归档包校验和不一致（期望: {bundle.checksum}，实际: {recomputed}），"
+                f"文件可能在传输/保存过程中被修改。"
+            )
+
+    valid = len(errors) == 0
+    return BundleValidationResult(
+        valid=valid,
+        errors=errors,
+        warnings=warnings,
+        conflict_types=conflict_types,
+        existing_bundle=existing_bundle,
+        existing_run=existing_run,
+    )
+
+
+def import_bundle_into_store(
+    store: StateStore,
+    bundle: ExecutionBundle,
+    import_source: str,
+    force: bool = False,
+    imported_by: str = "cli",
+    check_snapshot: bool = True,
+) -> Tuple[bool, BundleValidationResult, BundleImportLog, List[str]]:
+    """
+    将归档包导入到本地状态存储
+
+    步骤：
+    1. 验证归档包
+    2. 写入快照（如本地无此快照）
+    3. 写入签收记录
+    4. 写入签收冲突历史
+    5. 写入校验历史
+    6. 写入执行记录
+    7. 写入归档包
+    8. 写入撤销记录
+    9. 记录导入日志
+
+    返回: (是否成功, 验证结果, 导入日志, 提示信息列表)
+    """
+    info_messages: List[str] = []
+
+    validation = validate_bundle_for_import(store, bundle, check_snapshot=check_snapshot)
+
+    def _make_log(status: str, forced_flag: bool = False) -> BundleImportLog:
+        return BundleImportLog(
+            import_log_id=generate_id(),
+            bundle_id=bundle.bundle_id,
+            run_id=bundle.run_id,
+            snapshot_id=bundle.snapshot_id,
+            timestamp=now_iso(),
+            status=status,
+            source_file=os.path.abspath(import_source),
+            errors=list(validation.errors),
+            warnings=list(validation.warnings),
+            conflict_details=list(validation.conflict_types),
+            forced=forced_flag,
+            imported_by=imported_by,
+        )
+
+    if validation.has_errors and not force:
+        store.add_bundle_import_log(_make_log("failed"))
+        return False, validation, _make_log("failed"), info_messages
+
+    snapshot_written = False
+    local_snapshot = store.get_snapshot(bundle.snapshot_id)
+    if not local_snapshot:
+        snap_to_save = bundle.snapshot
+        snap_to_save.imported = True
+        snap_to_save.import_source = os.path.abspath(import_source)
+        store.save_snapshot(snap_to_save)
+        snapshot_written = True
+        info_messages.append(f"快照 {bundle.snapshot_id} 已从归档包导入")
+    else:
+        info_messages.append(f"快照 {bundle.snapshot_id} 本地已存在，跳过导入")
+
+    signoffs_written = 0
+    for signoff in bundle.signoffs:
+        local_signoff = store.get_signoff(signoff.signoff_id)
+        if not local_signoff:
+            sig_to_save = signoff
+            sig_to_save.import_source = os.path.abspath(import_source)
+            store.add_signoff(sig_to_save)
+            signoffs_written += 1
+    if signoffs_written:
+        info_messages.append(f"已导入 {signoffs_written} 条签收记录")
+
+    conflicts_restored = 0
+    pending_skipped = 0
+    for sc in bundle.signoff_conflicts:
+        existing_sc = store.get_signoff_conflict(sc.conflict_id)
+        if existing_sc:
+            continue
+        if (sc.status == "pending" and
+                store.get_pending_conflict_by_snapshot(sc.snapshot_id)):
+            pending_skipped += 1
+            continue
+        store.save_signoff_conflict(sc)
+        conflicts_restored += 1
+    if conflicts_restored:
+        info_messages.append(f"已恢复 {conflicts_restored} 条签收冲突历史")
+    if pending_skipped:
+        info_messages.append(f"跳过 {pending_skipped} 条已存在的待处理冲突")
+
+    vh_written = 0
+    for vh in bundle.validation_history:
+        existing_vh = None
+        for r in store._data.get("validation_history", []):
+            if r.get("validation_id") == vh.validation_id:
+                existing_vh = r
+                break
+        if not existing_vh:
+            store.add_validation_history(vh)
+            vh_written += 1
+    if vh_written:
+        info_messages.append(f"已导入 {vh_written} 条校验历史记录")
+
+    if not store.get_run(bundle.run_id):
+        run_data = {
+            "id": bundle.run_id,
+            "plan_id": bundle.plan_id,
+            "snapshot_id": bundle.snapshot_id,
+            "created_at": bundle.run_details.created_at,
+            "completed_at": bundle.run_details.completed_at,
+            "dry_run": bundle.summary.dry_run,
+            "is_undone": bundle.summary.is_undone,
+            "moves": list(bundle.run_details.moves),
+        }
+        if bundle.summary.signoff_id:
+            run_data["signoff_id"] = bundle.summary.signoff_id
+        store._data["runs"][bundle.run_id] = run_data
+        store.save()
+        info_messages.append(f"执行记录 {bundle.run_id} 已导入")
+    else:
+        info_messages.append(f"执行记录 {bundle.run_id} 本地已存在，跳过导入")
+
+    if bundle.run_details.undo_records:
+        existing_run_ids = {u.run_id for u in store.get_undo_records()}
+        for urd in bundle.run_details.undo_records:
+            if urd.get("run_id") in existing_run_ids:
+                continue
+            from .models import UndoRecord
+            ur = UndoRecord(
+                run_id=urd.get("run_id", ""),
+                undo_timestamp=urd.get("undo_timestamp", now_iso()),
+                moves_restored=urd.get("moves_restored", 0),
+                status=urd.get("status", "completed"),
+            )
+            store.add_undo_record(ur)
+
+    if not store.get_bundle(bundle.bundle_id):
+        bundle_to_save = bundle
+        bundle_to_save.imported = True
+        bundle_to_save.import_source = os.path.abspath(import_source)
+        bundle_to_save.imported_at = now_iso()
+        store.save_bundle(bundle_to_save)
+        info_messages.append(f"归档包 {bundle.bundle_id} 已导入本地状态")
+    else:
+        info_messages.append(f"归档包 {bundle.bundle_id} 本地已存在，跳过导入")
+
+    if force and validation.has_errors:
+        store.add_bundle_import_log(_make_log("forced", forced_flag=True))
+    else:
+        store.add_bundle_import_log(_make_log("success"))
+
+    return True, validation, _make_log("success"), info_messages

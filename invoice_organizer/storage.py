@@ -11,6 +11,7 @@ from .models import (
     BatchSnapshot, ImportLog, PlanLock, LockViolation, ConfigSnapshot,
     SnapshotRemark, RemarkHistory, RemarkFieldChange,
     SignoffRecord, SignoffConflictState, SignoffValidationHistory,
+    ExecutionBundle, BundleImportLog, BundleSummary, BundleRunDetails,
     generate_id, now_iso,
 )
 
@@ -44,6 +45,9 @@ class StateStore:
             "signoff_records": [],
             "signoff_conflicts": [],
             "validation_history": [],
+            "execution_bundles": {},
+            "bundle_import_logs": [],
+            "last_bundle": None,
             "last_scan": None,
             "last_plan": None,
             "last_snapshot": None,
@@ -888,3 +892,88 @@ class StateStore:
                 r["resolution_note"] = "快照状态变化，原校验结果已失效"
                 r["resolution_command"] = "state_refresh"
         self.save()
+
+    # ---- 执行批次归档包 ----
+
+    def save_bundle(self, bundle: ExecutionBundle) -> None:
+        """保存执行批次归档包"""
+        if "execution_bundles" not in self._data:
+            self._data["execution_bundles"] = {}
+        self._data["execution_bundles"][bundle.bundle_id] = bundle.to_dict()
+        self._data["last_bundle"] = bundle.bundle_id
+        self.save()
+
+    def get_bundle(self, bundle_id: str) -> Optional[ExecutionBundle]:
+        """根据 bundle_id 获取归档包"""
+        bundle_data = self._data.get("execution_bundles", {}).get(bundle_id)
+        if bundle_data:
+            return ExecutionBundle.from_dict(bundle_data)
+        return None
+
+    def get_last_bundle(self) -> Optional[ExecutionBundle]:
+        """获取最近的归档包"""
+        bundle_id = self._data.get("last_bundle")
+        if bundle_id:
+            return self.get_bundle(bundle_id)
+        return None
+
+    def get_bundle_by_run_id(self, run_id: str) -> Optional[ExecutionBundle]:
+        """根据执行 ID 查找归档包"""
+        for bid, bdata in self._data.get("execution_bundles", {}).items():
+            if bdata.get("run_id") == run_id:
+                return ExecutionBundle.from_dict(bdata)
+        return None
+
+    def list_bundles(self) -> List[Dict[str, Any]]:
+        """列出所有归档包（摘要信息）"""
+        result = []
+        bundles = self._data.get("execution_bundles", {})
+        for bid, bdata in bundles.items():
+            summary = bdata.get("summary", {})
+            result.append({
+                "bundle_id": bid,
+                "created_at": bdata.get("created_at", ""),
+                "run_id": bdata.get("run_id", ""),
+                "plan_id": bdata.get("plan_id", ""),
+                "snapshot_id": bdata.get("snapshot_id", ""),
+                "total_moves": summary.get("total_moves", 0),
+                "success_count": summary.get("success_count", 0),
+                "skipped_conflict_count": summary.get("skipped_conflict_count", 0),
+                "skipped_manual_count": summary.get("skipped_manual_count", 0),
+                "failed_count": summary.get("failed_count", 0),
+                "dry_run": summary.get("dry_run", False),
+                "is_undone": summary.get("is_undone", False),
+                "has_signoff": summary.get("has_signoff", False),
+                "signed_by": summary.get("signed_by", ""),
+                "imported": bdata.get("imported", False),
+                "bundle_version": bdata.get("bundle_version", ""),
+            })
+        return sorted(result, key=lambda x: x["created_at"], reverse=True)
+
+    def update_bundle_undone_status(self, run_id: str, is_undone: bool = True) -> bool:
+        """更新归档包的撤销状态（当执行被 undo 时调用）"""
+        for bid, bdata in self._data.get("execution_bundles", {}).items():
+            if bdata.get("run_id") == run_id:
+                if "summary" not in bdata:
+                    bdata["summary"] = {}
+                bdata["summary"]["is_undone"] = is_undone
+                self.save()
+                return True
+        return False
+
+    # ---- 归档包导入日志 ----
+
+    def add_bundle_import_log(self, log: BundleImportLog) -> None:
+        """添加归档包导入日志"""
+        if "bundle_import_logs" not in self._data:
+            self._data["bundle_import_logs"] = []
+        self._data["bundle_import_logs"].append(log.to_dict())
+        self.save()
+
+    def get_bundle_import_logs(self, bundle_id: Optional[str] = None) -> List[BundleImportLog]:
+        """获取归档包导入日志，可按 bundle_id 筛选"""
+        logs = self._data.get("bundle_import_logs", [])
+        result = [BundleImportLog.from_dict(l) for l in logs]
+        if bundle_id:
+            result = [l for l in result if l.bundle_id == bundle_id]
+        return sorted(result, key=lambda x: x.timestamp, reverse=True)

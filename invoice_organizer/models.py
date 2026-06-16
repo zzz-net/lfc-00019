@@ -912,6 +912,217 @@ class SignoffValidationHistory:
         return self.resolved_at is not None
 
 
+BUNDLE_VERSION: str = "1.0"
+BUNDLE_REQUIRED_FIELDS: List[str] = [
+    "bundle_id", "bundle_version", "created_at",
+    "run_id", "plan_id", "snapshot_id",
+    "summary", "snapshot", "run_details",
+]
+
+
+@dataclass
+class BundleSummary:
+    """执行批次归档包摘要"""
+    total_moves: int = 0
+    success_count: int = 0
+    skipped_conflict_count: int = 0
+    skipped_manual_count: int = 0
+    failed_count: int = 0
+    dry_run: bool = False
+    is_undone: bool = False
+    conflict_details: List[str] = field(default_factory=list)
+    manual_skip_reasons: List[str] = field(default_factory=list)
+    has_signoff: bool = False
+    signoff_status: str = ""
+    signed_by: str = ""
+    signoff_id: str = ""
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "BundleSummary":
+        return cls(
+            total_moves=data.get("total_moves", 0),
+            success_count=data.get("success_count", 0),
+            skipped_conflict_count=data.get("skipped_conflict_count", 0),
+            skipped_manual_count=data.get("skipped_manual_count", 0),
+            failed_count=data.get("failed_count", 0),
+            dry_run=data.get("dry_run", False),
+            is_undone=data.get("is_undone", False),
+            conflict_details=list(data.get("conflict_details", [])),
+            manual_skip_reasons=list(data.get("manual_skip_reasons", [])),
+            has_signoff=data.get("has_signoff", False),
+            signoff_status=data.get("signoff_status", ""),
+            signed_by=data.get("signed_by", ""),
+            signoff_id=data.get("signoff_id", ""),
+        )
+
+
+@dataclass
+class BundleRunDetails:
+    """执行明细 - 归档包内的完整执行记录"""
+    moves: List[Dict[str, Any]] = field(default_factory=list)
+    filter_rules: List[str] = field(default_factory=list)
+    filter_file_types: List[str] = field(default_factory=list)
+    filter_target_dirs: List[str] = field(default_factory=list)
+    created_at: str = ""
+    completed_at: str = ""
+    undo_records: List[Dict[str, Any]] = field(default_factory=list)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "BundleRunDetails":
+        return cls(
+            moves=list(data.get("moves", [])),
+            filter_rules=list(data.get("filter_rules", [])),
+            filter_file_types=list(data.get("filter_file_types", [])),
+            filter_target_dirs=list(data.get("filter_target_dirs", [])),
+            created_at=data.get("created_at", ""),
+            completed_at=data.get("completed_at", ""),
+            undo_records=list(data.get("undo_records", [])),
+        )
+
+
+@dataclass
+class ExecutionBundle:
+    """执行批次归档包
+
+    一次 apply 完成后的完整可导出归档包，包含：
+    - 批次快照
+    - 签收信息
+    - 校验结果
+    - 移动明细
+    - 冲突和人工跳过原因
+
+    支持 list-bundles、export-bundle、import-bundle 重新查阅或交接。
+    """
+    bundle_id: str
+    bundle_version: str
+    created_at: str
+    run_id: str
+    plan_id: str
+    snapshot_id: str
+    summary: BundleSummary
+    snapshot: BatchSnapshot
+    run_details: BundleRunDetails
+    signoffs: List[SignoffRecord] = field(default_factory=list)
+    signoff_conflicts: List[SignoffConflictState] = field(default_factory=list)
+    validation_history: List[SignoffValidationHistory] = field(default_factory=list)
+    imported: bool = False
+    import_source: Optional[str] = None
+    imported_at: Optional[str] = None
+    checksum: str = ""
+
+    def to_dict(self) -> Dict[str, Any]:
+        result = {
+            "bundle_id": self.bundle_id,
+            "bundle_version": self.bundle_version,
+            "created_at": self.created_at,
+            "run_id": self.run_id,
+            "plan_id": self.plan_id,
+            "snapshot_id": self.snapshot_id,
+            "summary": self.summary.to_dict(),
+            "snapshot": self.snapshot.to_dict(),
+            "run_details": self.run_details.to_dict(),
+            "signoffs": [s.to_dict() for s in self.signoffs],
+            "signoff_conflicts": [sc.to_dict() for sc in self.signoff_conflicts],
+            "validation_history": [vh.to_dict() for vh in self.validation_history],
+            "imported": self.imported,
+            "import_source": self.import_source,
+            "imported_at": self.imported_at,
+            "checksum": self.checksum,
+        }
+        return result
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "ExecutionBundle":
+        signoffs_data = data.get("signoffs", [])
+        signoffs = [SignoffRecord.from_dict(s) for s in signoffs_data] if signoffs_data else []
+        conflicts_data = data.get("signoff_conflicts", [])
+        signoff_conflicts = [SignoffConflictState.from_dict(sc) for sc in conflicts_data] if conflicts_data else []
+        vh_data = data.get("validation_history", [])
+        validation_history = [SignoffValidationHistory.from_dict(vh) for vh in vh_data] if vh_data else []
+        return cls(
+            bundle_id=data["bundle_id"],
+            bundle_version=data.get("bundle_version", BUNDLE_VERSION),
+            created_at=data["created_at"],
+            run_id=data["run_id"],
+            plan_id=data["plan_id"],
+            snapshot_id=data["snapshot_id"],
+            summary=BundleSummary.from_dict(data.get("summary", {})),
+            snapshot=BatchSnapshot.from_dict(data["snapshot"]),
+            run_details=BundleRunDetails.from_dict(data.get("run_details", {})),
+            signoffs=signoffs,
+            signoff_conflicts=signoff_conflicts,
+            validation_history=validation_history,
+            imported=data.get("imported", False),
+            import_source=data.get("import_source"),
+            imported_at=data.get("imported_at"),
+            checksum=data.get("checksum", ""),
+        )
+
+
+@dataclass
+class BundleImportLog:
+    """归档包导入日志"""
+    import_log_id: str
+    bundle_id: str
+    run_id: str
+    snapshot_id: str
+    timestamp: str
+    status: str  # "success" | "failed" | "skipped" | "forced"
+    source_file: str
+    errors: List[str] = field(default_factory=list)
+    warnings: List[str] = field(default_factory=list)
+    conflict_details: List[str] = field(default_factory=list)
+    forced: bool = False
+    imported_by: str = "cli"
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "BundleImportLog":
+        return cls(
+            import_log_id=data["import_log_id"],
+            bundle_id=data["bundle_id"],
+            run_id=data["run_id"],
+            snapshot_id=data["snapshot_id"],
+            timestamp=data["timestamp"],
+            status=data["status"],
+            source_file=data["source_file"],
+            errors=list(data.get("errors", [])),
+            warnings=list(data.get("warnings", [])),
+            conflict_details=list(data.get("conflict_details", [])),
+            forced=data.get("forced", False),
+            imported_by=data.get("imported_by", "cli"),
+        )
+
+
+@dataclass
+class BundleValidationResult:
+    """归档包验证结果"""
+    valid: bool
+    errors: List[str] = field(default_factory=list)
+    warnings: List[str] = field(default_factory=list)
+    conflict_types: List[str] = field(default_factory=list)
+    existing_bundle: Optional[ExecutionBundle] = None
+    existing_run: Optional[Dict[str, Any]] = None
+
+    @property
+    def has_errors(self) -> bool:
+        return len(self.errors) > 0
+
+    def to_dict(self) -> Dict[str, Any]:
+        result = asdict(self)
+        if self.existing_bundle:
+            result["existing_bundle"] = self.existing_bundle.to_dict()
+        return result
+
+
 def load_config(config_path: str) -> Config:
     """从 YAML 文件加载配置"""
     if not os.path.exists(config_path):
