@@ -25,6 +25,7 @@ from .models import (
     TargetDirMapping, ConfigFingerprint, HandoverConflictSummary,
     HandoverPreviewResult, HandoverImportLog, LandingHandoverBundle,
     HANDOVER_BUNDLE_VERSION, HANDOVER_REQUIRED_FIELDS,
+    TargetDirInfo, ActualFileCheckResult, HandoverUnifiedValidationResult,
     generate_id, now_iso,
 )
 from .storage import StateStore
@@ -3356,7 +3357,9 @@ def validate_landing_for_import(
         if "本地配置改动" not in conflict_types:
             conflict_types.append("本地配置改动")
 
-    if current_config and landing.dest_dir != current_config.dest_dir:
+    if current_config and os.path.normpath(landing.dest_dir) != os.path.normpath(
+        current_config.dest_dir
+    ):
         errors.append(
             f"清单目标目录与当前配置不一致: "
             f"清单 dest_dir={landing.dest_dir}, 当前配置 dest_dir={current_config.dest_dir}"
@@ -3739,6 +3742,243 @@ def _extract_target_dir_key(target_dir: str, dest_dir: str) -> str:
         return os.path.basename(target_dir)
 
 
+def _build_target_dir_info(
+    bundle: LandingHandoverBundle,
+    dest_root: str,
+    rebind_map: Optional[Dict[str, str]] = None,
+) -> TargetDirInfo:
+    """构建目标目录信息（原始或重绑后）
+
+    Args:
+        bundle: 交接包
+        dest_root: 目标根目录路径
+        rebind_map: 如提供则按 key->新路径 重写，否则用原始映射
+    """
+    target_dirs: List[Dict[str, Any]] = []
+    total = 0
+    for m in bundle.target_dir_mappings:
+        if rebind_map and m.target_dir_key in rebind_map:
+            actual_dir = rebind_map[m.target_dir_key]
+        else:
+            actual_dir = os.path.normpath(os.path.join(dest_root, m.target_dir_key))
+        target_dirs.append({
+            "target_dir_key": m.target_dir_key,
+            "original_target_dir": m.original_target_dir,
+            "actual_dir": actual_dir,
+            "file_count": m.file_count,
+            "file_list": list(m.file_list),
+        })
+        total += m.file_count
+    return TargetDirInfo(
+        dest_root=os.path.normpath(dest_root),
+        target_dirs=target_dirs,
+        total_expected_files=total,
+        dir_path_digest=_compute_dir_digest(dest_root),
+    )
+
+
+def _check_actual_files_on_disk(target_dir_info: TargetDirInfo) -> ActualFileCheckResult:
+    """直接读文件系统，逐目录逐文件检查真实落点
+
+    不依赖任何状态值，完全基于实际磁盘上是否存在对应文件。
+    """
+    missing: List[str] = []
+    found: List[str] = []
+    per_dir: List[Dict[str, Any]] = []
+    total_expected = 0
+    total_found = 0
+
+    for td in target_dir_info.target_dirs:
+        dir_expected = 0
+        dir_found = 0
+        dir_missing_files: List[str] = []
+        dir_found_files: List[str] = []
+
+        actual_dir = td["actual_dir"]
+        file_list = td.get("file_list", [])
+        dir_expected = len(file_list)
+
+        for fname in file_list:
+            full_path = os.path.normpath(os.path.join(actual_dir, fname))
+            if os.path.isfile(full_path):
+                found.append(full_path)
+                dir_found_files.append(full_path)
+                dir_found += 1
+            else:
+                missing.append(full_path)
+                dir_missing_files.append(full_path)
+
+        total_expected += dir_expected
+        total_found += dir_found
+        per_dir.append({
+            "target_dir_key": td["target_dir_key"],
+            "actual_dir": actual_dir,
+            "dir_exists": os.path.isdir(actual_dir),
+            "expected_count": dir_expected,
+            "found_count": dir_found,
+            "missing_count": dir_expected - dir_found,
+            "missing_files": dir_missing_files,
+            "found_files": dir_found_files,
+        })
+
+    return ActualFileCheckResult(
+        checked_at=now_iso(),
+        total_expected=total_expected,
+        total_found=total_found,
+        total_missing=len(missing),
+        missing_files=missing,
+        found_files=found,
+        per_dir_results=per_dir,
+        all_files_present=(len(missing) == 0 and total_expected > 0),
+    )
+
+
+def _validate_handover_unified(
+    bundle: LandingHandoverBundle,
+    store: Optional[StateStore] = None,
+    current_config: Optional[Config] = None,
+    proposed_dest_dir: Optional[str] = None,
+    rebind_map: Optional[Dict[str, str]] = None,
+    preview_result: Optional[HandoverPreviewResult] = None,
+    import_log: Optional[HandoverImportLog] = None,
+    command_exit_code: int = 0,
+    force_applied: bool = False,
+    check_actual_files: bool = True,
+) -> HandoverUnifiedValidationResult:
+    """交接包统一校验链（preview-handover / import-handover / review-handover 共用）
+
+    判定规则（任何一条不满足 → is_valid=False）：
+    1. 原始目标目录信息存在且完整
+    2. 重绑后目标目录信息存在且完整
+    3. 当前实际文件检查结果：目标目录里必须有真实恢复出来的文件（非空目录）
+    4. 命令退出码必须为 0（或 force_applied 时单独标记）
+    5. preview / import / landing 校验均无致命错误
+    """
+    result = HandoverUnifiedValidationResult()
+    block_reasons: List[str] = []
+
+    # === Step 1: 原始目标目录信息（始终不被覆盖）===
+    if bundle.original_dest_dir_record and bundle.original_dest_dir_record.dest_root:
+        result.original_target_dir_info = bundle.original_dest_dir_record
+    else:
+        # 首次生成，基于 bundle 内 dest_dir 构造
+        result.original_target_dir_info = _build_target_dir_info(bundle, bundle.dest_dir)
+
+    # === Step 2: fresh workspace 重绑后的目标目录 ===
+    if proposed_dest_dir:
+        dest_root_used = proposed_dest_dir
+    elif import_log and len(import_log.rebind_map) > 0:
+        # 从 import_log 的 rebind_map 推断新 dest_root
+        first_val = list(import_log.rebind_map.values())[0] if import_log.rebind_map else None
+        dest_root_used = os.path.dirname(first_val) if first_val else bundle.dest_dir
+    else:
+        dest_root_used = bundle.dest_dir
+
+    rebind_to_use = rebind_map or (dict(import_log.rebind_map) if import_log else None)
+    if bundle.rebound_dest_dir_record and bundle.rebound_dest_dir_record.dest_root:
+        result.rebound_target_dir_info = bundle.rebound_dest_dir_record
+    else:
+        result.rebound_target_dir_info = _build_target_dir_info(
+            bundle, dest_root_used, rebind_to_use
+        )
+
+    # === Step 3: 当前实际文件检查结果 ===
+    if check_actual_files:
+        result.actual_file_check = _check_actual_files_on_disk(result.rebound_target_dir_info)
+        if not result.actual_file_check.all_files_present:
+            if result.actual_file_check.total_missing > 0:
+                block_reasons.append(
+                    f"真实落点文件缺失 {result.actual_file_check.total_missing} 个"
+                    f"（期望 {result.actual_file_check.total_expected}，找到 {result.actual_file_check.total_found}）"
+                )
+            elif result.actual_file_check.total_expected == 0:
+                block_reasons.append("目标目录映射为空（0 个文件期望）")
+            else:
+                # total_expected > 0 但 all_files_present=False 说明没有文件存在
+                block_reasons.append(
+                    f"目标目录为空或未恢复任何文件（期望 {result.actual_file_check.total_expected} 个，"
+                    f"实际找到 {result.actual_file_check.total_found} 个）"
+                )
+
+    # === Step 4: 命令退出码 ===
+    result.command_exit_code = command_exit_code
+    result.has_non_zero_exit = (command_exit_code != 0)
+    result.force_applied = force_applied
+    if result.has_non_zero_exit and not force_applied:
+        block_reasons.append(f"命令非零退出（exit_code={command_exit_code}）")
+
+    # === Step 5: preview / import / landing 错误汇总 ===
+    if preview_result:
+        result.preview_errors = list(preview_result.errors)
+        result.preview_warnings = list(preview_result.warnings)
+        if preview_result.errors:
+            for err in preview_result.errors:
+                block_reasons.append(f"[preview] {err}")
+
+    if import_log:
+        result.import_errors = list(import_log.errors)
+        result.import_warnings = list(import_log.warnings)
+        if import_log.errors:
+            for err in import_log.errors:
+                block_reasons.append(f"[import] {err}")
+
+    # 同时调用 landing validate 链
+    if store:
+        try:
+            landing_v = validate_landing_for_import(
+                store, bundle.landing_fingerprint,
+                check_duplicate=False, current_config=current_config,
+            )
+            result.landing_errors = list(landing_v.errors)
+            result.landing_warnings = list(landing_v.warnings)
+            if landing_v.errors:
+                for err in landing_v.errors:
+                    block_reasons.append(f"[landing] {err}")
+        except Exception as le:
+            result.landing_errors = [f"landing validate 异常: {type(le).__name__}: {le}"]
+            block_reasons.append(result.landing_errors[-1])
+
+    # === 最终判定 ===
+    result.block_reasons = block_reasons
+
+    if force_applied:
+        # force 时单独标记：仅当 force 且没有真实文件严重缺失时放行
+        if result.actual_file_check.all_files_present:
+            result.is_valid = True
+            result.overall_status = "valid"
+        else:
+            result.is_valid = False
+            result.overall_status = "invalid"
+    elif block_reasons:
+        result.is_valid = False
+        # 区分 warnings / conflict / invalid
+        has_only_warnings = (
+            not result.preview_errors
+            and not result.import_errors
+            and not result.landing_errors
+            and not result.has_non_zero_exit
+            and not result.actual_file_check.total_missing
+            and result.actual_file_check.total_expected > 0
+        )
+        if has_only_warnings and (result.preview_warnings or result.landing_warnings or result.import_warnings):
+            result.overall_status = "warnings"
+            result.is_valid = True  # 仅警告时仍可通过
+        else:
+            result.overall_status = "invalid"
+    else:
+        result.is_valid = True
+        result.overall_status = "valid"
+
+    # can_import / can_review 辅助标志
+    result.can_import = (
+        not result.preview_errors
+        and result.has_non_zero_exit is False
+    )
+    result.can_review = result.is_valid
+
+    return result
+
+
 def _compute_rules_digest(config: Config) -> str:
     """计算规则哈希"""
     try:
@@ -3827,6 +4067,31 @@ def create_handover_bundle(
         change_summary=landing.change_summary,
         notes=notes,
     )
+
+    # 写入原始目标目录信息（创建时一次性写入，永不被重绑定覆盖）
+    bundle.original_dest_dir_record = _build_target_dir_info(bundle, bundle.dest_dir)
+
+    # 创建时首次做实际文件检查（源 workspace 此时文件应该都在）
+    bundle.rebound_dest_dir_record = bundle.original_dest_dir_record
+    bundle.last_actual_file_check = _check_actual_files_on_disk(bundle.original_dest_dir_record)
+
+    # 首次跑统一校验链
+    bundle.unified_validation = _validate_handover_unified(
+        bundle,
+        store=None,
+        current_config=config,
+        proposed_dest_dir=bundle.dest_dir,
+        check_actual_files=False,  # 创建阶段单独检查，避免重复 I/O
+    )
+    # 覆盖刚才跳过的实际文件检查结果
+    bundle.unified_validation.actual_file_check = bundle.last_actual_file_check
+    if not bundle.last_actual_file_check.all_files_present:
+        bundle.unified_validation.is_valid = False
+        bundle.unified_validation.overall_status = "invalid"
+        bundle.unified_validation.block_reasons.append(
+            f"创建时真实落点文件检查失败（期望 {bundle.last_actual_file_check.total_expected}, "
+            f"找到 {bundle.last_actual_file_check.total_found}）"
+        )
 
     # 计算 checksum
     data_for_checksum = json.dumps(bundle.to_dict(), sort_keys=True, ensure_ascii=False, default=str)
@@ -4102,7 +4367,7 @@ def preview_handover_bundle(
     else:
         status = "ok"
 
-    return HandoverPreviewResult(
+    preview = HandoverPreviewResult(
         handover_id=bundle.handover_id,
         status=status,
         original_dest_dir=original_dest_dir,
@@ -4113,6 +4378,30 @@ def preview_handover_bundle(
         permission_checks=permission_checks,
         can_import=can_import,
     )
+
+    # === 接入统一校验链：保存到 bundle ===
+    bundle.unified_validation = _validate_handover_unified(
+        bundle,
+        store=None,
+        current_config=current_config,
+        proposed_dest_dir=new_dest_dir,
+        rebind_map=rebind_map,
+        preview_result=preview,
+        command_exit_code=0,
+        check_actual_files=True,  # preview 阶段就检查真实文件是否到位
+    )
+    # 统一校验链的结果回写 preview 标志（确保 CLI 出口行为一致）
+    preview.can_import = bundle.unified_validation.can_import
+    if bundle.unified_validation.block_reasons and not preview.errors:
+        for r in bundle.unified_validation.block_reasons:
+            if r.startswith("[preview]") or r.startswith("[import]") or r.startswith("[landing]"):
+                continue
+            preview.errors.append(r)
+    if not bundle.unified_validation.is_valid:
+        preview.can_import = False
+        preview.status = "errors" if preview.errors else "warnings"
+
+    return preview
 
 
 def _rebind_landing_with_map(
@@ -4353,6 +4642,13 @@ def import_handover_bundle(
     bundle.imported_at = now_iso()
     bundle.import_rebind_map = dict(rebind_map)
 
+    # === 写入 fresh workspace 重绑后的目标目录信息（永不覆盖原始信息）===
+    bundle.rebound_dest_dir_record = _build_target_dir_info(
+        bundle, new_dest, rebind_map
+    )
+    # 首次导入时立刻检查真实文件
+    bundle.last_actual_file_check = _check_actual_files_on_disk(bundle.rebound_dest_dir_record)
+
     # Step 5: 保存 + 写日志
     store.save_handover(bundle)
     # 同时把重绑定后的 landing 也存到 landings 表，供 verify-landing 使用
@@ -4377,6 +4673,37 @@ def import_handover_bundle(
     )
     store.add_handover_import_log(log)
     bundle.last_import_log_id = log.import_log_id
+
+    # === 最终跑一次统一校验链（preview+import+landing 整体判定）===
+    command_exit_code = 0 if not errors else 1
+    bundle.unified_validation = _validate_handover_unified(
+        bundle,
+        store=store,
+        current_config=current_config,
+        proposed_dest_dir=new_dest,
+        rebind_map=rebind_map,
+        preview_result=preview,
+        import_log=log,
+        command_exit_code=command_exit_code,
+        force_applied=force,
+        check_actual_files=False,  # 上面已单独检查，直接用结果
+    )
+    # 覆盖刚才跳过的实际文件检查结果
+    bundle.unified_validation.actual_file_check = bundle.last_actual_file_check
+    if not bundle.last_actual_file_check.all_files_present:
+        # 即使 force，真实文件缺失也必须判 invalid
+        bundle.unified_validation.is_valid = False
+        bundle.unified_validation.overall_status = "invalid"
+        reason = (
+            f"导入后真实落点文件缺失 {bundle.last_actual_file_check.total_missing} 个"
+            f"（期望 {bundle.last_actual_file_check.total_expected}, "
+            f"找到 {bundle.last_actual_file_check.total_found}）"
+        )
+        if reason not in bundle.unified_validation.block_reasons:
+            bundle.unified_validation.block_reasons.append(reason)
+        if log.status == "success":
+            log.status = "failed"
+
     store.save_handover(bundle)
 
     return bundle, log
@@ -4424,18 +4751,73 @@ def review_handover_bundle(
         current_config=current_cfg,
     )
 
+    # === Step: 直接读文件系统做真实落点检查（不依赖任何状态值）===
+    if bundle.rebound_dest_dir_record and bundle.rebound_dest_dir_record.dest_root:
+        rebound_info = bundle.rebound_dest_dir_record
+    else:
+        # 老数据兼容：从 bundle.dest_dir 重新构造
+        rebound_info = _build_target_dir_info(
+            bundle, bundle.dest_dir,
+            rebind_map=dict(bundle.import_rebind_map) if bundle.import_rebind_map else None,
+        )
+    actual_file_check = _check_actual_files_on_disk(rebound_info)
+    bundle.last_actual_file_check = actual_file_check
+    bundle.rebound_dest_dir_record = rebound_info
+
+    # === Step: 运行统一校验链（preview/import 信息已缺省，主要用真实文件检查做裁决）===
+    unified = _validate_handover_unified(
+        bundle,
+        store=store,
+        current_config=current_cfg,
+        proposed_dest_dir=bundle.dest_dir,
+        rebind_map=dict(bundle.import_rebind_map) if bundle.import_rebind_map else None,
+        import_log=last_import_log,
+        command_exit_code=0,  # review 自身不产生非零退出，由 CLI 层决定
+        force_applied=bool(last_import_log.forced) if last_import_log else False,
+        check_actual_files=False,  # 上面已单独检查
+    )
+    # 覆盖统一校验链跳过的实际文件检查结果
+    unified.actual_file_check = actual_file_check
+
+    # 判定 verify_status：统一判定，以"真实文件存在性"作为最高优先级
+    # 1. 先按 landing validate 的 error 分类
     if validation.has_errors:
-        # 判断是 invalid 还是 conflict
         has_conflict_only = True
         for err in validation.errors:
             if "缺少必填字段" in err or "格式错误" in err:
                 has_conflict_only = False
                 break
-        verify_status = "conflict" if has_conflict_only else "invalid"
+        landing_based_status = "conflict" if has_conflict_only else "invalid"
     else:
-        verify_status = "valid"
+        landing_based_status = "valid"
 
-    # 构造复查结果
+    # 2. 再按真实文件检查叠加：任何文件缺失 → 直接 invalid
+    if not actual_file_check.all_files_present:
+        verify_status = "invalid"
+        if actual_file_check.total_missing == 0 and actual_file_check.total_expected > 0:
+            missing_msg = (
+                f"目标目录为空或未恢复任何文件"
+                f"（期望 {actual_file_check.total_expected} 个，找到 {actual_file_check.total_found} 个）"
+            )
+        else:
+            missing_msg = (
+                f"真实落点文件缺失 {actual_file_check.total_missing} 个"
+                f"（期望 {actual_file_check.total_expected}, 找到 {actual_file_check.total_found}）"
+            )
+        # 叠加到验证错误里，确保 CLI 输出可见
+        if missing_msg not in validation.errors:
+            validation.errors.append(missing_msg)
+        # 同步到统一校验链
+        unified.is_valid = False
+        unified.overall_status = "invalid"
+        if missing_msg not in unified.block_reasons:
+            unified.block_reasons.append(missing_msg)
+    else:
+        verify_status = landing_based_status
+
+    bundle.unified_validation = unified
+
+    # 构造复查结果（拆出三个独立字段 + 统一校验结果）
     result: Dict[str, Any] = {
         "handover": {
             "handover_id": bundle.handover_id,
@@ -4448,6 +4830,12 @@ def review_handover_bundle(
             "imported_at": bundle.imported_at,
             "change_summary": bundle.change_summary,
         },
+        # === 三个独立字段（拆分"原始/重绑/实际文件检查）===
+        "original_target_dir_info": bundle.original_dest_dir_record.to_dict() if bundle.original_dest_dir_record else None,
+        "rebound_target_dir_info": bundle.rebound_dest_dir_record.to_dict() if bundle.rebound_dest_dir_record else None,
+        "actual_file_check": actual_file_check.to_dict(),
+        # === 统一校验结果 ===
+        "unified_validation": unified.to_dict(),
         "rebind_map": bundle.import_rebind_map,
         "last_import_log": last_import_log.to_dict() if last_import_log else None,
         "all_import_logs_count": len(import_logs),

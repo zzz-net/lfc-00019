@@ -4154,6 +4154,24 @@ def cmd_import_handover(file_path, config_path, dest_dir, rebind_json, no_dup_ch
             "imported_at": imported_bundle.imported_at,
             "import_source": imported_bundle.import_source,
             "last_import_log_id": imported_bundle.last_import_log_id,
+            # === 新增三个独立字段 + 统一校验结果 ===
+            "original_target_dir_info": (
+                imported_bundle.original_dest_dir_record.to_dict()
+                if imported_bundle.original_dest_dir_record else None
+            ),
+            "rebound_target_dir_info": (
+                imported_bundle.rebound_dest_dir_record.to_dict()
+                if imported_bundle.rebound_dest_dir_record else None
+            ),
+            "actual_file_check": (
+                imported_bundle.last_actual_file_check.to_dict()
+                if imported_bundle.last_actual_file_check else None
+            ),
+            "unified_validation": (
+                imported_bundle.unified_validation.to_dict()
+                if imported_bundle.unified_validation else None
+            ),
+            "is_valid": imported_bundle.unified_validation.is_valid if imported_bundle.unified_validation else False,
         }
         click.echo(json.dumps(out, ensure_ascii=False, indent=2))
     else:
@@ -4163,6 +4181,14 @@ def cmd_import_handover(file_path, config_path, dest_dir, rebind_json, no_dup_ch
         color = {"success": "green", "forced": "yellow", "failed": "red", "skipped": "magenta"}.get(
             log.status, "white"
         )
+        # 统一校验链覆盖：即使 log.status 是 success，只要 unified is_valid=False 就变色
+        uv = imported_bundle.unified_validation
+        valid_by_unified = bool(uv.is_valid) if uv else (log.status == "success")
+        if not valid_by_unified:
+            if log.status == "success":
+                status_cn = "成功但落点无效"
+            color = "red"
+
         click.echo(click.style(f"✓ 交接包导入[{status_cn}]", fg=color))
         click.echo(f"  交接包ID: {imported_bundle.handover_id}")
         click.echo(f"  导入日志ID: {log.import_log_id}")
@@ -4171,6 +4197,33 @@ def cmd_import_handover(file_path, config_path, dest_dir, rebind_json, no_dup_ch
         click.echo(f"  落点文件数: {len(imported_bundle.landing_fingerprint.file_fingerprints)}")
         click.echo(f"  导入时间:   {imported_bundle.imported_at}")
         click.echo(f"  导入来源:   {imported_bundle.import_source}")
+
+        # 真实落点文件检查结果（统一校验链）
+        afc = imported_bundle.last_actual_file_check
+        if afc:
+            click.echo()
+            present_cn = "完整" if afc.all_files_present else "缺失"
+            present_color = "green" if afc.all_files_present else "red"
+            click.echo(click.style(
+                f"[真实落点检查:{present_cn}] 期望 {afc.total_expected} 个，"
+                f"找到 {afc.total_found} 个，缺失 {afc.total_missing} 个",
+                fg=present_color,
+            ))
+            if not afc.all_files_present:
+                for pdr in afc.per_dir_results:
+                    dir_color = "green" if pdr["missing_count"] == 0 else "red"
+                    exists_tag = "[目录存在]" if pdr["dir_exists"] else "[目录不存在]"
+                    click.echo(click.style(
+                        f"  {exists_tag} {pdr['actual_dir']} "
+                        f"({pdr['found_count']}/{pdr['expected_count']} 文件到位)",
+                        fg=dir_color,
+                    ))
+            if uv and uv.block_reasons:
+                click.echo()
+                click.echo(click.style("[统一校验拦截原因]", fg="red"))
+                for r in uv.block_reasons:
+                    click.echo(f"  - {r}")
+
         if log.rebind_map:
             click.echo()
             click.echo(click.style("[重绑定映射]", fg="cyan"))
@@ -4192,7 +4245,10 @@ def cmd_import_handover(file_path, config_path, dest_dir, rebind_json, no_dup_ch
             for c in log.conflict_details:
                 click.echo(f"  - {c}")
 
-    if log.status in ("failed", "skipped"):
+    # 统一判定退出码：log.status 失败 OR 统一校验 is_valid=False → sys.exit(1)
+    uv_for_exit = imported_bundle.unified_validation
+    unified_invalid = bool(uv_for_exit and not uv_for_exit.is_valid)
+    if log.status in ("failed", "skipped") or unified_invalid:
         sys.exit(1)
 
 
@@ -4301,13 +4357,51 @@ def cmd_review_handover(config_path, handover_id, json_output):
             for t in result["verify_conflict_types"]:
                 click.echo(f"  - {t}")
 
+        # 新增：真实落点文件检查（独立于 verify_status）
+        afc = result.get("actual_file_check", {})
+        if afc:
+            click.echo()
+            all_present = afc.get("all_files_present", False)
+            total_expected = afc.get("total_expected", 0)
+            total_found = afc.get("total_found", 0)
+            total_missing = afc.get("total_missing", 0)
+            present_cn = "完整" if all_present else "缺失"
+            present_color = "green" if all_present else "red"
+            click.echo(click.style(
+                f"[真实落点检查:{present_cn}] 期望 {total_expected} 个，"
+                f"找到 {total_found} 个，缺失 {total_missing} 个",
+                fg=present_color,
+            ))
+            if not all_present:
+                for pdr in afc.get("per_dir_results", []):
+                    dir_color = "green" if pdr.get("missing_count", 0) == 0 else "red"
+                    exists_tag = "[目录存在]" if pdr.get("dir_exists", False) else "[目录不存在]"
+                    click.echo(click.style(
+                        f"  {exists_tag} {pdr.get('actual_dir')} "
+                        f"({pdr.get('found_count', 0)}/{pdr.get('expected_count', 0)} 文件到位)",
+                        fg=dir_color,
+                    ))
+
+        # 新增：统一校验链拦截原因
+        uv = result.get("unified_validation", {})
+        if uv and not uv.get("is_valid", True):
+            block_reasons = uv.get("block_reasons", [])
+            if block_reasons:
+                click.echo()
+                click.echo(click.style("[统一校验拦截原因]", fg="red"))
+                for r in block_reasons:
+                    click.echo(f"  - {r}")
+
         if result.get("checksum"):
             click.echo()
             click.echo(f"交接包校验和: {result['checksum']}")
         click.echo()
         click.echo(f"历史导入记录数: {result['all_import_logs_count']}")
 
-    if result["verify_status"] != "valid":
+    # 统一判定退出码：verify_status != valid  OR  unified is_valid=False → sys.exit(1)
+    unified_for_exit = result.get("unified_validation", {})
+    unified_valid = bool(unified_for_exit.get("is_valid", True))
+    if result["verify_status"] != "valid" or not unified_valid:
         sys.exit(1)
 
 

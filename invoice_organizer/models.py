@@ -1696,6 +1696,130 @@ class HandoverImportLog:
 
 
 @dataclass
+class TargetDirInfo:
+    """单个目标目录的检查信息
+
+    包含目录路径、预期文件列表和实际存在的文件检查结果。
+    用于"原始目标目录"和"重绑后目标目录"的独立记录。
+    """
+    dest_root: str = ""
+    target_dirs: List[Dict[str, Any]] = field(default_factory=list)
+    total_expected_files: int = 0
+    dir_path_digest: str = ""
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: Optional[Dict[str, Any]]) -> "TargetDirInfo":
+        if not data:
+            return cls()
+        return cls(
+            dest_root=data.get("dest_root", ""),
+            target_dirs=list(data.get("target_dirs", [])),
+            total_expected_files=data.get("total_expected_files", 0),
+            dir_path_digest=data.get("dir_path_digest", ""),
+        )
+
+
+@dataclass
+class ActualFileCheckResult:
+    """当前实际文件系统检查结果
+
+    逐目录、逐文件检查真实落点是否存在，
+    不依赖任何状态值，直接读文件系统。
+    """
+    checked_at: str = field(default_factory=now_iso)
+    total_expected: int = 0
+    total_found: int = 0
+    total_missing: int = 0
+    missing_files: List[str] = field(default_factory=list)
+    found_files: List[str] = field(default_factory=list)
+    per_dir_results: List[Dict[str, Any]] = field(default_factory=list)
+    all_files_present: bool = False
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: Optional[Dict[str, Any]]) -> "ActualFileCheckResult":
+        if not data:
+            return cls()
+        return cls(
+            checked_at=data.get("checked_at", now_iso()),
+            total_expected=data.get("total_expected", 0),
+            total_found=data.get("total_found", 0),
+            total_missing=data.get("total_missing", 0),
+            missing_files=list(data.get("missing_files", [])),
+            found_files=list(data.get("found_files", [])),
+            per_dir_results=list(data.get("per_dir_results", [])),
+            all_files_present=data.get("all_files_present", False),
+        )
+
+
+@dataclass
+class HandoverUnifiedValidationResult:
+    """交接包统一校验结果
+
+    preview-handover / import-handover / review-handover 共用的判定链输出。
+    任何一步非零退出或真实文件缺失，is_valid 都必须为 False。
+    """
+    is_valid: bool = False
+    overall_status: str = "invalid"  # "valid" | "invalid" | "warnings" | "conflict"
+
+    original_target_dir_info: TargetDirInfo = field(default_factory=TargetDirInfo)
+    rebound_target_dir_info: TargetDirInfo = field(default_factory=TargetDirInfo)
+    actual_file_check: ActualFileCheckResult = field(default_factory=ActualFileCheckResult)
+
+    preview_errors: List[str] = field(default_factory=list)
+    preview_warnings: List[str] = field(default_factory=list)
+    import_errors: List[str] = field(default_factory=list)
+    import_warnings: List[str] = field(default_factory=list)
+    landing_errors: List[str] = field(default_factory=list)
+    landing_warnings: List[str] = field(default_factory=list)
+
+    command_exit_code: int = 0
+    has_non_zero_exit: bool = False
+    force_applied: bool = False
+
+    can_import: bool = False
+    can_review: bool = False
+
+    block_reasons: List[str] = field(default_factory=list)
+
+    def to_dict(self) -> Dict[str, Any]:
+        result = asdict(self)
+        result["original_target_dir_info"] = self.original_target_dir_info.to_dict()
+        result["rebound_target_dir_info"] = self.rebound_target_dir_info.to_dict()
+        result["actual_file_check"] = self.actual_file_check.to_dict()
+        return result
+
+    @classmethod
+    def from_dict(cls, data: Optional[Dict[str, Any]]) -> "HandoverUnifiedValidationResult":
+        if not data:
+            return cls()
+        return cls(
+            is_valid=data.get("is_valid", False),
+            overall_status=data.get("overall_status", "invalid"),
+            original_target_dir_info=TargetDirInfo.from_dict(data.get("original_target_dir_info")),
+            rebound_target_dir_info=TargetDirInfo.from_dict(data.get("rebound_target_dir_info")),
+            actual_file_check=ActualFileCheckResult.from_dict(data.get("actual_file_check")),
+            preview_errors=list(data.get("preview_errors", [])),
+            preview_warnings=list(data.get("preview_warnings", [])),
+            import_errors=list(data.get("import_errors", [])),
+            import_warnings=list(data.get("import_warnings", [])),
+            landing_errors=list(data.get("landing_errors", [])),
+            landing_warnings=list(data.get("landing_warnings", [])),
+            command_exit_code=data.get("command_exit_code", 0),
+            has_non_zero_exit=data.get("has_non_zero_exit", False),
+            force_applied=data.get("force_applied", False),
+            can_import=data.get("can_import", False),
+            can_review=data.get("can_review", False),
+            block_reasons=list(data.get("block_reasons", [])),
+        )
+
+
+@dataclass
 class LandingHandoverBundle:
     """落点交接包
 
@@ -1706,6 +1830,9 @@ class LandingHandoverBundle:
     - 手工改名记录
     - 冲突摘要
     - 最近一次 verify 结论
+    - 原始目标目录信息（不被重绑定覆盖）
+    - fresh workspace 重绑后的目标目录信息
+    - 当前实际文件检查结果
 
     用于跨工作区交接、复原、继续核对。
     """
@@ -1738,6 +1865,11 @@ class LandingHandoverBundle:
     last_import_log_id: str = ""
     checksum: str = ""
 
+    original_dest_dir_record: TargetDirInfo = field(default_factory=TargetDirInfo)
+    rebound_dest_dir_record: TargetDirInfo = field(default_factory=TargetDirInfo)
+    last_actual_file_check: ActualFileCheckResult = field(default_factory=ActualFileCheckResult)
+    unified_validation: HandoverUnifiedValidationResult = field(default_factory=HandoverUnifiedValidationResult)
+
     def to_dict(self) -> Dict[str, Any]:
         result = {
             "handover_id": self.handover_id,
@@ -1763,6 +1895,10 @@ class LandingHandoverBundle:
             "import_rebind_map": dict(self.import_rebind_map),
             "last_import_log_id": self.last_import_log_id,
             "checksum": self.checksum,
+            "original_dest_dir_record": self.original_dest_dir_record.to_dict(),
+            "rebound_dest_dir_record": self.rebound_dest_dir_record.to_dict(),
+            "last_actual_file_check": self.last_actual_file_check.to_dict(),
+            "unified_validation": self.unified_validation.to_dict(),
         }
         return result
 
@@ -1801,6 +1937,10 @@ class LandingHandoverBundle:
             import_rebind_map=dict(data.get("import_rebind_map", {})),
             last_import_log_id=data.get("last_import_log_id", ""),
             checksum=data.get("checksum", ""),
+            original_dest_dir_record=TargetDirInfo.from_dict(data.get("original_dest_dir_record")),
+            rebound_dest_dir_record=TargetDirInfo.from_dict(data.get("rebound_dest_dir_record")),
+            last_actual_file_check=ActualFileCheckResult.from_dict(data.get("last_actual_file_check")),
+            unified_validation=HandoverUnifiedValidationResult.from_dict(data.get("unified_validation")),
         )
 
 
