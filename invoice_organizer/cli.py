@@ -294,6 +294,8 @@ def cmd_plan(
               help="跳过签收校验，即使没有签收也可以执行")
 @click.option("--force-expired-signoff", is_flag=True,
               help="即使签收已过期也强制执行")
+@click.option("--force-conflict-signoff", is_flag=True,
+              help="即使存在签收冲突也强制执行（需先解决分歧）")
 def cmd_apply(
     config_path: str,
     plan_id: Optional[str],
@@ -308,6 +310,7 @@ def cmd_apply(
     require_signoff: bool,
     no_require_signoff: bool,
     force_expired_signoff: bool,
+    force_conflict_signoff: bool,
 ):
     try:
         config = load_config(config_path)
@@ -350,6 +353,8 @@ def cmd_apply(
     )
 
     active_signoff = signoff_validation.active_signoff
+
+    has_conflict_error = any("未解决的签收冲突" in err or "冲突的签收记录" in err for err in signoff_validation.errors)
 
     if signoff_validation.is_expired and not force_expired_signoff:
         click.echo(click.style("[错误] 执行被签收过期拦截！", fg="red", bold=True))
@@ -396,7 +401,11 @@ def cmd_apply(
             len(signoff_validation.errors) == 1 and
             "签收已过期" in signoff_validation.errors[0]
         )
-        if not (only_expired_error and force_expired_signoff):
+        only_conflict_error = (
+            has_conflict_error and
+            len(signoff_validation.errors) == sum(1 for err in signoff_validation.errors if "未解决的签收冲突" in err or "冲突的签收记录" in err)
+        )
+        if not (only_expired_error and force_expired_signoff) and not (only_conflict_error and force_conflict_signoff):
             click.echo(click.style("[错误] 执行被签收校验拦截！", fg="red", bold=True))
             for err in signoff_validation.errors:
                 click.echo(click.style(f"  - {err}", fg="red"))
@@ -410,11 +419,16 @@ def cmd_apply(
                 click.echo(f"  签收时间: {active_signoff.signed_at}")
                 if active_signoff.deadline:
                     click.echo(f"  截止时间: {active_signoff.deadline}")
+                if active_signoff.conflict_detail:
+                    click.echo(f"  冲突详情: {active_signoff.conflict_detail}")
             click.echo()
             click.echo("  你可以：")
             click.echo(f"    1. 先执行 sign-off 签收该快照")
             click.echo(f"       python -m invoice_organizer sign-off -c {config_path} -s {snapshot_id} --signed-by <签收人>")
-            click.echo("    2. 使用 --no-require-signoff 跳过签收校验")
+            if has_conflict_error:
+                click.echo("    2. 使用 --force-conflict-signoff 强制执行（需先解决分歧）")
+                click.echo(f"       python -m invoice_organizer apply -c {config_path} -s {snapshot_id} --force-conflict-signoff")
+            click.echo("    3. 使用 --no-require-signoff 跳过签收校验")
             click.echo(f"       python -m invoice_organizer apply -c {config_path} -s {snapshot_id} --no-require-signoff")
             sys.exit(1)
 
@@ -430,6 +444,8 @@ def cmd_apply(
             click.echo(click.style("  [注意] 已强制执行过期签收", fg="yellow"))
         if signoff_validation.config_mismatch and force_snapshot:
             click.echo(click.style("  [注意] 已强制使用签收时配置执行（忽略当前配置变更）", fg="yellow"))
+        if has_conflict_error and force_conflict_signoff:
+            click.echo(click.style("  [注意] 已强制执行（存在未解决的签收冲突）", fg="yellow"))
 
     allowed, reject_reason = _check_lock_before_apply(store, snapshot)
     if not allowed:
@@ -2018,12 +2034,23 @@ def cmd_check_signoff(
     else:
         click.echo(click.style("  签收状态: 未签收", fg="yellow"))
 
+    only_conflict_error = all(
+        "未解决的签收冲突" in err or "冲突的签收记录" in err
+        for err in result.errors
+    )
+
     if result.has_errors:
-        click.echo()
-        click.echo(click.style("[错误] 签收校验失败：", fg="red", bold=True))
-        for err in result.errors:
-            click.echo(click.style(f"  - {err}", fg="red"))
-        sys.exit(1)
+        if no_require_signed and only_conflict_error:
+            click.echo()
+            click.echo(click.style("[警告] 存在未解决的签收冲突（仅查看模式）：", fg="yellow", bold=True))
+            for err in result.errors:
+                click.echo(click.style(f"  - {err}", fg="yellow"))
+        else:
+            click.echo()
+            click.echo(click.style("[错误] 签收校验失败：", fg="red", bold=True))
+            for err in result.errors:
+                click.echo(click.style(f"  - {err}", fg="red"))
+            sys.exit(1)
 
     if result.warnings:
         click.echo()
@@ -2031,9 +2058,13 @@ def cmd_check_signoff(
         for warn in result.warnings:
             click.echo(click.style(f"  - {warn}", fg="yellow"))
 
-    if not result.has_errors:
-        click.echo()
-        click.echo(click.style("[OK] 签收校验通过，可以执行 apply。", fg="green"))
+    if not result.has_errors or (no_require_signed and only_conflict_error):
+        if not result.has_errors:
+            click.echo()
+            click.echo(click.style("[OK] 签收校验通过，可以执行 apply。", fg="green"))
+        else:
+            click.echo()
+            click.echo(click.style("[提示] 存在未解决的签收冲突，需先解决才能执行 apply。", fg="yellow"))
 
     if verbose:
         all_signoffs = store.get_signoffs_by_snapshot(snapshot_id)

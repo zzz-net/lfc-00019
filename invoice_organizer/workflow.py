@@ -1758,6 +1758,11 @@ def validate_signoff_for_apply(
             f"该快照已被新版本替代，更新的快照: {newer_ids}"
         )
 
+    if active_signoff.forced and active_signoff.conflict_detail and active_signoff.import_source:
+        errors.append(
+            f"存在未解决的签收冲突！该签收为强制导入，冲突原因: {active_signoff.conflict_detail}"
+        )
+
     all_signoffs = store.get_signoffs_by_snapshot(snapshot.snapshot_id)
     other_active = [
         s for s in all_signoffs
@@ -1768,7 +1773,7 @@ def validate_signoff_for_apply(
             conflicting_signoffs.append(
                 f"ID: {s.signoff_id}, 签收人: {s.signed_by}, 状态: {s.status}"
             )
-        warnings.append(
+        errors.append(
             f"存在 {len(other_active)} 条冲突的签收记录，请确认使用哪一份"
         )
 
