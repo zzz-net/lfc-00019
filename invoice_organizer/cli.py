@@ -761,7 +761,7 @@ def cmd_update_snapshot(
         new_remark=new_remark,
         changed_by=updated_by,
         change_source="cli",
-        allow_overwrite=True,
+        allow_overwrite=force,
     )
 
     if not success:
@@ -769,6 +769,10 @@ def cmd_update_snapshot(
         click.echo(click.style("[错误] 备注更新失败：", fg="red", bold=True))
         for err in errors:
             click.echo(click.style(f"  - {err}", fg="red"))
+        if history and history.conflict_detected:
+            click.echo()
+            click.echo(click.style("[提示] 备注内容存在冲突，不会自动覆盖。", fg="yellow"))
+            click.echo(click.style("  使用 --force 可强制覆盖现有备注。", fg="yellow"))
         sys.exit(1)
 
     click.echo()

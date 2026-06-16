@@ -174,37 +174,83 @@ def step_1_plan_with_remark():
 
 def step_2_update_remark(snapshot_id):
     print("\n" + "="*70)
-    print("[步骤 2] 补充修改备注信息")
+    print("[步骤 2] 补充修改备注信息（验证 --force 与 forced 标记）")
     print("="*70)
 
+    print("\n[测试 2a] 不带 --force 覆盖冲突备注，应被拒绝")
     result = run(
         f"python -m invoice_organizer update-snapshot -c {CONFIG_PATH} "
         f"-s {snapshot_id} "
         f"--remark \"2024年1月发票批次，已完成初审\" "
-        f"--tag 已初审 --append-tags "
         f"--notes \"已完成初审，发现2张发票需要补充材料，详见附件。\" "
         f"--updated-by \"李四\" "
         f"-y -v"
     )
-    assert result.returncode == 0, "update-snapshot 命令失败"
-    assert "已完成初审" in result.stdout, "更新后的备注未显示"
-    assert "备注变更对比" in result.stdout, "更新后应显示备注变更对比"
+    assert result.returncode != 0, "不带 --force 冲突时应失败"
+    assert "冲突" in result.stdout or "备注内容冲突" in result.stdout, "应提示冲突"
+    assert "备注变更对比" in result.stdout, "冲突时也应显示变更对比"
+    assert "--force" in result.stdout, "应提示使用 --force"
 
     with open(STATE_FILE, "r", encoding="utf-8") as f:
         state = json.load(f)
+    snapshot_data = state["snapshots"][snapshot_id]
+    remark = snapshot_data["remark"]
+    assert remark["remark"] == "2024年1月发票批次，待财务审核", "不带 --force 冲突时备注不应改变"
+    assert remark["handler"] == "张三", "不带 --force 冲突时交接人不应改变"
 
+    histories = state.get("remark_histories", [])
+    assert len(histories) >= 1, "应记录冲突历史"
+    conflict_h = [h for h in histories if h.get("conflict_detected")]
+    assert len(conflict_h) >= 1, "应有冲突检测记录"
+    assert conflict_h[-1]["forced"] == False, "不带 --force 的冲突记录 forced 应为 False"
+
+    print("\n[测试 2b] 带 --force 覆盖冲突备注，应成功且 forced=True")
+    result = run(
+        f"python -m invoice_organizer update-snapshot -c {CONFIG_PATH} "
+        f"-s {snapshot_id} "
+        f"--remark \"2024年1月发票批次，已完成初审\" "
+        f"--notes \"已完成初审，发现2张发票需要补充材料，详见附件。\" "
+        f"--updated-by \"李四\" "
+        f"--force -y -v"
+    )
+    assert result.returncode == 0, "带 --force 应成功"
+    assert "已完成初审" in result.stdout, "更新后的备注未显示"
+    assert "备注变更对比" in result.stdout, "更新后应显示备注变更对比"
+    assert "强制覆盖" in result.stdout, "强制覆盖时应显示对应标记"
+
+    with open(STATE_FILE, "r", encoding="utf-8") as f:
+        state = json.load(f)
     snapshot_data = state["snapshots"][snapshot_id]
     remark = snapshot_data["remark"]
     assert remark["remark"] == "2024年1月发票批次，已完成初审", "备注更新错误"
-    assert set(remark["tags"]) == {"2024-01", "财务审核", "增值税", "已初审"}, "标签追加错误"
     assert "补充材料" in remark["notes"], "注意事项更新错误"
     assert remark["updated_by"] == "李四", "更新人错误"
 
     histories = state.get("remark_histories", [])
-    assert len(histories) >= 1, "应该有备注修改历史"
-    history = histories[-1]
-    assert history["snapshot_id"] == snapshot_id, "历史记录快照ID错误"
-    assert history["changed_by"] == "李四", "历史记录修改人错误"
+    forced_h = [h for h in histories if h.get("forced")]
+    assert len(forced_h) >= 1, "带 --force 冲突后应有 forced=True 记录"
+    assert forced_h[-1]["forced"] == True, "带 --force 的冲突记录 forced 应为 True"
+
+    print("\n[测试 2c] 追加标签（修改已有标签字段，需 --force），验证 forced=True")
+    result = run(
+        f"python -m invoice_organizer update-snapshot -c {CONFIG_PATH} "
+        f"-s {snapshot_id} "
+        f"--tag 已初审 --append-tags "
+        f"--updated-by \"李四\" "
+        f"--force -y -v"
+    )
+    assert result.returncode == 0, "追加标签带 --force 应成功"
+
+    with open(STATE_FILE, "r", encoding="utf-8") as f:
+        state = json.load(f)
+    snapshot_data = state["snapshots"][snapshot_id]
+    remark = snapshot_data["remark"]
+    assert set(remark["tags"]) == {"2024-01", "财务审核", "增值税", "已初审"}, "标签追加错误"
+
+    histories = state.get("remark_histories", [])
+    last_h = histories[-1]
+    assert last_h["forced"] == True, "追加标签修改已有字段带 --force 时 forced 应为 True"
+    assert last_h["conflict_detected"] == True, "追加标签修改已有字段时 conflict_detected 应为 True"
 
     return remark
 
@@ -505,6 +551,127 @@ def step_7_undo_chain():
     print("  [OK] undo 操作不影响备注信息")
 
 
+def step_8_forced_flag_regression():
+    print("\n" + "="*70)
+    print("[步骤 8] 回归验证：--force 与 forced 标记严格对应")
+    print("="*70)
+
+    print("\n[测试 8.1] 创建空备注快照，不带 --force 首次写备注应成功且 forced=False")
+    result = run(
+        f"python -m invoice_organizer plan -c {CONFIG_PATH} "
+        f"-v"
+    )
+    assert result.returncode == 0, "plan 创建空备注快照应成功"
+
+    with open(STATE_FILE, "r", encoding="utf-8") as f:
+        state = json.load(f)
+    snapshots = state.get("snapshots", {})
+    new_snap_id = list(snapshots.keys())[-1]
+    new_snap = snapshots[new_snap_id]
+    assert new_snap["remark"]["remark"] == "", "空备注快照的 remark 应为空"
+
+    result = run(
+        f"python -m invoice_organizer update-snapshot -c {CONFIG_PATH} "
+        f"-s {new_snap_id} "
+        f"--remark \"回归测试备注\" "
+        f"--tag 回归 --tag 测试 "
+        f"--handler \"回归员\" "
+        f"--notes \"无冲突首次写入\" "
+        f"--updated-by \"回归测试\" "
+        f"-y -v"
+    )
+    assert result.returncode == 0, "空备注上首次写入不带 --force 应成功"
+    assert "强制覆盖" not in result.stdout, "无冲突时不应显示强制覆盖"
+    assert "备注变更对比" in result.stdout, "应显示变更对比"
+
+    with open(STATE_FILE, "r", encoding="utf-8") as f:
+        state = json.load(f)
+    histories = state.get("remark_histories", [])
+    last_h = [h for h in histories if h["snapshot_id"] == new_snap_id]
+    assert len(last_h) >= 1, "应有备注修改历史"
+    assert last_h[-1]["forced"] == False, "无冲突首次写入 forced 应为 False"
+    assert last_h[-1]["conflict_detected"] == False, "无冲突首次写入 conflict_detected 应为 False"
+    assert len(last_h[-1].get("changed_fields", [])) >= 1, "应有 changed_fields"
+
+    print("\n[测试 8.2] 不带 --force 覆盖已有备注，应被拒绝且 forced=False")
+    result = run(
+        f"python -m invoice_organizer update-snapshot -c {CONFIG_PATH} "
+        f"-s {new_snap_id} "
+        f"--remark \"尝试覆盖备注\" "
+        f"--updated-by \"回归测试\" "
+        f"-y -v"
+    )
+    assert result.returncode != 0, "不带 --force 覆盖冲突备注应失败"
+    assert "冲突" in result.stdout, "应提示冲突"
+
+    with open(STATE_FILE, "r", encoding="utf-8") as f:
+        state = json.load(f)
+    histories = state.get("remark_histories", [])
+    last_h = [h for h in histories if h["snapshot_id"] == new_snap_id]
+    conflict_h = [h for h in last_h if h.get("conflict_detected")]
+    assert len(conflict_h) >= 1, "应有冲突记录"
+    assert conflict_h[-1]["forced"] == False, "冲突被拒绝时 forced 必须为 False"
+    assert conflict_h[-1]["changed_fields"][0]["field_name"] == "remark", "changed_fields 应记录 remark 变更"
+
+    snap_data = state["snapshots"][new_snap_id]
+    assert snap_data["remark"]["remark"] == "回归测试备注", "冲突被拒绝后备注不应改变"
+
+    print("\n[测试 8.3] 带 --force 覆盖冲突备注，应成功且 forced=True")
+    result = run(
+        f"python -m invoice_organizer update-snapshot -c {CONFIG_PATH} "
+        f"-s {new_snap_id} "
+        f"--remark \"强制覆盖备注\" "
+        f"--updated-by \"回归测试\" "
+        f"--force -y -v"
+    )
+    assert result.returncode == 0, "带 --force 覆盖冲突备注应成功"
+    assert "强制覆盖" in result.stdout, "应显示强制覆盖标记"
+
+    with open(STATE_FILE, "r", encoding="utf-8") as f:
+        state = json.load(f)
+    histories = state.get("remark_histories", [])
+    last_h = [h for h in histories if h["snapshot_id"] == new_snap_id]
+    forced_h = [h for h in last_h if h.get("forced")]
+    assert len(forced_h) >= 1, "应有 forced=True 记录"
+    assert forced_h[-1]["forced"] == True, "带 --force 冲突覆盖 forced 应为 True"
+    assert forced_h[-1]["conflict_detected"] == True, "带 --force 冲突覆盖 conflict_detected 应为 True"
+
+    snap_data = state["snapshots"][new_snap_id]
+    assert snap_data["remark"]["remark"] == "强制覆盖备注", "强制覆盖后备注应更新"
+
+    print("\n[测试 8.4] remark-history 命令验证：同一快照三种历史记录标记正确")
+    result = run(
+        f"python -m invoice_organizer remark-history -c {CONFIG_PATH} "
+        f"-s {new_snap_id} -v"
+    )
+    assert result.returncode == 0, "remark-history 命令应成功"
+    assert "[冲突]" in result.stdout, "remark-history 应显示冲突标记"
+    assert "[强制覆盖]" in result.stdout, "remark-history 应显示强制覆盖标记"
+
+    print("\n[测试 8.5] 导出后 remark_histories 的 forced/changed_fields 完整保留")
+    export_path = os.path.join(OUTPUT_DIR, "regression_export.json")
+    result = run(
+        f"python -m invoice_organizer export -c {CONFIG_PATH} "
+        f"-o {export_path} -f json"
+    )
+    assert result.returncode == 0, "导出应成功"
+    with open(export_path, "r", encoding="utf-8") as f:
+        exported = json.load(f)
+    rh = [h for h in exported.get("remark_histories", []) if h["snapshot_id"] == new_snap_id]
+    assert len(rh) >= 3, f"导出应有至少3条历史记录（首次写入+冲突拒绝+强制覆盖），实际 {len(rh)}"
+
+    no_conflict = [h for h in rh if not h.get("conflict_detected") and not h.get("forced")]
+    conflict_rejected = [h for h in rh if h.get("conflict_detected") and not h.get("forced")]
+    conflict_forced = [h for h in rh if h.get("conflict_detected") and h.get("forced")]
+    assert len(no_conflict) >= 1, "应有无冲突记录"
+    assert len(conflict_rejected) >= 1, "应有冲突拒绝记录（forced=False）"
+    assert len(conflict_forced) >= 1, "应有冲突强制覆盖记录（forced=True）"
+
+    for h in rh:
+        assert "changed_fields" in h, "每条历史都应有 changed_fields"
+        assert "forced" in h, "每条历史都应有 forced"
+
+
 def main():
     print("\n" + "="*70)
     print("批次备注 + 交接信息 完整链路验收测试")
@@ -521,13 +688,15 @@ def main():
         step_5_import_modified_remark(snapshot_json, snapshot_id)
         step_6_input_validation()
         step_7_undo_chain()
+        step_8_forced_flag_regression()
 
         print("\n" + "="*70)
         print("[OK] 所有验收测试通过！")
         print("="*70)
         print("\n验证要点总结：")
         print("  [OK] plan 时写入备注、标签、交接人、注意事项")
-        print("  [OK] update-snapshot 补充/修改备注，支持追加标签，显示变更对比")
+        print("  [OK] update-snapshot 不带 --force 冲突时拒绝，带 --force 才覆盖")
+        print("  [OK] 无冲突更新 forced=False，强制覆盖 forced=True，严格区分")
         print("  [OK] list-snapshots 展示备注信息（标签不截断）")
         print("  [OK] export-snapshot JSON 导出包含备注")
         print("  [OK] export JSON/CSV 完整导出包含备注和历史（含 forced/changed_fields/remark_conflict_detail）")
@@ -536,6 +705,7 @@ def main():
         print("  [OK] --force 强制覆盖备注冲突并记录 forced/changed_fields")
         print("  [OK] --remark-only 仅导入备注信息")
         print("  [OK] remark-history 命令查看修改历史，含冲突/强制标记和变更字段")
+        print("  [OK] 回归：三种历史记录（无冲突/冲突拒绝/强制覆盖）forced 标记严格对应")
         print("  [OK] 输入验证：超长、重复标签、数量限制")
         print("  [OK] undo 链路正常，备注信息不受影响")
         print()
