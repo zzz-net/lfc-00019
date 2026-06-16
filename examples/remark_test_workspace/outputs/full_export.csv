@@ -1,23 +1,23 @@
 ﻿=== 扫描记录 ===
-扫描时间,2026-06-16T07:41:01.794661
+扫描时间,2026-06-16T08:00:16.345308
 文件ID,源路径,文件名,大小,修改时间,匹配规则
-3c985687e00f,D:\workSpace\AI__SPACE\lfc-00019\examples\remark_test_workspace\source\2024年1月增值税专用发票_A001.pdf,2024年1月增值税专用发票_A001.pdf,21,1781566861.5498216,增值税专用发票
-201402087709,D:\workSpace\AI__SPACE\lfc-00019\examples\remark_test_workspace\source\2024年2月增值税普通发票_B002.pdf,2024年2月增值税普通发票_B002.pdf,21,1781566861.5498216,增值税普通发票
-421ab8f5021f,D:\workSpace\AI__SPACE\lfc-00019\examples\remark_test_workspace\source\notes.md,notes.md,13,1781566861.5508356,
-c462ce1b7920,D:\workSpace\AI__SPACE\lfc-00019\examples\remark_test_workspace\source\出差报销单_202401.xlsx,出差报销单_202401.xlsx,15,1781566861.5508356,报销单据
-31f25b5f5843,D:\workSpace\AI__SPACE\lfc-00019\examples\remark_test_workspace\source\发票扫描件_出租车发票.png,发票扫描件_出租车发票.png,21,1781566861.5498216,
-97cb208554c8,D:\workSpace\AI__SPACE\lfc-00019\examples\remark_test_workspace\source\发票照片_餐厅发票.jpg,发票照片_餐厅发票.jpg,17,1781566861.5498216,
-f5b8e7ef44b1,D:\workSpace\AI__SPACE\lfc-00019\examples\remark_test_workspace\source\未分类的文档.txt,未分类的文档.txt,14,1781566861.5508356,
-3488fc692581,D:\workSpace\AI__SPACE\lfc-00019\examples\remark_test_workspace\source\电子发票_20240115_001.pdf,电子发票_20240115_001.pdf,21,1781566861.5498216,电子发票PDF
-03b399be6571,D:\workSpace\AI__SPACE\lfc-00019\examples\remark_test_workspace\source\采购合同_供应商A.docx,采购合同_供应商A.docx,15,1781566861.5508356,合同文档
+5a0ba4d3abd5,D:\workSpace\AI__SPACE\lfc-00019\examples\remark_test_workspace\source\2024年1月增值税专用发票_A001.pdf,2024年1月增值税专用发票_A001.pdf,21,1781568016.1393018,增值税专用发票
+5a7695a7d09e,D:\workSpace\AI__SPACE\lfc-00019\examples\remark_test_workspace\source\2024年2月增值税普通发票_B002.pdf,2024年2月增值税普通发票_B002.pdf,21,1781568016.1393018,增值税普通发票
+2e5887ca43ff,D:\workSpace\AI__SPACE\lfc-00019\examples\remark_test_workspace\source\notes.md,notes.md,13,1781568016.1403444,
+3eae6fc4f92e,D:\workSpace\AI__SPACE\lfc-00019\examples\remark_test_workspace\source\出差报销单_202401.xlsx,出差报销单_202401.xlsx,15,1781568016.1403444,报销单据
+6f7cf737f64b,D:\workSpace\AI__SPACE\lfc-00019\examples\remark_test_workspace\source\发票扫描件_出租车发票.png,发票扫描件_出租车发票.png,21,1781568016.1393018,
+c7a4baa9247a,D:\workSpace\AI__SPACE\lfc-00019\examples\remark_test_workspace\source\发票照片_餐厅发票.jpg,发票照片_餐厅发票.jpg,17,1781568016.1403444,
+0955b8e67f07,D:\workSpace\AI__SPACE\lfc-00019\examples\remark_test_workspace\source\未分类的文档.txt,未分类的文档.txt,14,1781568016.1413956,
+61375753b910,D:\workSpace\AI__SPACE\lfc-00019\examples\remark_test_workspace\source\电子发票_20240115_001.pdf,电子发票_20240115_001.pdf,21,1781568016.1393018,电子发票PDF
+8bebe7a3f7bd,D:\workSpace\AI__SPACE\lfc-00019\examples\remark_test_workspace\source\采购合同_供应商A.docx,采购合同_供应商A.docx,15,1781568016.1403444,合同文档
 
 === 归档预案 ===
 预案ID,创建时间,文件,源路径,目标路径,匹配规则,冲突类型,冲突详情
-f851278bb428,2026-06-16T07:41:01.795864,2024年1月增值税专用发票_A001.pdf,D:\workSpace\AI__SPACE\lfc-00019\examples\remark_test_workspace\source\2024年1月增值税专用发票_A001.pdf,D:\workSpace\AI__SPACE\lfc-00019\examples\remark_test_workspace\dest\vat_special\2024年1月增值税专用发票_A001.pdf,增值税专用发票,,
-f851278bb428,2026-06-16T07:41:01.795864,2024年2月增值税普通发票_B002.pdf,D:\workSpace\AI__SPACE\lfc-00019\examples\remark_test_workspace\source\2024年2月增值税普通发票_B002.pdf,D:\workSpace\AI__SPACE\lfc-00019\examples\remark_test_workspace\dest\vat/normal\2024年2月增值税普通发票_B002.pdf,增值税普通发票,,
-f851278bb428,2026-06-16T07:41:01.795864,出差报销单_202401.xlsx,D:\workSpace\AI__SPACE\lfc-00019\examples\remark_test_workspace\source\出差报销单_202401.xlsx,D:\workSpace\AI__SPACE\lfc-00019\examples\remark_test_workspace\dest\reimbursement\出差报销单_202401.xlsx,报销单据,,
-f851278bb428,2026-06-16T07:41:01.795864,电子发票_20240115_001.pdf,D:\workSpace\AI__SPACE\lfc-00019\examples\remark_test_workspace\source\电子发票_20240115_001.pdf,D:\workSpace\AI__SPACE\lfc-00019\examples\remark_test_workspace\dest\electronic\电子发票_20240115_001.pdf,电子发票PDF,,
-f851278bb428,2026-06-16T07:41:01.795864,采购合同_供应商A.docx,D:\workSpace\AI__SPACE\lfc-00019\examples\remark_test_workspace\source\采购合同_供应商A.docx,D:\workSpace\AI__SPACE\lfc-00019\examples\remark_test_workspace\dest\contracts\采购合同_供应商A.docx,合同文档,,
+54a10b0a8d71,2026-06-16T08:00:16.346365,2024年1月增值税专用发票_A001.pdf,D:\workSpace\AI__SPACE\lfc-00019\examples\remark_test_workspace\source\2024年1月增值税专用发票_A001.pdf,D:\workSpace\AI__SPACE\lfc-00019\examples\remark_test_workspace\dest\vat_special\2024年1月增值税专用发票_A001.pdf,增值税专用发票,,
+54a10b0a8d71,2026-06-16T08:00:16.346365,2024年2月增值税普通发票_B002.pdf,D:\workSpace\AI__SPACE\lfc-00019\examples\remark_test_workspace\source\2024年2月增值税普通发票_B002.pdf,D:\workSpace\AI__SPACE\lfc-00019\examples\remark_test_workspace\dest\vat/normal\2024年2月增值税普通发票_B002.pdf,增值税普通发票,,
+54a10b0a8d71,2026-06-16T08:00:16.346365,出差报销单_202401.xlsx,D:\workSpace\AI__SPACE\lfc-00019\examples\remark_test_workspace\source\出差报销单_202401.xlsx,D:\workSpace\AI__SPACE\lfc-00019\examples\remark_test_workspace\dest\reimbursement\出差报销单_202401.xlsx,报销单据,,
+54a10b0a8d71,2026-06-16T08:00:16.346365,电子发票_20240115_001.pdf,D:\workSpace\AI__SPACE\lfc-00019\examples\remark_test_workspace\source\电子发票_20240115_001.pdf,D:\workSpace\AI__SPACE\lfc-00019\examples\remark_test_workspace\dest\electronic\电子发票_20240115_001.pdf,电子发票PDF,,
+54a10b0a8d71,2026-06-16T08:00:16.346365,采购合同_供应商A.docx,D:\workSpace\AI__SPACE\lfc-00019\examples\remark_test_workspace\source\采购合同_供应商A.docx,D:\workSpace\AI__SPACE\lfc-00019\examples\remark_test_workspace\dest\contracts\采购合同_供应商A.docx,合同文档,,
 
 === 执行记录 ===
 执行ID,预案ID,是否预演,撤销状态,创建时间,完成时间,文件,源->目标,状态,执行时间,错误信息
@@ -36,11 +36,11 @@ f851278bb428,2026-06-16T07:41:01.795864,采购合同_供应商A.docx,D:\workSpac
 
 === 批次快照 ===
 快照ID,创建时间,预案ID,移动项数,有冲突,备注,标签,交接人,注意事项,备注更新时间,备注更新人
-7f7a18b5ccdd,2026-06-16T07:41:01.797926,f851278bb428,5,否,2024年1月发票批次，已完成初审,"2024-01, 财务审核, 增值税, 已初审",张三,已完成初审，发现2张发票需要补充材料，详见附件。,2026-06-16T07:41:02.046847,李四
+0bbd294a2bab,2026-06-16T08:00:16.347417,54a10b0a8d71,5,否,2024年1月发票批次，已完成初审,"2024-01, 财务审核, 增值税, 已初审",张三,已完成初审，发现2张发票需要补充材料，详见附件。,2026-06-16T08:00:16.553777,李四
 
 === 备注修改历史 ===
-历史ID,快照ID,修改时间,修改人,修改来源,是否冲突,冲突详情
-cf752bff90e5,7f7a18b5ccdd,2026-06-16T07:41:02.047865,李四,cli,否,
+历史ID,快照ID,修改时间,修改人,修改来源,是否冲突,冲突详情,是否强制,变化字段
+559a1c43f57e,0bbd294a2bab,2026-06-16T08:00:16.554791,李四,cli,是,备注内容冲突: 旧='2024年1月发票批次，待财务审核...' 新='2024年1月发票批次，已完成初审...'; 标签冲突: 新增=['已初审'] 删除=[]; 注意事项冲突: 旧内容长度=22 新内容长度=24,是,正文: '2024年1月发票批次，待财务审核' -> '2024年1月发票批次，已完成初审'; 标签: +['已初审']; 注意事项: 长度 22->24
 
 === 导入日志 ===
-导入ID,时间,状态,快照ID,预案ID,移动项数,源文件,是否强制,错误,警告
+导入ID,时间,状态,快照ID,预案ID,移动项数,源文件,是否强制,备注冲突,错误,警告

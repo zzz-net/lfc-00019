@@ -235,6 +235,25 @@ class SnapshotRemark:
 
 
 @dataclass
+class RemarkFieldChange:
+    """备注单个字段的变化记录"""
+    field_name: str
+    old_value: Any
+    new_value: Any
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "RemarkFieldChange":
+        return cls(
+            field_name=data["field_name"],
+            old_value=data.get("old_value"),
+            new_value=data.get("new_value"),
+        )
+
+
+@dataclass
 class RemarkHistory:
     """备注修改历史记录
 
@@ -249,15 +268,20 @@ class RemarkHistory:
     change_source: str  # "cli" | "import" | "api"
     conflict_detected: bool = False
     conflict_detail: str = ""
+    forced: bool = False
+    changed_fields: List[RemarkFieldChange] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
         result = asdict(self)
         result["old_remark"] = self.old_remark.to_dict()
         result["new_remark"] = self.new_remark.to_dict()
+        result["changed_fields"] = [fc.to_dict() for fc in self.changed_fields]
         return result
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "RemarkHistory":
+        changed_fields_data = data.get("changed_fields", [])
+        changed_fields = [RemarkFieldChange.from_dict(fc) for fc in changed_fields_data]
         return cls(
             history_id=data["history_id"],
             snapshot_id=data["snapshot_id"],
@@ -268,6 +292,8 @@ class RemarkHistory:
             change_source=data.get("change_source", "cli"),
             conflict_detected=data.get("conflict_detected", False),
             conflict_detail=data.get("conflict_detail", ""),
+            forced=data.get("forced", False),
+            changed_fields=changed_fields,
         )
 
 
@@ -389,6 +415,7 @@ class ImportLog:
     warnings: List[str] = field(default_factory=list)
     config_diff: Optional[Dict[str, Any]] = None
     forced: bool = False
+    remark_conflict_detail: str = ""
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -407,6 +434,7 @@ class ImportLog:
             warnings=data.get("warnings", []),
             config_diff=data.get("config_diff"),
             forced=data.get("forced", False),
+            remark_conflict_detail=data.get("remark_conflict_detail", ""),
         )
 
 

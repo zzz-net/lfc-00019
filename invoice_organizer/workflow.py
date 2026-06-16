@@ -14,7 +14,7 @@ from .models import (
     ConfigSnapshot, BatchSnapshot, UnmatchedFileInfo, NewDirInfo,
     ConfigDiffResult, ImportValidationResult,
     PlanDiffResult, FileMoveDiff, UnmatchedFileDiff,
-    SnapshotRemark, RemarkValidationResult,
+    SnapshotRemark, RemarkValidationResult, RemarkFieldChange,
     generate_id, now_iso,
 )
 from .storage import StateStore
@@ -618,8 +618,33 @@ def export_logs(
 
             writer.writerow([])
             writer.writerow(["=== 备注修改历史 ==="])
-            writer.writerow(["历史ID", "快照ID", "修改时间", "修改人", "修改来源", "是否冲突", "冲突详情"])
+            writer.writerow(["历史ID", "快照ID", "修改时间", "修改人", "修改来源", "是否冲突", "冲突详情", "是否强制", "变化字段"])
             for rh in full_state.get("remark_histories", []):
+                changed_fields = rh.get("changed_fields", [])
+                field_summaries = []
+                for fc in changed_fields:
+                    fn = fc.get("field_name", "")
+                    if fn == "tags":
+                        old_set = set(fc.get("old_value", [])) if fc.get("old_value") else set()
+                        new_set = set(fc.get("new_value", [])) if fc.get("new_value") else set()
+                        added = sorted(new_set - old_set)
+                        removed = sorted(old_set - new_set)
+                        parts = []
+                        if added:
+                            parts.append(f"+{added}")
+                        if removed:
+                            parts.append(f"-{removed}")
+                        field_summaries.append(f"标签: {'; '.join(parts)}")
+                    elif fn == "remark":
+                        field_summaries.append(f"正文: '{fc.get('old_value', '')}' -> '{fc.get('new_value', '')}'")
+                    elif fn == "handler":
+                        field_summaries.append(f"交接人: '{fc.get('old_value', '')}' -> '{fc.get('new_value', '')}'")
+                    elif fn == "notes":
+                        old_len = len(fc.get("old_value", "")) if fc.get("old_value") else 0
+                        new_len = len(fc.get("new_value", "")) if fc.get("new_value") else 0
+                        field_summaries.append(f"注意事项: 长度 {old_len}->{new_len}")
+                    else:
+                        field_summaries.append(f"{fn}: {fc.get('old_value', '')} -> {fc.get('new_value', '')}")
                 writer.writerow([
                     rh.get("history_id", ""),
                     rh.get("snapshot_id", ""),
@@ -628,11 +653,13 @@ def export_logs(
                     rh.get("change_source", ""),
                     "是" if rh.get("conflict_detected") else "否",
                     rh.get("conflict_detail", ""),
+                    "是" if rh.get("forced") else "否",
+                    "; ".join(field_summaries) if field_summaries else "无变化",
                 ])
 
             writer.writerow([])
             writer.writerow(["=== 导入日志 ==="])
-            writer.writerow(["导入ID", "时间", "状态", "快照ID", "预案ID", "移动项数", "源文件", "是否强制", "错误", "警告"])
+            writer.writerow(["导入ID", "时间", "状态", "快照ID", "预案ID", "移动项数", "源文件", "是否强制", "备注冲突", "错误", "警告"])
             for il in full_state.get("import_logs", []):
                 writer.writerow([
                     il.get("import_id", ""),
@@ -643,6 +670,7 @@ def export_logs(
                     il.get("move_count", ""),
                     il.get("source_file", ""),
                     "是" if il.get("forced") else "否",
+                    il.get("remark_conflict_detail", ""),
                     "; ".join(il.get("errors", [])) if il.get("errors") else "",
                     "; ".join(il.get("warnings", [])) if il.get("warnings") else "",
                 ])
@@ -1332,6 +1360,73 @@ MAX_HANDLER_LENGTH = 50
 MAX_NOTES_LENGTH = 1000
 MAX_TAG_LENGTH = 30
 MAX_TAGS_COUNT = 10
+
+
+def diff_remarks(old_remark: SnapshotRemark, new_remark: SnapshotRemark) -> List[RemarkFieldChange]:
+    """
+    字段级对比两个备注对象，返回各字段变化明细
+
+    对比字段：remark(正文)、tags(标签)、handler(交接人)、notes(注意事项)
+    """
+    changes: List[RemarkFieldChange] = []
+
+    if old_remark.remark != new_remark.remark:
+        changes.append(RemarkFieldChange(
+            field_name="remark",
+            old_value=old_remark.remark,
+            new_value=new_remark.remark,
+        ))
+
+    old_tags = list(old_remark.tags)
+    new_tags = list(new_remark.tags)
+    if old_tags != new_tags:
+        changes.append(RemarkFieldChange(
+            field_name="tags",
+            old_value=old_tags,
+            new_value=new_tags,
+        ))
+
+    if old_remark.handler != new_remark.handler:
+        changes.append(RemarkFieldChange(
+            field_name="handler",
+            old_value=old_remark.handler,
+            new_value=new_remark.handler,
+        ))
+
+    if old_remark.notes != new_remark.notes:
+        changes.append(RemarkFieldChange(
+            field_name="notes",
+            old_value=old_remark.notes,
+            new_value=new_remark.notes,
+        ))
+
+    return changes
+
+
+def format_remark_change(fc: RemarkFieldChange) -> str:
+    """将单字段变化格式化为可读字符串"""
+    if fc.field_name == "tags":
+        old_set = set(fc.old_value) if fc.old_value else set()
+        new_set = set(fc.new_value) if fc.new_value else set()
+        added = sorted(new_set - old_set)
+        removed = sorted(old_set - new_set)
+        parts = []
+        if added:
+            parts.append(f"+{added}")
+        if removed:
+            parts.append(f"-{removed}")
+        return f"标签: {'; '.join(parts)}" if parts else "标签: 无实质变化"
+    elif fc.field_name == "remark":
+        old_short = (fc.old_value[:40] + "...") if fc.old_value and len(fc.old_value) > 40 else (fc.old_value or "(空)")
+        new_short = (fc.new_value[:40] + "...") if fc.new_value and len(fc.new_value) > 40 else (fc.new_value or "(空)")
+        return f"正文: '{old_short}' -> '{new_short}'"
+    elif fc.field_name == "handler":
+        return f"交接人: '{fc.old_value or '(空)'}' -> '{fc.new_value or '(空)'}'"
+    elif fc.field_name == "notes":
+        old_len = len(fc.old_value) if fc.old_value else 0
+        new_len = len(fc.new_value) if fc.new_value else 0
+        return f"注意事项: 长度 {old_len} -> {new_len}"
+    return f"{fc.field_name}: {fc.old_value} -> {fc.new_value}"
 
 
 def validate_remark(remark: SnapshotRemark) -> RemarkValidationResult:

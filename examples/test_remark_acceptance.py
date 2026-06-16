@@ -188,6 +188,7 @@ def step_2_update_remark(snapshot_id):
     )
     assert result.returncode == 0, "update-snapshot 命令失败"
     assert "已完成初审" in result.stdout, "更新后的备注未显示"
+    assert "备注变更对比" in result.stdout, "更新后应显示备注变更对比"
 
     with open(STATE_FILE, "r", encoding="utf-8") as f:
         state = json.load(f)
@@ -255,6 +256,9 @@ def step_3_export_snapshot_and_full(snapshot_id):
     assert "张三" in csv_content, "CSV导出应包含交接人"
     assert "批次快照" in csv_content, "CSV导出应包含批次快照章节"
     assert "备注修改历史" in csv_content, "CSV导出应包含备注修改历史章节"
+    assert "是否强制" in csv_content, "CSV导出备注历史应包含是否强制列"
+    assert "变化字段" in csv_content, "CSV导出备注历史应包含变化字段列"
+    assert "备注冲突" in csv_content, "CSV导出导入日志应包含备注冲突列"
 
     return snapshot_json
 
@@ -292,7 +296,7 @@ def step_4_restart_and_check():
 
 def step_5_import_modified_remark(snapshot_json, original_snapshot_id):
     print("\n" + "="*70)
-    print("[步骤 5] 导入修改过备注的快照，验证冲突检测")
+    print("[步骤 5] 导入修改过备注的快照，验证冲突检测和变更对比")
     print("="*70)
 
     with open(snapshot_json, "r", encoding="utf-8") as f:
@@ -316,7 +320,8 @@ def step_5_import_modified_remark(snapshot_json, original_snapshot_id):
     assert "备注内容冲突" in result.stdout, "应提示备注内容冲突"
     assert "交接人冲突" in result.stdout, "应提示交接人冲突"
     assert "标签冲突" in result.stdout, "应提示标签冲突"
-    assert "--force" in result.stdout, "应提示使用--force参数"
+    assert "备注变更对比" in result.stdout, "应显示备注变更对比视图"
+    assert "正文:" in result.stdout or "交接人:" in result.stdout, "变更对比应包含字段名"
 
     with open(STATE_FILE, "r", encoding="utf-8") as f:
         state = json.load(f)
@@ -328,6 +333,12 @@ def step_5_import_modified_remark(snapshot_json, original_snapshot_id):
     remark_histories = state.get("remark_histories", [])
     conflict_history = [h for h in remark_histories if h.get("conflict_detected")]
     assert len(conflict_history) >= 1, "应记录备注冲突历史"
+    ch = conflict_history[-1]
+    assert "changed_fields" in ch, "冲突历史应包含 changed_fields"
+    assert len(ch["changed_fields"]) >= 1, "冲突历史应有至少一个字段变更"
+    field_names = [fc["field_name"] for fc in ch["changed_fields"]]
+    assert "remark" in field_names, "变更字段应包含 remark"
+    assert ch["forced"] == False, "非强制时 forced 应为 False"
 
     print("\n[测试 5.2] 使用 --force 强制导入备注冲突")
     with open(STATE_FILE, "r", encoding="utf-8") as f:
@@ -341,6 +352,7 @@ def step_5_import_modified_remark(snapshot_json, original_snapshot_id):
     )
     assert result.returncode == 0, "使用--force应成功导入"
     assert "强制覆盖备注冲突" in result.stdout, "应提示已强制覆盖冲突"
+    assert "备注变更对比" in result.stdout, "强制导入后应显示变更对比"
 
     with open(STATE_FILE, "r", encoding="utf-8") as f:
         state = json.load(f)
@@ -356,6 +368,14 @@ def step_5_import_modified_remark(snapshot_json, original_snapshot_id):
     last_log = state["import_logs"][-1]
     assert last_log["forced"] == True, "最后一条 import_log 应标记 forced=true"
     assert last_log["status"] == "forced", "最后一条 import_log 状态应为 forced"
+    assert "remark_conflict_detail" in last_log, "import_log 应包含 remark_conflict_detail"
+    assert last_log["remark_conflict_detail"] != "", "remark_conflict_detail 不应为空"
+
+    forced_rh = [h for h in state["remark_histories"] if h.get("forced")]
+    assert len(forced_rh) >= 1, "--force 后 remark_histories 中应有 forced=true 的记录"
+    last_forced_rh = forced_rh[-1]
+    assert "changed_fields" in last_forced_rh, "强制导入历史应包含 changed_fields"
+    assert len(last_forced_rh["changed_fields"]) >= 1, "强制导入历史应有字段变更"
 
     print("\n[测试 5.2b] 重启后复查 --force 导入的历史和 import log")
     result = run(
@@ -373,6 +393,20 @@ def step_5_import_modified_remark(snapshot_json, original_snapshot_id):
     exp_snap = list(exported.get("snapshots", {}).values())[0]
     assert exp_snap["remark"]["remark"] == "2024年1月发票批次，审核通过", "导出快照备注应与 --force 导入后一致"
     assert exp_snap["remark"]["handler"] == "王五", "导出快照交接人应与 --force 导入后一致"
+
+    for rh in exp_rh:
+        assert "changed_fields" in rh, "导出的 remark_histories 每条都应有 changed_fields"
+        assert "forced" in rh, "导出的 remark_histories 每条都应有 forced"
+
+    print("\n[测试 5.2c] 使用 remark-history 命令查看历史")
+    result = run(
+        f"python -m invoice_organizer remark-history -c {CONFIG_PATH} -s {original_snapshot_id} -v"
+    )
+    assert result.returncode == 0, "remark-history 命令不应失败"
+    assert original_snapshot_id in result.stdout, "remark-history 应显示快照ID"
+    assert "[冲突]" in result.stdout or "冲突" in result.stdout, "remark-history 应显示冲突标记"
+    assert "[强制覆盖]" in result.stdout or "强制覆盖" in result.stdout, "remark-history 应显示强制覆盖标记"
+    assert "变更字段" in result.stdout, "remark-history -v 应显示变更字段"
 
     print("\n[测试 5.3] 使用 --remark-only 仅导入备注")
     data["remark"]["remark"] = "2024年1月发票批次，已归档"
@@ -493,14 +527,15 @@ def main():
         print("="*70)
         print("\n验证要点总结：")
         print("  [OK] plan 时写入备注、标签、交接人、注意事项")
-        print("  [OK] update-snapshot 补充/修改备注，支持追加标签")
-        print("  [OK] list-snapshots 展示备注信息")
+        print("  [OK] update-snapshot 补充/修改备注，支持追加标签，显示变更对比")
+        print("  [OK] list-snapshots 展示备注信息（标签不截断）")
         print("  [OK] export-snapshot JSON 导出包含备注")
-        print("  [OK] export JSON/CSV 完整导出包含备注和历史")
+        print("  [OK] export JSON/CSV 完整导出包含备注和历史（含 forced/changed_fields/remark_conflict_detail）")
         print("  [OK] 重启后备注信息持久化保存")
-        print("  [OK] import-snapshot 检测备注冲突并拒绝覆盖")
-        print("  [OK] --force 强制覆盖备注冲突并记录")
+        print("  [OK] import-snapshot 检测备注冲突并拒绝覆盖，显示字段级变更对比")
+        print("  [OK] --force 强制覆盖备注冲突并记录 forced/changed_fields")
         print("  [OK] --remark-only 仅导入备注信息")
+        print("  [OK] remark-history 命令查看修改历史，含冲突/强制标记和变更字段")
         print("  [OK] 输入验证：超长、重复标签、数量限制")
         print("  [OK] undo 链路正常，备注信息不受影响")
         print()

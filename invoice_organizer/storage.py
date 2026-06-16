@@ -9,7 +9,7 @@ from datetime import datetime
 from .models import (
     ScannedFile, PlannedMove, ExecutedMove, UndoRecord,
     BatchSnapshot, ImportLog, PlanLock, LockViolation, ConfigSnapshot,
-    SnapshotRemark, RemarkHistory,
+    SnapshotRemark, RemarkHistory, RemarkFieldChange,
     generate_id, now_iso,
 )
 
@@ -259,6 +259,8 @@ class StateStore:
 
         返回: (是否成功, 历史记录, 错误信息列表)
         """
+        from .workflow import diff_remarks
+
         snapshot = self.get_snapshot(snapshot_id)
         if not snapshot:
             return False, None, [f"快照不存在: {snapshot_id}"]
@@ -269,19 +271,21 @@ class StateStore:
         if not os.access(state_file_dir, os.W_OK):
             return False, None, [f"状态文件目录无写权限: {state_file_dir}"]
 
+        changed_fields = diff_remarks(old_remark, new_remark)
+
         conflicts = []
-        if not old_remark.is_empty() and not allow_overwrite:
-            if old_remark.remark and old_remark.remark != new_remark.remark:
+        for fc in changed_fields:
+            if fc.field_name == "remark" and old_remark.remark:
                 conflicts.append(f"备注内容冲突: 旧='{old_remark.remark[:50]}...' 新='{new_remark.remark[:50]}...'")
-            if old_remark.handler and old_remark.handler != new_remark.handler:
+            elif fc.field_name == "handler" and old_remark.handler:
                 conflicts.append(f"交接人冲突: 旧='{old_remark.handler}' 新='{new_remark.handler}'")
-            if old_remark.notes and old_remark.notes != new_remark.notes:
+            elif fc.field_name == "notes" and old_remark.notes:
                 conflicts.append(f"注意事项冲突: 旧内容长度={len(old_remark.notes)} 新内容长度={len(new_remark.notes)}")
-            old_tags_set = set(old_remark.tags)
-            new_tags_set = set(new_remark.tags)
-            if old_tags_set and old_tags_set != new_tags_set:
-                added = new_tags_set - old_tags_set
-                removed = old_tags_set - new_tags_set
+            elif fc.field_name == "tags" and old_remark.tags:
+                old_set = set(old_remark.tags)
+                new_set = set(new_remark.tags)
+                added = new_set - old_set
+                removed = old_set - new_set
                 if added or removed:
                     conflicts.append(f"标签冲突: 新增={sorted(added)} 删除={sorted(removed)}")
 
@@ -299,6 +303,8 @@ class StateStore:
                 change_source=change_source,
                 conflict_detected=True,
                 conflict_detail=conflict_detail,
+                forced=False,
+                changed_fields=changed_fields,
             )
             self._add_remark_history(history)
             self.save()
@@ -317,6 +323,8 @@ class StateStore:
             change_source=change_source,
             conflict_detected=conflict_detected,
             conflict_detail=conflict_detail,
+            forced=conflict_detected and allow_overwrite,
+            changed_fields=changed_fields,
         )
         self._add_remark_history(history)
         self.save()
