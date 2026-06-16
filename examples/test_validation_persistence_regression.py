@@ -549,8 +549,12 @@ def step_8_undo_and_refresh(snapshot1_id, run_id):
     latest = validation_history[-1]
     assert latest.get("triggered_by") == "undo"
     assert latest.get("status") == "passed"
-    assert latest.get("resolved_at") is not None and latest["resolved_at"] != ""
-    assert latest.get("resolution_command") == "undo"
+    assert latest.get("resolved_at") is None, \
+        "undo 产生的 passed 记录不应有 resolved_at（这是 clean pass，不是阻塞解除）"
+
+    pre_undo_blocked = [v for v in validation_history
+                        if v.get("status") == "blocked" and v.get("resolved_at")]
+    assert len(pre_undo_blocked) >= 1, "undo 前的 blocked 记录应有 resolved_at"
 
     json_file = EXPORT_DIR / "export_after_undo.json"
     run(f'python -m invoice_organizer export -c {CONFIG_FILE} -o {json_file} --format json')
@@ -564,7 +568,8 @@ def step_8_undo_and_refresh(snapshot1_id, run_id):
     exported_latest = exported_validation[-1]
     assert exported_latest["validation_id"] == latest["validation_id"]
     assert exported_latest["triggered_by"] == "undo"
-    assert exported_latest["resolution_command"] == "undo"
+    assert exported_latest.get("resolved_at") is None, \
+        "导出 JSON 中 undo 的 passed 记录也不应有 resolved_at"
 
     print("  [OK] undo 后校验状态已刷新，导出数据一致")
 

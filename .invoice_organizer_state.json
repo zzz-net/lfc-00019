@@ -1,0 +1,638 @@
+{
+  "scanned_files": [
+    {
+      "id": "3fb82df15320",
+      "source_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_ddsrg988\\source\\einv_C.pdf",
+      "filename": "einv_C.pdf",
+      "size": 1,
+      "mtime": 1781585663.2791667,
+      "matched_rule": "einv"
+    },
+    {
+      "id": "fd189e723328",
+      "source_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_ddsrg988\\source\\vat_A.pdf",
+      "filename": "vat_A.pdf",
+      "size": 1,
+      "mtime": 1781585663.278129,
+      "matched_rule": "vat"
+    },
+    {
+      "id": "52b667010b2b",
+      "source_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_ddsrg988\\source\\vat_B.pdf",
+      "filename": "vat_B.pdf",
+      "size": 1,
+      "mtime": 1781585663.2791667,
+      "matched_rule": "vat"
+    }
+  ],
+  "plans": {
+    "b46539315985": {
+      "id": "b46539315985",
+      "created_at": "2026-06-16T12:53:23.715083",
+      "moves": [
+        {
+          "id": "cc1a9e9643c6",
+          "source_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_z0tt9cb4\\source\\einv_C.pdf",
+          "target_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_z0tt9cb4\\dest\\electronic\\einv_C.pdf",
+          "filename": "einv_C.pdf",
+          "matched_rule": "einv",
+          "conflict_type": null,
+          "conflict_detail": null
+        },
+        {
+          "id": "2014ab5713b9",
+          "source_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_z0tt9cb4\\source\\vat_A.pdf",
+          "target_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_z0tt9cb4\\dest\\vat_special\\vat_A.pdf",
+          "filename": "vat_A.pdf",
+          "matched_rule": "vat",
+          "conflict_type": null,
+          "conflict_detail": null
+        },
+        {
+          "id": "0cd5d5827168",
+          "source_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_z0tt9cb4\\source\\vat_B.pdf",
+          "target_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_z0tt9cb4\\dest\\vat_special\\vat_B.pdf",
+          "filename": "vat_B.pdf",
+          "matched_rule": "vat",
+          "conflict_type": null,
+          "conflict_detail": null
+        }
+      ],
+      "has_conflicts": false
+    },
+    "f3da97993bc9": {
+      "id": "f3da97993bc9",
+      "created_at": "2026-06-16T12:53:53.424501",
+      "moves": [
+        {
+          "id": "820e5c4d687b",
+          "source_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_krz9yexa\\source\\einv_C.pdf",
+          "target_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_krz9yexa\\dest\\electronic\\einv_C.pdf",
+          "filename": "einv_C.pdf",
+          "matched_rule": "einv",
+          "conflict_type": null,
+          "conflict_detail": null
+        },
+        {
+          "id": "6757e42d5ed5",
+          "source_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_krz9yexa\\source\\vat_A.pdf",
+          "target_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_krz9yexa\\dest\\vat_special\\vat_A.pdf",
+          "filename": "vat_A.pdf",
+          "matched_rule": "vat",
+          "conflict_type": null,
+          "conflict_detail": null
+        },
+        {
+          "id": "42c8ffdee970",
+          "source_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_krz9yexa\\source\\vat_B.pdf",
+          "target_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_krz9yexa\\dest\\vat_special\\vat_B.pdf",
+          "filename": "vat_B.pdf",
+          "matched_rule": "vat",
+          "conflict_type": null,
+          "conflict_detail": null
+        }
+      ],
+      "has_conflicts": false
+    },
+    "4c8b874627db": {
+      "id": "4c8b874627db",
+      "created_at": "2026-06-16T12:54:23.610909",
+      "moves": [
+        {
+          "id": "35b4173ff2d7",
+          "source_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_ddsrg988\\source\\einv_C.pdf",
+          "target_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_ddsrg988\\dest\\electronic\\einv_C.pdf",
+          "filename": "einv_C.pdf",
+          "matched_rule": "einv",
+          "conflict_type": null,
+          "conflict_detail": null
+        },
+        {
+          "id": "0c73cf062ff1",
+          "source_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_ddsrg988\\source\\vat_A.pdf",
+          "target_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_ddsrg988\\dest\\vat_special\\vat_A.pdf",
+          "filename": "vat_A.pdf",
+          "matched_rule": "vat",
+          "conflict_type": null,
+          "conflict_detail": null
+        },
+        {
+          "id": "9fa5ba9e27df",
+          "source_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_ddsrg988\\source\\vat_B.pdf",
+          "target_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_ddsrg988\\dest\\vat_special\\vat_B.pdf",
+          "filename": "vat_B.pdf",
+          "matched_rule": "vat",
+          "conflict_type": null,
+          "conflict_detail": null
+        }
+      ],
+      "has_conflicts": false
+    }
+  },
+  "runs": {},
+  "undo_records": [],
+  "snapshots": {
+    "3e45c859392f": {
+      "snapshot_id": "3e45c859392f",
+      "created_at": "2026-06-16T12:53:23.716169",
+      "plan_id": "b46539315985",
+      "config_snapshot": {
+        "source_dir": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_z0tt9cb4\\source",
+        "dest_dir": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_z0tt9cb4\\dest",
+        "rules": [
+          {
+            "name": "vat",
+            "pattern": "*vat*.pdf",
+            "target": "vat_special",
+            "description": null
+          },
+          {
+            "name": "einv",
+            "pattern": "*einv*.pdf",
+            "target": "electronic",
+            "description": null
+          }
+        ],
+        "state_file": ".invoice_organizer_state.json",
+        "recursive": true,
+        "file_extensions": null,
+        "config_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_z0tt9cb4\\config.yaml",
+        "config_mtime": 1781585603.4729576
+      },
+      "scanned_files": [
+        {
+          "id": "9e439e8682e5",
+          "source_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_z0tt9cb4\\source\\einv_C.pdf",
+          "filename": "einv_C.pdf",
+          "size": 1,
+          "mtime": 1781585603.4709032,
+          "matched_rule": "einv"
+        },
+        {
+          "id": "7996907cabd5",
+          "source_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_z0tt9cb4\\source\\vat_A.pdf",
+          "filename": "vat_A.pdf",
+          "size": 1,
+          "mtime": 1781585603.4709032,
+          "matched_rule": "vat"
+        },
+        {
+          "id": "bb94145a7a93",
+          "source_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_z0tt9cb4\\source\\vat_B.pdf",
+          "filename": "vat_B.pdf",
+          "size": 1,
+          "mtime": 1781585603.4709032,
+          "matched_rule": "vat"
+        }
+      ],
+      "moves": [
+        {
+          "id": "cc1a9e9643c6",
+          "source_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_z0tt9cb4\\source\\einv_C.pdf",
+          "target_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_z0tt9cb4\\dest\\electronic\\einv_C.pdf",
+          "filename": "einv_C.pdf",
+          "matched_rule": "einv",
+          "conflict_type": null,
+          "conflict_detail": null
+        },
+        {
+          "id": "2014ab5713b9",
+          "source_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_z0tt9cb4\\source\\vat_A.pdf",
+          "target_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_z0tt9cb4\\dest\\vat_special\\vat_A.pdf",
+          "filename": "vat_A.pdf",
+          "matched_rule": "vat",
+          "conflict_type": null,
+          "conflict_detail": null
+        },
+        {
+          "id": "0cd5d5827168",
+          "source_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_z0tt9cb4\\source\\vat_B.pdf",
+          "target_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_z0tt9cb4\\dest\\vat_special\\vat_B.pdf",
+          "filename": "vat_B.pdf",
+          "matched_rule": "vat",
+          "conflict_type": null,
+          "conflict_detail": null
+        }
+      ],
+      "unmatched_files": [],
+      "new_target_dirs": [
+        {
+          "path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_z0tt9cb4\\dest\\electronic",
+          "rule_names": [
+            "einv"
+          ],
+          "file_count": 1
+        },
+        {
+          "path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_z0tt9cb4\\dest\\vat_special",
+          "rule_names": [
+            "vat"
+          ],
+          "file_count": 2
+        }
+      ],
+      "has_conflicts": false,
+      "summary": {
+        "total_files": 3,
+        "matched_files": 3,
+        "unmatched_files": 0,
+        "new_target_dirs": [
+          "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_z0tt9cb4\\dest\\electronic",
+          "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_z0tt9cb4\\dest\\vat_special"
+        ],
+        "rules_with_same_target": {},
+        "files_per_rule": {
+          "einv": 1,
+          "vat": 2
+        },
+        "files_per_target_dir": {
+          "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_z0tt9cb4\\dest\\electronic": 1,
+          "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_z0tt9cb4\\dest\\vat_special": 2
+        },
+        "conflict_count": 0,
+        "conflict_details": []
+      },
+      "imported": false,
+      "import_source": null,
+      "remark": {
+        "remark": "",
+        "tags": [],
+        "handler": "",
+        "notes": "",
+        "updated_at": "",
+        "updated_by": ""
+      },
+      "signoffs": [],
+      "signoff_conflicts": []
+    },
+    "6aa8a7334d8b": {
+      "snapshot_id": "6aa8a7334d8b",
+      "created_at": "2026-06-16T12:53:53.425509",
+      "plan_id": "f3da97993bc9",
+      "config_snapshot": {
+        "source_dir": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_krz9yexa\\source",
+        "dest_dir": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_krz9yexa\\dest",
+        "rules": [
+          {
+            "name": "vat",
+            "pattern": "*vat*.pdf",
+            "target": "vat_special",
+            "description": null
+          },
+          {
+            "name": "einv",
+            "pattern": "*einv*.pdf",
+            "target": "electronic",
+            "description": null
+          }
+        ],
+        "state_file": ".invoice_organizer_state.json",
+        "recursive": true,
+        "file_extensions": null,
+        "config_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_krz9yexa\\config.yaml",
+        "config_mtime": 1781585633.2417011
+      },
+      "scanned_files": [
+        {
+          "id": "f8ba60a30c72",
+          "source_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_krz9yexa\\source\\einv_C.pdf",
+          "filename": "einv_C.pdf",
+          "size": 1,
+          "mtime": 1781585633.2406776,
+          "matched_rule": "einv"
+        },
+        {
+          "id": "4e01330cf383",
+          "source_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_krz9yexa\\source\\vat_A.pdf",
+          "filename": "vat_A.pdf",
+          "size": 1,
+          "mtime": 1781585633.2406776,
+          "matched_rule": "vat"
+        },
+        {
+          "id": "07509a90b321",
+          "source_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_krz9yexa\\source\\vat_B.pdf",
+          "filename": "vat_B.pdf",
+          "size": 1,
+          "mtime": 1781585633.2406776,
+          "matched_rule": "vat"
+        }
+      ],
+      "moves": [
+        {
+          "id": "820e5c4d687b",
+          "source_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_krz9yexa\\source\\einv_C.pdf",
+          "target_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_krz9yexa\\dest\\electronic\\einv_C.pdf",
+          "filename": "einv_C.pdf",
+          "matched_rule": "einv",
+          "conflict_type": null,
+          "conflict_detail": null
+        },
+        {
+          "id": "6757e42d5ed5",
+          "source_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_krz9yexa\\source\\vat_A.pdf",
+          "target_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_krz9yexa\\dest\\vat_special\\vat_A.pdf",
+          "filename": "vat_A.pdf",
+          "matched_rule": "vat",
+          "conflict_type": null,
+          "conflict_detail": null
+        },
+        {
+          "id": "42c8ffdee970",
+          "source_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_krz9yexa\\source\\vat_B.pdf",
+          "target_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_krz9yexa\\dest\\vat_special\\vat_B.pdf",
+          "filename": "vat_B.pdf",
+          "matched_rule": "vat",
+          "conflict_type": null,
+          "conflict_detail": null
+        }
+      ],
+      "unmatched_files": [],
+      "new_target_dirs": [
+        {
+          "path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_krz9yexa\\dest\\electronic",
+          "rule_names": [
+            "einv"
+          ],
+          "file_count": 1
+        },
+        {
+          "path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_krz9yexa\\dest\\vat_special",
+          "rule_names": [
+            "vat"
+          ],
+          "file_count": 2
+        }
+      ],
+      "has_conflicts": false,
+      "summary": {
+        "total_files": 3,
+        "matched_files": 3,
+        "unmatched_files": 0,
+        "new_target_dirs": [
+          "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_krz9yexa\\dest\\electronic",
+          "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_krz9yexa\\dest\\vat_special"
+        ],
+        "rules_with_same_target": {},
+        "files_per_rule": {
+          "einv": 1,
+          "vat": 2
+        },
+        "files_per_target_dir": {
+          "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_krz9yexa\\dest\\electronic": 1,
+          "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_krz9yexa\\dest\\vat_special": 2
+        },
+        "conflict_count": 0,
+        "conflict_details": []
+      },
+      "imported": false,
+      "import_source": null,
+      "remark": {
+        "remark": "",
+        "tags": [],
+        "handler": "",
+        "notes": "",
+        "updated_at": "",
+        "updated_by": ""
+      },
+      "signoffs": [],
+      "signoff_conflicts": []
+    },
+    "16222b3894ad": {
+      "snapshot_id": "16222b3894ad",
+      "created_at": "2026-06-16T12:54:23.612425",
+      "plan_id": "4c8b874627db",
+      "config_snapshot": {
+        "source_dir": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_ddsrg988\\source",
+        "dest_dir": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_ddsrg988\\dest",
+        "rules": [
+          {
+            "name": "vat",
+            "pattern": "*vat*.pdf",
+            "target": "vat_special",
+            "description": null
+          },
+          {
+            "name": "einv",
+            "pattern": "*einv*.pdf",
+            "target": "electronic",
+            "description": null
+          }
+        ],
+        "state_file": ".invoice_organizer_state.json",
+        "recursive": true,
+        "file_extensions": null,
+        "config_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_ddsrg988\\config.yaml",
+        "config_mtime": 1781585663.2812493
+      },
+      "scanned_files": [
+        {
+          "id": "3fb82df15320",
+          "source_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_ddsrg988\\source\\einv_C.pdf",
+          "filename": "einv_C.pdf",
+          "size": 1,
+          "mtime": 1781585663.2791667,
+          "matched_rule": "einv"
+        },
+        {
+          "id": "fd189e723328",
+          "source_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_ddsrg988\\source\\vat_A.pdf",
+          "filename": "vat_A.pdf",
+          "size": 1,
+          "mtime": 1781585663.278129,
+          "matched_rule": "vat"
+        },
+        {
+          "id": "52b667010b2b",
+          "source_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_ddsrg988\\source\\vat_B.pdf",
+          "filename": "vat_B.pdf",
+          "size": 1,
+          "mtime": 1781585663.2791667,
+          "matched_rule": "vat"
+        }
+      ],
+      "moves": [
+        {
+          "id": "35b4173ff2d7",
+          "source_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_ddsrg988\\source\\einv_C.pdf",
+          "target_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_ddsrg988\\dest\\electronic\\einv_C.pdf",
+          "filename": "einv_C.pdf",
+          "matched_rule": "einv",
+          "conflict_type": null,
+          "conflict_detail": null
+        },
+        {
+          "id": "0c73cf062ff1",
+          "source_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_ddsrg988\\source\\vat_A.pdf",
+          "target_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_ddsrg988\\dest\\vat_special\\vat_A.pdf",
+          "filename": "vat_A.pdf",
+          "matched_rule": "vat",
+          "conflict_type": null,
+          "conflict_detail": null
+        },
+        {
+          "id": "9fa5ba9e27df",
+          "source_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_ddsrg988\\source\\vat_B.pdf",
+          "target_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_ddsrg988\\dest\\vat_special\\vat_B.pdf",
+          "filename": "vat_B.pdf",
+          "matched_rule": "vat",
+          "conflict_type": null,
+          "conflict_detail": null
+        }
+      ],
+      "unmatched_files": [],
+      "new_target_dirs": [
+        {
+          "path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_ddsrg988\\dest\\electronic",
+          "rule_names": [
+            "einv"
+          ],
+          "file_count": 1
+        },
+        {
+          "path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_ddsrg988\\dest\\vat_special",
+          "rule_names": [
+            "vat"
+          ],
+          "file_count": 2
+        }
+      ],
+      "has_conflicts": false,
+      "summary": {
+        "total_files": 3,
+        "matched_files": 3,
+        "unmatched_files": 0,
+        "new_target_dirs": [
+          "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_ddsrg988\\dest\\electronic",
+          "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_ddsrg988\\dest\\vat_special"
+        ],
+        "rules_with_same_target": {},
+        "files_per_rule": {
+          "einv": 1,
+          "vat": 2
+        },
+        "files_per_target_dir": {
+          "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_ddsrg988\\dest\\electronic": 1,
+          "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_ddsrg988\\dest\\vat_special": 2
+        },
+        "conflict_count": 0,
+        "conflict_details": []
+      },
+      "imported": false,
+      "import_source": null,
+      "remark": {
+        "remark": "",
+        "tags": [],
+        "handler": "",
+        "notes": "",
+        "updated_at": "",
+        "updated_by": ""
+      },
+      "signoffs": [],
+      "signoff_conflicts": []
+    }
+  },
+  "import_logs": [],
+  "plan_locks": [],
+  "lock_violations": [],
+  "plan_diffs": [],
+  "remark_histories": [],
+  "signoff_records": [
+    {
+      "signoff_id": "48d8139ebb7a",
+      "snapshot_id": "16222b3894ad",
+      "plan_id": "4c8b874627db",
+      "status": "signed",
+      "signed_by": "reviewer",
+      "signed_at": "2026-06-16T12:54:24.193219",
+      "deadline": "2026-07-06T12:54:23.959822",
+      "notes": "clean-pass",
+      "config_snapshot": {
+        "source_dir": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_ddsrg988\\source",
+        "dest_dir": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_ddsrg988\\dest",
+        "rules": [
+          {
+            "name": "vat",
+            "pattern": "*vat*.pdf",
+            "target": "vat_special",
+            "description": null
+          },
+          {
+            "name": "einv",
+            "pattern": "*einv*.pdf",
+            "target": "electronic",
+            "description": null
+          }
+        ],
+        "state_file": ".invoice_organizer_state.json",
+        "recursive": true,
+        "file_extensions": null,
+        "config_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_ddsrg988\\config.yaml",
+        "config_mtime": 1781585663.2812493
+      },
+      "created_at": "2026-06-16T12:54:24.193219",
+      "created_by": "cli",
+      "import_source": null,
+      "conflict_detail": "",
+      "forced": false,
+      "is_active": true,
+      "superseded_by": null,
+      "superseded_at": null,
+      "conflict_id": null
+    }
+  ],
+  "signoff_conflicts": [],
+  "validation_history": [
+    {
+      "validation_id": "33424be753fe",
+      "snapshot_id": "16222b3894ad",
+      "plan_id": "4c8b874627db",
+      "triggered_by": "sign-off",
+      "triggered_at": "2026-06-16T12:54:24.198876",
+      "status": "passed",
+      "block_types": [],
+      "errors": [],
+      "warnings": [],
+      "is_expired": false,
+      "config_mismatch": false,
+      "snapshot_replaced": false,
+      "has_unresolved_conflict": false,
+      "has_lock_mismatch": false,
+      "active_signoff_id": "48d8139ebb7a",
+      "conflict_id": null,
+      "lock_id": null,
+      "resolved_at": null,
+      "resolved_by": null,
+      "resolution_note": "",
+      "resolution_command": ""
+    }
+  ],
+  "last_scan": "2026-06-16T12:54:23.608122",
+  "last_plan": "4c8b874627db",
+  "last_snapshot": "16222b3894ad",
+  "active_lock_id": null,
+  "created_at": "2026-06-16T12:53:23.712950",
+  "scan_config": {
+    "source_dir": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_ddsrg988\\source",
+    "dest_dir": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_ddsrg988\\dest",
+    "rules": [
+      {
+        "name": "vat",
+        "pattern": "*vat*.pdf",
+        "target": "vat_special",
+        "description": null
+      },
+      {
+        "name": "einv",
+        "pattern": "*einv*.pdf",
+        "target": "electronic",
+        "description": null
+      }
+    ],
+    "state_file": ".invoice_organizer_state.json",
+    "recursive": true,
+    "file_extensions": null,
+    "config_path": "C:\\Users\\admin\\AppData\\Local\\Temp\\1\\reviewer_owned_validation_ddsrg988\\config.yaml",
+    "config_mtime": 1781585663.2812493
+  }
+}

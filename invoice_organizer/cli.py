@@ -669,6 +669,8 @@ def cmd_undo(config_path: str, run_id: Optional[str], yes: bool, verbose: bool):
     if snapshot_id:
         snapshot = store.get_snapshot(snapshot_id)
         if snapshot:
+            pre_validation = store.get_latest_validation(snapshot_id)
+
             store.invalidate_validation_for_snapshot(snapshot_id)
 
             result = validate_signoff_for_apply(
@@ -686,10 +688,9 @@ def cmd_undo(config_path: str, run_id: Optional[str], yes: bool, verbose: bool):
                 lock_allowed=True,
             )
 
-            latest_validation = store.get_latest_validation(snapshot_id)
-            if latest_validation:
+            if pre_validation and pre_validation.status == "blocked" and not pre_validation.is_resolved:
                 store.update_validation_resolution(
-                    validation_id=latest_validation.validation_id,
+                    validation_id=pre_validation.validation_id,
                     resolved_by="cli",
                     resolution_note=f"撤销执行 {run_id}，状态已重置",
                     resolution_command="undo",
@@ -1565,6 +1566,8 @@ def cmd_import_snapshot(
         store.add_import_log(_make_log("success"))
 
     if not remark_only:
+        pre_validation = store.get_latest_validation(snapshot.snapshot_id)
+
         store.invalidate_validation_for_snapshot(snapshot.snapshot_id)
 
         result = validate_signoff_for_apply(
@@ -1582,10 +1585,9 @@ def cmd_import_snapshot(
             lock_allowed=True,
         )
 
-        latest_validation = store.get_latest_validation(snapshot.snapshot_id)
-        if latest_validation:
+        if pre_validation and pre_validation.status == "blocked" and not pre_validation.is_resolved:
             store.update_validation_resolution(
-                validation_id=latest_validation.validation_id,
+                validation_id=pre_validation.validation_id,
                 resolved_by=updated_by,
                 resolution_note=f"从 {input_path} 导入快照",
                 resolution_command="import-snapshot",
@@ -1880,6 +1882,8 @@ def cmd_unlock_plan(
 
     snapshot = store.get_snapshot(lock.snapshot_id)
     if snapshot:
+        pre_validation = store.get_latest_validation(snapshot.snapshot_id)
+
         store.invalidate_validation_for_snapshot(snapshot.snapshot_id)
 
         result = validate_signoff_for_apply(
@@ -1897,10 +1901,9 @@ def cmd_unlock_plan(
             lock_allowed=True,
         )
 
-        latest_validation = store.get_latest_validation(snapshot.snapshot_id)
-        if latest_validation:
+        if pre_validation and pre_validation.status == "blocked" and not pre_validation.is_resolved:
             store.update_validation_resolution(
-                validation_id=latest_validation.validation_id,
+                validation_id=pre_validation.validation_id,
                 resolved_by="cli",
                 resolution_note=f"释放锁定 {lock.lock_id}",
                 resolution_command="unlock-plan",
@@ -2344,6 +2347,8 @@ def cmd_sign_off(
 
     store.add_signoff(signoff)
 
+    pre_validation = store.get_latest_validation(snapshot.snapshot_id)
+
     store.invalidate_validation_for_snapshot(snapshot.snapshot_id)
 
     result = validate_signoff_for_apply(
@@ -2361,10 +2366,9 @@ def cmd_sign_off(
         lock_allowed=True,
     )
 
-    latest_validation = store.get_latest_validation(snapshot.snapshot_id)
-    if latest_validation:
+    if pre_validation and pre_validation.status == "blocked" and not pre_validation.is_resolved:
         store.update_validation_resolution(
-            validation_id=latest_validation.validation_id,
+            validation_id=pre_validation.validation_id,
             resolved_by=signed_by,
             resolution_note=f"重新签收，签收 ID: {signoff.signoff_id}",
             resolution_command="sign-off",
@@ -2679,6 +2683,8 @@ def cmd_resolve_signoff_conflict(
     click.echo(format_signoff_conflict_summary(updated_conflict))
     click.echo()
 
+    pre_validation = store.get_latest_validation(snapshot.snapshot_id)
+
     store.invalidate_validation_for_snapshot(snapshot.snapshot_id)
 
     result = validate_signoff_for_apply(
@@ -2696,10 +2702,9 @@ def cmd_resolve_signoff_conflict(
         lock_allowed=True,
     )
 
-    latest_validation = store.get_latest_validation(snapshot.snapshot_id)
-    if latest_validation:
+    if pre_validation and pre_validation.status == "blocked" and not pre_validation.is_resolved:
         store.update_validation_resolution(
-            validation_id=latest_validation.validation_id,
+            validation_id=pre_validation.validation_id,
             resolved_by=resolved_by,
             resolution_note=f"通过 resolve-signoff-conflict 解决冲突 {conflict_id}",
             resolution_command="resolve-signoff-conflict",
