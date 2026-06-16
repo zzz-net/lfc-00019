@@ -16,7 +16,7 @@ from .models import (
     PlanDiffResult, FileMoveDiff, UnmatchedFileDiff,
     SnapshotRemark, RemarkValidationResult, RemarkFieldChange,
     SignoffRecord, SignoffValidationResult, SignoffFieldChange,
-    SignoffConflictState,
+    SignoffConflictState, SignoffValidationHistory,
     generate_id, now_iso,
 )
 from .storage import StateStore
@@ -688,6 +688,52 @@ def export_logs(
             writer.writerow(["冲突ID", "快照ID", "预案ID", "状态", "本地签收ID", "导入签收ID", "检测时间", "导入来源", "差异字段", "差异详情", "解决时间", "解决人", "解决说明", "新签收ID"])
             for sc in full_state.get("signoff_conflicts", []):
                 writer.writerow(export_signoff_conflict_to_csv_row(SignoffConflictState.from_dict(sc)))
+
+            writer.writerow([])
+            writer.writerow(["=== 签收校验历史 ==="])
+            writer.writerow([
+                "校验ID", "快照ID", "预案ID", "触发命令", "触发时间",
+                "状态", "阻塞类型", "是否过期", "配置不一致", "快照已更新",
+                "有未解决冲突", "锁定不一致", "活动签收ID", "冲突ID", "锁定ID",
+                "错误信息", "警告信息", "解决时间", "解决人", "解决说明", "解决命令"
+            ])
+            block_type_cn = {
+                "signoff_expired": "签收过期",
+                "config_mismatch": "配置不一致",
+                "unresolved_signoff_conflict": "未解决签收冲突",
+                "lock_mismatch": "锁定快照不一致",
+                "no_signoff": "未签收",
+                "not_signed": "非已签收状态",
+                "conflicting_signoffs": "冲突的签收记录",
+                "snapshot_replaced": "快照已更新",
+            }
+            for vh in full_state.get("validation_history", []):
+                block_types = vh.get("block_types", [])
+                block_types_cn = "; ".join([block_type_cn.get(bt, bt) for bt in block_types])
+                status_cn = "通过" if vh.get("status") == "passed" else "阻塞"
+                writer.writerow([
+                    vh.get("validation_id", ""),
+                    vh.get("snapshot_id", ""),
+                    vh.get("plan_id", ""),
+                    vh.get("triggered_by", ""),
+                    vh.get("triggered_at", ""),
+                    status_cn,
+                    block_types_cn,
+                    "是" if vh.get("is_expired") else "否",
+                    "是" if vh.get("config_mismatch") else "否",
+                    "是" if vh.get("snapshot_replaced") else "否",
+                    "是" if vh.get("has_unresolved_conflict") else "否",
+                    "是" if vh.get("has_lock_mismatch") else "否",
+                    vh.get("active_signoff_id", ""),
+                    vh.get("conflict_id", ""),
+                    vh.get("lock_id", ""),
+                    "; ".join(vh.get("errors", [])) if vh.get("errors") else "",
+                    "; ".join(vh.get("warnings", [])) if vh.get("warnings") else "",
+                    vh.get("resolved_at", ""),
+                    vh.get("resolved_by", ""),
+                    vh.get("resolution_note", ""),
+                    vh.get("resolution_command", ""),
+                ])
 
         return 1
 
@@ -1991,3 +2037,95 @@ def has_unresolved_signoff_conflict(store: StateStore, snapshot_id: str) -> Opti
     返回冲突状态对象，如果没有则返回 None
     """
     return store.get_pending_conflict_by_snapshot(snapshot_id)
+
+
+def save_validation_history(
+    store: StateStore,
+    snapshot: BatchSnapshot,
+    signoff_validation: SignoffValidationResult,
+    triggered_by: str,
+    lock_allowed: bool = True,
+    lock_reject_reason: Optional[str] = None,
+    active_lock_snapshot_id: Optional[str] = None,
+) -> SignoffValidationHistory:
+    """
+    持久化签收校验结果，支持重启后回看和导出复核。
+
+    Args:
+        store: 状态存储
+        snapshot: 当前快照
+        signoff_validation: 签收校验结果
+        triggered_by: 触发命令 ("check-signoff" | "apply-dry-run" | "apply")
+        lock_allowed: 锁定检查是否通过
+        lock_reject_reason: 锁定拒绝原因
+        active_lock_snapshot_id: 当前锁定的快照 ID
+
+    Returns:
+        已持久化的校验历史记录
+    """
+    block_types: List[str] = []
+    has_unresolved_conflict = False
+    has_lock_mismatch = not lock_allowed
+    conflict_id: Optional[str] = None
+    lock_id: Optional[str] = None
+    active_signoff_id: Optional[str] = None
+
+    if signoff_validation.unresolved_conflict:
+        has_unresolved_conflict = True
+        conflict_id = signoff_validation.unresolved_conflict.conflict_id
+        block_types.append("unresolved_signoff_conflict")
+
+    if signoff_validation.active_signoff:
+        active_signoff_id = signoff_validation.active_signoff.signoff_id
+
+    if signoff_validation.is_expired:
+        block_types.append("signoff_expired")
+
+    if signoff_validation.config_mismatch:
+        block_types.append("config_mismatch")
+
+    if signoff_validation.snapshot_replaced:
+        block_types.append("snapshot_replaced")
+
+    if signoff_validation.conflicting_signoffs:
+        block_types.append("conflicting_signoffs")
+
+    if not signoff_validation.active_signoff:
+        block_types.append("no_signoff")
+    elif signoff_validation.active_signoff.status != "signed":
+        block_types.append("not_signed")
+
+    if has_lock_mismatch:
+        block_types.append("lock_mismatch")
+        active_lock = store.get_active_lock()
+        if active_lock:
+            lock_id = active_lock.lock_id
+
+    status = "passed" if signoff_validation.valid and lock_allowed else "blocked"
+
+    record = SignoffValidationHistory(
+        validation_id=generate_id(),
+        snapshot_id=snapshot.snapshot_id,
+        plan_id=snapshot.plan_id,
+        triggered_by=triggered_by,
+        triggered_at=now_iso(),
+        status=status,
+        block_types=block_types,
+        errors=list(signoff_validation.errors),
+        warnings=list(signoff_validation.warnings),
+        is_expired=signoff_validation.is_expired,
+        config_mismatch=signoff_validation.config_mismatch,
+        snapshot_replaced=signoff_validation.snapshot_replaced,
+        has_unresolved_conflict=has_unresolved_conflict,
+        has_lock_mismatch=has_lock_mismatch,
+        active_signoff_id=active_signoff_id,
+        conflict_id=conflict_id,
+        lock_id=lock_id,
+    )
+
+    if has_lock_mismatch and lock_reject_reason:
+        if lock_reject_reason not in record.errors:
+            record.errors.append(lock_reject_reason)
+
+    store.add_validation_history(record)
+    return record

@@ -26,7 +26,7 @@ from .workflow import (
     validate_signoff_for_apply, config_snapshot_to_dict, export_signoff_to_csv_row,
     check_signoff_expired,
     detect_and_create_signoff_conflict, format_signoff_conflict_summary,
-    has_unresolved_signoff_conflict,
+    has_unresolved_signoff_conflict, save_validation_history,
 )
 
 
@@ -354,6 +354,15 @@ def cmd_apply(
         require_signed=require_signoff,
     )
 
+    triggered_by = "apply-dry-run" if dry_run else "apply"
+    save_validation_history(
+        store=store,
+        snapshot=snapshot,
+        signoff_validation=signoff_validation,
+        triggered_by=triggered_by,
+        lock_allowed=True,
+    )
+
     active_signoff = signoff_validation.active_signoff
 
     has_conflict_error = any("未解决的签收冲突" in err or "冲突的签收记录" in err for err in signoff_validation.errors)
@@ -450,6 +459,19 @@ def cmd_apply(
             click.echo(click.style("  [注意] 已强制执行（存在未解决的签收冲突）", fg="yellow"))
 
     allowed, reject_reason = _check_lock_before_apply(store, snapshot)
+
+    if not allowed:
+        active_lock = store.get_active_lock()
+        save_validation_history(
+            store=store,
+            snapshot=snapshot,
+            signoff_validation=signoff_validation,
+            triggered_by=triggered_by,
+            lock_allowed=False,
+            lock_reject_reason=reject_reason,
+            active_lock_snapshot_id=active_lock.snapshot_id if active_lock else None,
+        )
+
     if not allowed:
         click.echo(click.style("[错误] 执行被版本锁定拦截！", fg="red", bold=True))
         click.echo(click.style(f"  {reject_reason}", fg="red"))
@@ -641,6 +663,37 @@ def cmd_undo(config_path: str, run_id: Optional[str], yes: bool, verbose: bool):
         click.echo("\n[撤销详情 - 错误]")
         for err in errors_detail:
             click.echo(click.style(f"  - {err}", fg="red"))
+
+    run_data = store.get_run(run_id)
+    snapshot_id = run_data.get("snapshot_id") if run_data else None
+    if snapshot_id:
+        snapshot = store.get_snapshot(snapshot_id)
+        if snapshot:
+            store.invalidate_validation_for_snapshot(snapshot_id)
+
+            result = validate_signoff_for_apply(
+                store=store,
+                snapshot=snapshot,
+                current_config=config,
+                require_signed=True,
+            )
+
+            save_validation_history(
+                store=store,
+                snapshot=snapshot,
+                signoff_validation=result,
+                triggered_by="undo",
+                lock_allowed=True,
+            )
+
+            latest_validation = store.get_latest_validation(snapshot_id)
+            if latest_validation:
+                store.update_validation_resolution(
+                    validation_id=latest_validation.validation_id,
+                    resolved_by="cli",
+                    resolution_note=f"撤销执行 {run_id}，状态已重置",
+                    resolution_command="undo",
+                )
 
 
 @cli.command("export-plan", help="导出单个预案及其摘要 (JSON 或 CSV)，便于人工复核")
@@ -1511,6 +1564,33 @@ def cmd_import_snapshot(
     else:
         store.add_import_log(_make_log("success"))
 
+    if not remark_only:
+        store.invalidate_validation_for_snapshot(snapshot.snapshot_id)
+
+        result = validate_signoff_for_apply(
+            store=store,
+            snapshot=snapshot,
+            current_config=config,
+            require_signed=True,
+        )
+
+        save_validation_history(
+            store=store,
+            snapshot=snapshot,
+            signoff_validation=result,
+            triggered_by="import-snapshot",
+            lock_allowed=True,
+        )
+
+        latest_validation = store.get_latest_validation(snapshot.snapshot_id)
+        if latest_validation:
+            store.update_validation_resolution(
+                validation_id=latest_validation.validation_id,
+                resolved_by=updated_by,
+                resolution_note=f"从 {input_path} 导入快照",
+                resolution_command="import-snapshot",
+            )
+
     click.echo(f"  可使用 apply -s {snapshot.snapshot_id} 执行，或 export-snapshot 导出复核。")
 
 
@@ -2011,6 +2091,32 @@ def cmd_sign_off(
 
     store.add_signoff(signoff)
 
+    store.invalidate_validation_for_snapshot(snapshot.snapshot_id)
+
+    result = validate_signoff_for_apply(
+        store=store,
+        snapshot=snapshot,
+        current_config=config,
+        require_signed=True,
+    )
+
+    save_validation_history(
+        store=store,
+        snapshot=snapshot,
+        signoff_validation=result,
+        triggered_by="sign-off",
+        lock_allowed=True,
+    )
+
+    latest_validation = store.get_latest_validation(snapshot.snapshot_id)
+    if latest_validation:
+        store.update_validation_resolution(
+            validation_id=latest_validation.validation_id,
+            resolved_by=signed_by,
+            resolution_note=f"重新签收，签收 ID: {signoff.signoff_id}",
+            resolution_command="sign-off",
+        )
+
     click.echo()
     click.echo(click.style(f"[签收成功] 签收 ID: {signoff.signoff_id}", fg="green"))
     if signoff.forced:
@@ -2071,6 +2177,14 @@ def cmd_check_signoff(
         snapshot=snapshot,
         current_config=config,
         require_signed=require_signed,
+    )
+
+    save_validation_history(
+        store=store,
+        snapshot=snapshot,
+        signoff_validation=result,
+        triggered_by="check-signoff",
+        lock_allowed=True,
     )
 
     click.echo(click.style("[签收状态检查]", fg="cyan", bold=True))
@@ -2312,12 +2426,31 @@ def cmd_resolve_signoff_conflict(
     click.echo(format_signoff_conflict_summary(updated_conflict))
     click.echo()
 
+    store.invalidate_validation_for_snapshot(snapshot.snapshot_id)
+
     result = validate_signoff_for_apply(
         store=store,
         snapshot=snapshot,
         current_config=config,
         require_signed=True,
     )
+
+    save_validation_history(
+        store=store,
+        snapshot=snapshot,
+        signoff_validation=result,
+        triggered_by="resolve-signoff-conflict",
+        lock_allowed=True,
+    )
+
+    latest_validation = store.get_latest_validation(snapshot.snapshot_id)
+    if latest_validation:
+        store.update_validation_resolution(
+            validation_id=latest_validation.validation_id,
+            resolved_by=resolved_by,
+            resolution_note=f"通过 resolve-signoff-conflict 解决冲突 {conflict_id}",
+            resolution_command="resolve-signoff-conflict",
+        )
 
     if result.valid:
         click.echo(click.style("[OK] 签收校验已通过，可以执行 apply。", fg="green"))

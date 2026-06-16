@@ -10,7 +10,7 @@ from .models import (
     ScannedFile, PlannedMove, ExecutedMove, UndoRecord,
     BatchSnapshot, ImportLog, PlanLock, LockViolation, ConfigSnapshot,
     SnapshotRemark, RemarkHistory, RemarkFieldChange,
-    SignoffRecord, SignoffConflictState,
+    SignoffRecord, SignoffConflictState, SignoffValidationHistory,
     generate_id, now_iso,
 )
 
@@ -43,6 +43,7 @@ class StateStore:
             "remark_histories": [],
             "signoff_records": [],
             "signoff_conflicts": [],
+            "validation_history": [],
             "last_scan": None,
             "last_plan": None,
             "last_snapshot": None,
@@ -832,3 +833,58 @@ class StateStore:
         if imported:
             return imported[-1].import_source
         return None
+
+    # ---- 签收校验历史 ----
+
+    def add_validation_history(self, record: SignoffValidationHistory) -> None:
+        """添加签收校验历史记录"""
+        self._data.setdefault("validation_history", []).append(record.to_dict())
+        self.save()
+
+    def get_validation_history(self, snapshot_id: Optional[str] = None, limit: int = 20) -> List[SignoffValidationHistory]:
+        """获取校验历史，可按快照过滤，按时间倒序排列"""
+        records = [
+            SignoffValidationHistory.from_dict(r)
+            for r in self._data.get("validation_history", [])
+        ]
+        if snapshot_id:
+            records = [r for r in records if r.snapshot_id == snapshot_id]
+        records.sort(key=lambda r: r.triggered_at, reverse=True)
+        return records[:limit]
+
+    def get_latest_validation(self, snapshot_id: Optional[str] = None) -> Optional[SignoffValidationHistory]:
+        """获取最近一次校验记录"""
+        records = self.get_validation_history(snapshot_id=snapshot_id, limit=1)
+        return records[0] if records else None
+
+    def update_validation_resolution(
+        self,
+        validation_id: str,
+        resolved_by: str,
+        resolution_note: str,
+        resolution_command: str,
+    ) -> Optional[SignoffValidationHistory]:
+        """标记校验记录为已解决"""
+        for r in self._data.get("validation_history", []):
+            if r.get("validation_id") == validation_id:
+                r["resolved_at"] = now_iso()
+                r["resolved_by"] = resolved_by
+                r["resolution_note"] = resolution_note
+                r["resolution_command"] = resolution_command
+                self.save()
+                return SignoffValidationHistory.from_dict(r)
+        return None
+
+    def invalidate_validation_for_snapshot(self, snapshot_id: str) -> None:
+        """快照状态变化时，标记相关未解决的校验记录为已过期（自动标记解决）"""
+        for r in self._data.get("validation_history", []):
+            if (
+                r.get("snapshot_id") == snapshot_id
+                and r.get("status") == "blocked"
+                and not r.get("resolved_at")
+            ):
+                r["resolved_at"] = now_iso()
+                r["resolved_by"] = "system"
+                r["resolution_note"] = "快照状态变化，原校验结果已失效"
+                r["resolution_command"] = "state_refresh"
+        self.save()

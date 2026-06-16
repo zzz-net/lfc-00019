@@ -840,6 +840,78 @@ class SignoffConflictDiff:
         }
 
 
+@dataclass
+class SignoffValidationHistory:
+    """签收校验历史记录
+
+    用于持久化每次 check-signoff、apply --dry-run 和正式 apply 的校验结果，
+    支持重启后回看和导出复核。
+
+    阻塞类型：
+    - signoff_expired: 签收已过期
+    - config_mismatch: 当前配置与签收时不一致
+    - unresolved_signoff_conflict: 存在未解决的签收冲突
+    - lock_mismatch: 锁定快照与执行快照不一致
+    - no_signoff: 未签收
+    - not_signed: 签收状态不是 signed
+    - conflicting_signoffs: 存在多条冲突的活动签收
+    """
+    validation_id: str
+    snapshot_id: str
+    plan_id: str
+    triggered_by: str  # "check-signoff" | "apply-dry-run" | "apply"
+    triggered_at: str
+    status: str  # "passed" | "blocked"
+    block_types: List[str] = field(default_factory=list)
+    errors: List[str] = field(default_factory=list)
+    warnings: List[str] = field(default_factory=list)
+    is_expired: bool = False
+    config_mismatch: bool = False
+    snapshot_replaced: bool = False
+    has_unresolved_conflict: bool = False
+    has_lock_mismatch: bool = False
+    active_signoff_id: Optional[str] = None
+    conflict_id: Optional[str] = None
+    lock_id: Optional[str] = None
+    resolved_at: Optional[str] = None
+    resolved_by: Optional[str] = None
+    resolution_note: str = ""
+    resolution_command: str = ""
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "SignoffValidationHistory":
+        return cls(
+            validation_id=data["validation_id"],
+            snapshot_id=data["snapshot_id"],
+            plan_id=data["plan_id"],
+            triggered_by=data["triggered_by"],
+            triggered_at=data["triggered_at"],
+            status=data["status"],
+            block_types=list(data.get("block_types", [])),
+            errors=list(data.get("errors", [])),
+            warnings=list(data.get("warnings", [])),
+            is_expired=data.get("is_expired", False),
+            config_mismatch=data.get("config_mismatch", False),
+            snapshot_replaced=data.get("snapshot_replaced", False),
+            has_unresolved_conflict=data.get("has_unresolved_conflict", False),
+            has_lock_mismatch=data.get("has_lock_mismatch", False),
+            active_signoff_id=data.get("active_signoff_id"),
+            conflict_id=data.get("conflict_id"),
+            lock_id=data.get("lock_id"),
+            resolved_at=data.get("resolved_at"),
+            resolved_by=data.get("resolved_by"),
+            resolution_note=data.get("resolution_note", ""),
+            resolution_command=data.get("resolution_command", ""),
+        )
+
+    @property
+    def is_resolved(self) -> bool:
+        return self.resolved_at is not None
+
+
 def load_config(config_path: str) -> Config:
     """从 YAML 文件加载配置"""
     if not os.path.exists(config_path):
