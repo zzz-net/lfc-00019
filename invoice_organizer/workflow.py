@@ -19,7 +19,8 @@ from .models import (
     SignoffConflictState, SignoffValidationHistory,
     TargetDirFingerprint, FileFingerprint, ManualRenameRecord,
     LandingFingerprint, LandingFingerprintDiff, LandingImportValidationResult,
-    LandingImportLog, LANDING_FINGERPRINT_VERSION, LANDING_REQUIRED_FIELDS,
+    LandingImportLog, LandingVerifyResult,
+    LANDING_FINGERPRINT_VERSION, LANDING_REQUIRED_FIELDS,
     generate_id, now_iso,
 )
 from .storage import StateStore
@@ -3075,6 +3076,20 @@ def create_landing_fingerprint(
         file_digests_summary = ""
 
     landing_id = generate_id()
+
+    change_summary_parts = []
+    change_summary_parts.append(f"成功移动 {success_count} 个文件")
+    if skipped_conflict_count > 0:
+        change_summary_parts.append(f"冲突跳过 {skipped_conflict_count} 个")
+    if skipped_manual_count > 0:
+        change_summary_parts.append(f"手工跳过 {skipped_manual_count} 个")
+    if failed_count > 0:
+        change_summary_parts.append(f"失败 {failed_count} 个")
+    change_summary_parts.append(f"涉及 {len(target_dirs)} 个目标目录")
+    if len(manual_renames) > 0:
+        change_summary_parts.append(f"含 {len(manual_renames)} 条改名记录")
+    change_summary = "；".join(change_summary_parts)
+
     landing = LandingFingerprint(
         landing_id=landing_id,
         run_id=run_id,
@@ -3104,6 +3119,8 @@ def create_landing_fingerprint(
         imported_at=None,
         signoff_id=signoff_id if signoff_id else None,
         signoff_snapshot_config_digest="",
+        change_summary=change_summary,
+        export_result="",
     )
 
     landing_dict = landing.to_dict()
@@ -3266,6 +3283,7 @@ def validate_landing_for_import(
     store: StateStore,
     landing: LandingFingerprint,
     check_duplicate: bool = True,
+    current_config: Optional[Config] = None,
 ) -> LandingImportValidationResult:
     """
     验证落点指纹清单是否可以导入
@@ -3276,9 +3294,11 @@ def validate_landing_for_import(
     3. move.target_path 变化（路径列表摘要不同）
     4. 清单内容与现场对不上（文件指纹不一致）
     5. 必填字段缺失
+    6. 当前配置 dest_dir 与清单 dest_dir 不一致（切换配置目录检测）
 
     Args:
         check_duplicate: 是否检查重复导入。本地自核对时传 False。
+        current_config: 当前配置，用于检测切换配置目录后的 dest_dir 不一致。
     """
     errors: List[str] = []
     warnings: List[str] = []
@@ -3331,6 +3351,39 @@ def validate_landing_for_import(
         )
         if "本地配置改动" not in conflict_types:
             conflict_types.append("本地配置改动")
+
+    if current_config and landing.dest_dir != current_config.dest_dir:
+        errors.append(
+            f"清单目标目录与当前配置不一致: "
+            f"清单 dest_dir={landing.dest_dir}, 当前配置 dest_dir={current_config.dest_dir}"
+        )
+        if "配置目录切换" not in conflict_types:
+            conflict_types.append("配置目录切换")
+        if diff_result and not diff_result.dest_dir_changed:
+            has_diff = True
+            diff_fields = list(diff_result.diff_fields)
+            diff_fields.append("dest_dir_vs_current_config")
+            diff_details = dict(diff_result.diff_details)
+            diff_details["dest_dir_vs_current_config"] = {
+                "landing": landing.dest_dir,
+                "current_config": current_config.dest_dir,
+            }
+            diff_result = LandingFingerprintDiff(
+                diff_id=diff_result.diff_id,
+                landing_id_local=diff_result.landing_id_local,
+                landing_id_imported=diff_result.landing_id_imported,
+                compared_at=diff_result.compared_at,
+                has_diff=True,
+                diff_fields=diff_fields,
+                diff_details=diff_details,
+                dest_dir_changed=True,
+                target_dirs_diff=diff_result.target_dirs_diff,
+                target_paths_diff=diff_result.target_paths_diff,
+                file_fingerprints_diff=diff_result.file_fingerprints_diff,
+                file_count_mismatch=diff_result.file_count_mismatch,
+                config_changed=diff_result.config_changed,
+                duplicate_import=diff_result.duplicate_import,
+            )
 
     if diff_result.config_changed:
         errors.append(
@@ -3398,6 +3451,7 @@ def import_landing_into_store(
     import_source: str,
     force: bool = False,
     imported_by: str = "cli",
+    current_config: Optional[Config] = None,
 ) -> Tuple[bool, LandingImportValidationResult, LandingImportLog, List[str]]:
     """
     将落点指纹清单导入到本地状态存储
@@ -3406,7 +3460,10 @@ def import_landing_into_store(
     """
     info_messages: List[str] = []
 
-    validation = validate_landing_for_import(store, landing)
+    validation = validate_landing_for_import(
+        store, landing,
+        current_config=current_config,
+    )
 
     def _make_log(status: str, forced_flag: bool = False) -> LandingImportLog:
         return LandingImportLog(
@@ -3446,12 +3503,40 @@ def import_landing_into_store(
     return True, validation, _make_log("success"), info_messages
 
 
-def export_landing_to_file(landing: LandingFingerprint, output_path: str) -> None:
-    """导出落点指纹清单到 JSON 文件"""
+def export_landing_to_file(
+    landing: LandingFingerprint,
+    output_path: str,
+    store: Optional[StateStore] = None,
+) -> str:
+    """导出落点指纹清单到 JSON 文件
+
+    Args:
+        landing: 落点指纹清单对象
+        output_path: 输出文件路径
+        store: 状态存储，若提供则更新 export_result 字段
+
+    Returns:
+        导出结果描述字符串
+    """
     data = landing.to_dict()
     data["landing_version"] = LANDING_FINGERPRINT_VERSION
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
+
+    abs_path = os.path.abspath(output_path)
+    file_size = os.path.getsize(abs_path)
+    export_result = (
+        f"导出成功: {abs_path} "
+        f"(大小: {file_size} 字节, "
+        f"文件指纹数: {len(landing.file_fingerprints)}, "
+        f"校验和: {landing.checksum[:16]}...)"
+    )
+
+    if store:
+        landing.export_result = export_result
+        store.save_landing(landing)
+
+    return export_result
 
 
 def load_landing_from_file(file_path: str) -> LandingFingerprint:
@@ -3498,3 +3583,127 @@ def load_landing_from_file(file_path: str) -> LandingFingerprint:
                 )
 
     return LandingFingerprint.from_dict(data)
+
+
+def verify_landing_file(
+    file_path: str,
+    store: Optional[StateStore] = None,
+    current_config: Optional[Config] = None,
+    check_duplicate: bool = True,
+    verify_source: str = "cli",
+) -> LandingVerifyResult:
+    """
+    核对单个落点清单文件，返回三类分类结果
+
+    分类规则:
+    - invalid: 清单本身有问题（文件不存在、JSON 格式错误、缺少必填字段等）
+    - conflict: 清单与当前配置或本地状态存在差异（dest_dir 不一致、目标路径变化、重复导入等）
+    - valid: 清单有效，与当前配置和状态一致
+
+    Args:
+        file_path: 清单文件路径
+        store: 状态存储，用于对比本地记录（为 None 时只做格式校验）
+        current_config: 当前配置，用于检测配置目录切换
+        check_duplicate: 是否检查重复导入
+        verify_source: 核对来源标记
+
+    Returns:
+        LandingVerifyResult 三类分类结果
+    """
+    landing = None
+    errors: List[str] = []
+    warnings: List[str] = []
+    conflict_types: List[str] = []
+
+    try:
+        landing = load_landing_from_file(file_path)
+    except FileNotFoundError as e:
+        return LandingVerifyResult(
+            status="invalid",
+            landing_id="unknown",
+            run_id="unknown",
+            errors=[f"清单文件不存在: {e}"],
+            verify_source=verify_source,
+        )
+    except json.JSONDecodeError as e:
+        return LandingVerifyResult(
+            status="invalid",
+            landing_id="unknown",
+            run_id="unknown",
+            errors=[f"清单 JSON 格式错误: {e}"],
+            verify_source=verify_source,
+        )
+    except ValueError as e:
+        return LandingVerifyResult(
+            status="invalid",
+            landing_id="unknown",
+            run_id="unknown",
+            errors=[f"清单内容无效: {e}"],
+            verify_source=verify_source,
+        )
+    except Exception as e:
+        return LandingVerifyResult(
+            status="invalid",
+            landing_id="unknown",
+            run_id="unknown",
+            errors=[f"读取清单时发生未知错误: {type(e).__name__}: {e}"],
+            verify_source=verify_source,
+        )
+
+    if store is None:
+        return LandingVerifyResult(
+            status="valid",
+            landing_id=landing.landing_id,
+            run_id=landing.run_id,
+            snapshot_id=landing.snapshot_id,
+            plan_id=landing.plan_id,
+            current_config_dest_dir=current_config.dest_dir if current_config else "",
+            landing_dest_dir=landing.dest_dir,
+            verify_source=verify_source,
+        )
+
+    validation = validate_landing_for_import(
+        store, landing,
+        check_duplicate=check_duplicate,
+        current_config=current_config,
+    )
+
+    if validation.has_errors:
+        has_conflict_only = True
+        for err in validation.errors:
+            if "缺少必填字段" in err or "格式错误" in err:
+                has_conflict_only = False
+                break
+
+        if has_conflict_only:
+            status = "conflict"
+        else:
+            status = "invalid"
+
+        return LandingVerifyResult(
+            status=status,
+            landing_id=landing.landing_id,
+            run_id=landing.run_id,
+            snapshot_id=landing.snapshot_id,
+            plan_id=landing.plan_id,
+            errors=list(validation.errors),
+            warnings=list(validation.warnings),
+            conflict_types=list(validation.conflict_types),
+            diff_result=validation.diff_result,
+            current_config_dest_dir=current_config.dest_dir if current_config else "",
+            landing_dest_dir=landing.dest_dir,
+            verify_source=verify_source,
+        )
+
+    return LandingVerifyResult(
+        status="valid",
+        landing_id=landing.landing_id,
+        run_id=landing.run_id,
+        snapshot_id=landing.snapshot_id,
+        plan_id=landing.plan_id,
+        warnings=list(validation.warnings),
+        diff_result=validation.diff_result,
+        current_config_dest_dir=current_config.dest_dir if current_config else "",
+        landing_dest_dir=landing.dest_dir,
+        verify_source=verify_source,
+    )

@@ -1269,6 +1269,9 @@ class LandingFingerprint:
     signoff_id: Optional[str] = None
     signoff_snapshot_config_digest: str = ""
 
+    change_summary: str = ""
+    export_result: str = ""
+
     def to_dict(self) -> Dict[str, Any]:
         result = asdict(self)
         result["target_dirs"] = [td.to_dict() for td in self.target_dirs]
@@ -1310,6 +1313,8 @@ class LandingFingerprint:
             imported_at=data.get("imported_at"),
             signoff_id=data.get("signoff_id"),
             signoff_snapshot_config_digest=data.get("signoff_snapshot_config_digest", ""),
+            change_summary=data.get("change_summary", ""),
+            export_result=data.get("export_result", ""),
         )
 
 
@@ -1402,6 +1407,55 @@ class LandingImportValidationResult:
             existing_landing=existing_landing,
             existing_run=data.get("existing_run"),
         )
+
+
+@dataclass
+class LandingVerifyResult:
+    """落点清单核对结果（三类分类）
+
+    用于 verify-landing -f 场景下的分类输出：
+    - valid: 有效，清单与当前配置和状态一致
+    - invalid: 无效，清单本身有问题（缺少字段、格式错误、无法解析等）
+    - conflict: 冲突，清单与当前配置或本地状态存在差异
+    """
+    status: str  # "valid" | "invalid" | "conflict"
+    landing_id: str
+    run_id: str
+    snapshot_id: str = ""
+    plan_id: str = ""
+
+    errors: List[str] = field(default_factory=list)
+    warnings: List[str] = field(default_factory=list)
+    conflict_types: List[str] = field(default_factory=list)
+
+    diff_result: Optional[LandingFingerprintDiff] = None
+    current_config_dest_dir: str = ""
+    landing_dest_dir: str = ""
+
+    valid_items: List[Dict[str, Any]] = field(default_factory=list)
+    invalid_items: List[Dict[str, Any]] = field(default_factory=list)
+    conflict_items: List[Dict[str, Any]] = field(default_factory=list)
+
+    verified_at: str = field(default_factory=now_iso)
+    verify_source: str = ""
+
+    @property
+    def is_valid(self) -> bool:
+        return self.status == "valid"
+
+    @property
+    def is_invalid(self) -> bool:
+        return self.status == "invalid"
+
+    @property
+    def is_conflict(self) -> bool:
+        return self.status == "conflict"
+
+    def to_dict(self) -> Dict[str, Any]:
+        result = asdict(self)
+        if self.diff_result:
+            result["diff_result"] = self.diff_result.to_dict()
+        return result
 
 
 @dataclass
